@@ -11,22 +11,29 @@
 //--------------------
 //Tokenizer
 enum class TokenType {
-  NUM,
-  PLUS,
-  MINUS,
-  STAR,
-  SLASH,
-  PAREN_L,
-  PAREN_R,
+  NUM, //number
+  PLUS, //+
+  MINUS, //-
+  STAR, //*
+  SLASH, // /
+  LT, //<
+  LE, //<=
+  GT, //>
+  GE, //>=
+  EQ, //==
+  ASSIGN, //=
+  NE, //!=
+  NOT, //!
+  PAREN_L, //(
+  PAREN_R, //)
   TK_EOF,
 };
 
 struct Token {                   
   TokenType tokenType;                                     
   int value; //available when tokenType is NUM
-  std::string str; 
-  Token(TokenType _tokenType, int _value, const std::string& _str) 
-    : tokenType(_tokenType), value(_value), str(_str)                
+  Token(TokenType _tokenType, int _value) 
+    : tokenType(_tokenType), value(_value)                
   {}                                                   
 };
 
@@ -39,13 +46,16 @@ void tokenize(const std::string& input);
 
 //-------------------
 //Parser
-
 enum class AstKind {
-  ND_NUM,
-  ND_ADD,
-  ND_SUB,
-  ND_MUL,
-  ND_DIV,
+  AST_NUM,
+  AST_ADD,
+  AST_SUB,
+  AST_MUL,
+  AST_DIV,
+  AST_LT, //<
+  AST_LE, //<=
+  AST_EQ, //==
+  AST_NE, //!=
 };
 
 struct AstNode {
@@ -66,6 +76,10 @@ enum class HirKind {
   HIR_SUB,
   HIR_MUL,
   HIR_DIV,
+  HIR_LT, //<
+  HIR_LE, //<=
+  HIR_EQ, //==
+  HIR_NE, //!=
 };
 
 struct HirNode {
@@ -87,6 +101,10 @@ enum class LirKind {
   LIR_SUB,
   LIR_MUL,
   LIR_DIV,
+  LIR_LT, //<
+  LIR_LE, //<=
+  LIR_EQ, //==
+  LIR_NE, //!=
   LIR_NULL,
 };
 

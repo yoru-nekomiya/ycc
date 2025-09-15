@@ -83,6 +83,14 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_MUL, hirNode);
   case HirKind::HIR_DIV:
     return gen_binop_lir(LirKind::LIR_DIV, hirNode);
+  case HirKind::HIR_LT:
+    return gen_binop_lir(LirKind::LIR_LT, hirNode);
+  case HirKind::HIR_LE:
+    return gen_binop_lir(LirKind::LIR_LE, hirNode);
+  case HirKind::HIR_EQ:
+    return gen_binop_lir(LirKind::LIR_EQ, hirNode);
+  case HirKind::HIR_NE:
+    return gen_binop_lir(LirKind::LIR_NE, hirNode);
   }
 }
 

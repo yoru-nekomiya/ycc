@@ -24,29 +24,37 @@ new_num(const std::unique_ptr<AstNode>& astNode){
   hirNode->val = astNode->val;
   return hirNode;
 }
-
+/*
 static std::unique_ptr<HirNode> add(const std::unique_ptr<AstNode>& astNode);
 static std::unique_ptr<HirNode> mul(const std::unique_ptr<AstNode>& astNode);
 static std::unique_ptr<HirNode> unary(const std::unique_ptr<AstNode>& astNode);
 static std::unique_ptr<HirNode> primary(const std::unique_ptr<AstNode>& astNode);
-
+*/
 
 std::unique_ptr<HirNode>
 program(const std::unique_ptr<AstNode>& astNode){
-  if(astNode->kind == AstKind::ND_NUM){
+  if(astNode->kind == AstKind::AST_NUM){
     return new_num(astNode);
   } else {
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);
     switch(astNode->kind){
-    case AstKind::ND_ADD:
+    case AstKind::AST_ADD:
       return new_binary(HirKind::HIR_ADD, lhs, rhs);
-    case AstKind::ND_SUB:
+    case AstKind::AST_SUB:
       return new_binary(HirKind::HIR_SUB, lhs, rhs);
-    case AstKind::ND_MUL:
+    case AstKind::AST_MUL:
       return new_binary(HirKind::HIR_MUL, lhs, rhs);
-    case AstKind::ND_DIV:
+    case AstKind::AST_DIV:
       return new_binary(HirKind::HIR_DIV, lhs, rhs);
+    case AstKind::AST_LT:
+      return new_binary(HirKind::HIR_LT, lhs, rhs);
+    case AstKind::AST_LE:
+      return new_binary(HirKind::HIR_LE, lhs, rhs);
+    case AstKind::AST_EQ:
+      return new_binary(HirKind::HIR_EQ, lhs, rhs);
+    case AstKind::AST_NE:
+      return new_binary(HirKind::HIR_NE, lhs, rhs);
     }
   }
   return nullptr;
