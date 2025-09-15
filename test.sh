@@ -38,6 +38,7 @@ try 1 '3==3'
 try 0 '3==7'
 try 1 '5!=6'
 try 0 '9!=9'
+try 4 '+5+(-1)'
 
 echo 'Tests are passed!'
 

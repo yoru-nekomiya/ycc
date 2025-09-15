@@ -105,8 +105,17 @@ static std::unique_ptr<AstNode> mul(){
   }
 }
 
-//unary = primary
+//unary = ("+" | "-")? unary
+//        | primary
 static std::unique_ptr<AstNode> unary(){
+  if(consume_symbol(TokenType::PLUS)){
+    return unary();
+  }
+  if(consume_symbol(TokenType::MINUS)){
+    auto node_unary = unary();
+    auto node_zero = new_num(0);
+    return new_binary(AstKind::AST_SUB, node_zero, node_unary);
+  }
   return primary();
 }
 
