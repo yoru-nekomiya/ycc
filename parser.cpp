@@ -1,14 +1,24 @@
 #include "ycc.hpp"
 
+std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
+std::shared_ptr<LVar> findLvar(const std::unique_ptr<Token>& token){
+  std::shared_ptr<LVar> lvar = nullptr;
+  if(localVars.contains(token->str)){
+    lvar = localVars[token->str];
+  }
+  return lvar;
+}
+
 static std::unique_ptr<AstNode> new_node(AstKind kind){
   auto astNode = std::make_unique<AstNode>();
   astNode->kind = kind;
   return astNode;
 }
 
-static std::unique_ptr<AstNode> new_binary(AstKind kind,
-				    std::unique_ptr<AstNode>& lhs,
-				    std::unique_ptr<AstNode>& rhs){
+static std::unique_ptr<AstNode>
+new_binary(AstKind kind,
+	   std::unique_ptr<AstNode>& lhs,
+	   std::unique_ptr<AstNode>& rhs){
   auto node = new_node(kind);
   node->lhs = std::move(lhs);
   node->rhs = std::move(rhs);
@@ -21,16 +31,52 @@ static std::unique_ptr<AstNode> new_num(int val){
   return node;
 }
 
+static std::unique_ptr<AstNode> stmt();
+static std::unique_ptr<AstNode> expr();
+static std::unique_ptr<AstNode> assign();
+static std::unique_ptr<AstNode> equality();
+static std::unique_ptr<AstNode> relational();
 static std::unique_ptr<AstNode> add();
 static std::unique_ptr<AstNode> mul();
 static std::unique_ptr<AstNode> unary();
 static std::unique_ptr<AstNode> primary();
-static std::unique_ptr<AstNode> equality();
-static std::unique_ptr<AstNode> relational();
 
-//program = add
-std::unique_ptr<AstNode> program(){
-  return equality();
+//program = stmt*
+std::list<std::unique_ptr<AstNode>> program(){
+  std::list<std::unique_ptr<AstNode>> astNodeList;
+  while(!at_eof()){
+    astNodeList.push_back(stmt());
+  }
+  return astNodeList;
+}
+
+//stmt = expr ";" | "return" expr ";"
+static std::unique_ptr<AstNode> stmt(){
+  std::unique_ptr<AstNode> node;
+  if(consume_symbol(TokenType::RETURN)){
+    node = new_node(AstKind::AST_RETURN);
+    auto node_expr = expr();
+    node->lhs = std::move(node_expr);
+  } else {
+    node = expr();
+  }
+  expect(TokenType::SEMICOLON);
+  return node;
+}
+
+// expr = assign
+static std::unique_ptr<AstNode> expr(){
+  return assign();
+}
+
+//assign = equality ("=" assign)?
+static std::unique_ptr<AstNode> assign(){
+  auto node = equality();
+  if(consume_symbol(TokenType::ASSIGN)){
+    auto node_assign = assign();
+    node = new_binary(AstKind::AST_ASSIGN, node, node_assign);
+  }
+  return node;
 }
 
 //equality = relational ("==" relational | "!=" relational)*
@@ -119,13 +165,29 @@ static std::unique_ptr<AstNode> unary(){
   return primary();
 }
 
-//primary = "(" add ")" | num
+//primary = "(" expr ")" | ident | num
 static std::unique_ptr<AstNode> primary(){
   if(consume_symbol(TokenType::PAREN_L)){
-    auto node = add();
+    auto node_expr = expr();
     expect(TokenType::PAREN_R);
-    return node;
+    return node_expr;
   }
+
+  auto token = consume_ident();
+  if(token){
+    auto node = new_node(AstKind::AST_LVAR);
+    auto lvar = findLvar(token);
+    if(lvar){
+      node->lvar = lvar;
+    } else {    
+      auto lvar = std::make_shared<LVar>();
+      lvar->name = token->str;  
+      lvar->offset = (localVars.size()+1) * 8;
+      node->lvar = lvar;
+      localVars[lvar->name] = lvar;
+    }
+    return node;
+  } //if(token)
 
   return new_num(expect_number());
 }

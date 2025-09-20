@@ -5,15 +5,6 @@ static int nreg = 1; //represents a virtual register number
 
 static std::shared_ptr<LirNode>
 new_lir(LirKind opcode){
-  /*
-  auto lirNode = std::make_shared<LirNode>(opcode,
-					   nullptr,
-					   nullptr,
-					   nullptr,
-					   -1,
-					   -1,
-					   -1);
-  */
   auto lirNode = std::make_shared<LirNode>();
   lirNode->opcode = opcode;
   lirList.push_back(lirNode);
@@ -26,26 +17,25 @@ emit_lir(LirKind opcode,
 	 const std::shared_ptr<LirNode>& a,
 	 const std::shared_ptr<LirNode>& b){
   auto lirNode = new_lir(opcode);
-  lirNode->d = std::move(d);
-  lirNode->a = std::move(a);
-  lirNode->b = std::move(b);
+  lirNode->d = d;
+  lirNode->a = a;
+  lirNode->b = b;
   return std::move(lirNode);
 }
 
+static std::unordered_map<std::string, int> map_varName2nreg;
 static std::shared_ptr<LirNode>
-new_reg(){
-  /*
-  auto lirNode = std::make_shared<LirNode>(LirKind::LIR_REG,
-					   nullptr,
-					   nullptr,
-					   nullptr,
-					   -1,
-					   nreg++,
-					   -1);
-  */
+new_reg(const std::string& varName = ""){
   auto lirNode = std::make_shared<LirNode>();
   lirNode->opcode = LirKind::LIR_REG;
-  lirNode->vn = nreg++;
+  if(varName == ""){
+    lirNode->vn = nreg++;
+  }
+  else if(map_varName2nreg.contains(varName)){    
+    lirNode->vn = map_varName2nreg[varName];
+  } else {
+    lirNode->vn = nreg++;
+  }
   return std::move(lirNode);
 }
 
@@ -56,7 +46,24 @@ new_imm(int imm){
   lirNode->vn = d->vn;
   lirNode->d = std::move(d);
   lirNode->imm = imm;
-  return std::move(lirNode);
+  return lirNode->d;
+}
+
+static std::shared_ptr<LirNode>
+load(const std::shared_ptr<LirNode>& dst,
+     const std::shared_ptr<LirNode>& src){
+  auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
+  node->lvar = src->lvar;
+  return node->d;
+}
+
+static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<HirNode>& hirNode){
+  auto lirNode = new_lir(LirKind::LIR_LVAR);
+  auto d = new_reg(hirNode->lvar->name);
+  lirNode->vn = d->vn;
+  lirNode->d = std::move(d);
+  lirNode->lvar = std::move(hirNode->lvar);
+  return lirNode->d;
 }
 
 std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<HirNode>& hirNode);
@@ -67,7 +74,8 @@ gen_binop_lir(LirKind opcode,
   auto d = new_reg();
   auto a = gen_expr_lir(hirNode->lhs);
   auto b = gen_expr_lir(hirNode->rhs);
-  return emit_lir(opcode, d, a, b);
+  auto lirNode = emit_lir(opcode, d, a, b);
+  return lirNode->d;
 }
 
 std::shared_ptr<LirNode>
@@ -91,7 +99,26 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_EQ, hirNode);
   case HirKind::HIR_NE:
     return gen_binop_lir(LirKind::LIR_NE, hirNode);
+  case HirKind::HIR_LVAR: {
+    auto reg = new_reg(hirNode->lvar->name);
+    auto node_lval = gen_lval_lir(hirNode);
+    auto lirNode = load(reg, node_lval);
+    return lirNode;
   }
+  case HirKind::HIR_ASSIGN: {
+    auto a = gen_lval_lir(hirNode->lhs);
+    auto b = gen_expr_lir(hirNode->rhs);
+    auto lirNode = emit_lir(LirKind::LIR_STORE, nullptr, a, b);
+    return std::move(a);
+  }
+  case HirKind::HIR_RETURN: {
+    auto a = gen_expr_lir(hirNode->lhs);
+    auto lirNode = new_lir(LirKind::LIR_RETURN);
+    lirNode->a = a;
+    return std::move(a);
+  }
+  } //switch
+  return nullptr;
 }
 
 void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
@@ -115,8 +142,10 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
 }
 
 std::list<std::shared_ptr<LirNode>>
-generateLirNode(const std::unique_ptr<HirNode>& hirNode){
-  auto lirNode = gen_expr_lir(hirNode);
+generateLirNode(const std::list<std::unique_ptr<HirNode>>& hirNodeList){
+  for(const auto& hirNode: hirNodeList){
+    gen_expr_lir(hirNode);
+  }
   //dumpLIR(lirList);
   return std::move(lirList);
 }

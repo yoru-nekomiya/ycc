@@ -30,9 +30,44 @@ bool consume_symbol(TokenType tk_type){
   return true;
 }
 
-static void new_token(TokenType tk_type, int value = 0){
-  auto token = std::make_unique<Token>(tk_type, value);
+std::unique_ptr<Token> consume_ident(){
+  auto& token = tokens.front();
+  if(token->tokenType != TokenType::IDENT){
+    return nullptr;
+  }
+  auto ret = std::move(tokens.front());
+  tokens.pop();
+  return ret;
+}
+
+static void new_token(TokenType tk_type,
+		      int value = 0,
+		      const std::string& str = ""){
+  auto token = std::make_unique<Token>(tk_type, value, str);
   tokens.push(std::move(token)); 
+}
+
+bool at_eof(){
+  return tokens.front()->tokenType == TokenType::TK_EOF;
+}
+
+static TokenType starts_keyword(const std::string& str){
+  const std::list<std::string> keyword =
+    {"return","if","else","while","for",
+     "int","char","short","long","void",
+     "break","continue","switch","case","goto",
+     "default","do"};
+  int i = 0;
+  for(const auto& kw: keyword){
+    if(str == kw){
+      switch(i){
+      case 0:
+	return TokenType::RETURN;
+      }
+    }
+    i++;
+  }
+  return TokenType::TK_EOF;
 }
 
 
@@ -42,8 +77,8 @@ void tokenize(const std::string& input){
   while(end < input.size()){ 
     const std::size_t begin = end;
     const char& c = input[begin];
+    end++;
     if(std::isspace(c)){ 
-      end++; 
       continue;                     
     }
     
@@ -54,43 +89,36 @@ void tokenize(const std::string& input){
     }
     
     if(c == '+'){
-      end++;
       new_token(TokenType::PLUS);
       continue;
     }
     
     if(c == '-'){         
-      end++;
       new_token(TokenType::MINUS);
       continue; 
     }
 
     if(c == '*'){                                         
-      end++;
       new_token(TokenType::STAR);
       continue;           
     }
     
     if(c == '/'){             
-      end++;
       new_token(TokenType::SLASH);
       continue; 
     }
 
     if(c == '('){             
-      end++;
       new_token(TokenType::PAREN_L);
       continue; 
     }
 
     if(c == ')'){             
-      end++;
       new_token(TokenType::PAREN_R);
       continue; 
     }
 
     if(c == '<'){
-      end++;
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::LE);
@@ -101,7 +129,6 @@ void tokenize(const std::string& input){
     }
 
     if(c == '>'){
-      end++;
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::GE);
@@ -112,7 +139,6 @@ void tokenize(const std::string& input){
     }
 
     if(c == '='){
-      end++;
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::EQ);
@@ -123,12 +149,33 @@ void tokenize(const std::string& input){
     }
 
     if(c == '!'){
-      end++;
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::NE);
       } else {
 	new_token(TokenType::NOT);
+      }
+      continue;
+    }
+
+    if(c == ';'){
+      new_token(TokenType::SEMICOLON);
+      continue; 
+    }
+    
+    //identifier or keyword
+    if(std::isalpha(c) || c == '_'){
+      while(std::isalnum(input[end]) || input[end] == '_'){
+	end++;
+      }
+      const auto word = input.substr(begin, end-begin);
+      const TokenType tokenType = starts_keyword(word);
+      if(tokenType != TokenType::TK_EOF){
+	//keyword
+	new_token(tokenType);
+      } else {
+	//identifier
+	new_token(TokenType::IDENT, 0, word);
       }
       continue;
     }

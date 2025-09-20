@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-g -static
+CXXFLAGS=-g -static -std=c++20
 SRCS=$(wildcard *.cpp)
 OBJS=$(SRCS:.cpp=.o)
 

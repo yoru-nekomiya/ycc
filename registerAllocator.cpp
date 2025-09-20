@@ -9,19 +9,11 @@ static void convertThreeAddress2Two(std::list<std::shared_ptr<LirNode>>& lirList
     if(!(*iter)->d || !(*iter)->a){
       continue;
     }
-    /*
-    auto movNode = std::make_shared<LirNode>(LirKind::LIR_MOV,
-					     (*iter)->d,
-					     nullptr,
-					     (*iter)->a,
-					     -1,
-					     -1,
-					     -1);
-    */
     auto movNode = std::make_shared<LirNode>();
     movNode->opcode = LirKind::LIR_MOV;
     movNode->d = (*iter)->d;
     movNode->b = (*iter)->a;
+    //movNode->d->parent = (*iter);
       
     (*iter)->a = (*iter)->d;
     iter = lirList.insert(iter, std::move(movNode));
@@ -30,17 +22,72 @@ static void convertThreeAddress2Two(std::list<std::shared_ptr<LirNode>>& lirList
   } //for
 }
 
+static void setLastUse(std::shared_ptr<LirNode>& lirNode,
+		       int c){
+  if(lirNode && lirNode->lastUse < c){
+    lirNode->lastUse = c;
+  }
+}
+
+static std::list<std::shared_ptr<LirNode>>
+collectReg(std::list<std::shared_ptr<LirNode>>& lirList){
+  std::list<std::shared_ptr<LirNode>> listReg;
+  int instCount = 1; 
+  for(auto& lirNode: lirList){
+    if(lirNode->d && !lirNode->d->def){
+      lirNode->d->def = instCount;
+      listReg.push_back(lirNode->d);
+    }
+    setLastUse(lirNode->a, instCount);
+    setLastUse(lirNode->b, instCount);
+    instCount++;
+  }
+  return listReg;
+}
+
+static std::unordered_map<int, std::shared_ptr<LirNode>> used;
+
 static void allocate(std::list<std::shared_ptr<LirNode>>& lirList){
+  const auto listReg = collectReg(lirList);
+
+  for(int i = 0; i < num_reg; i++){
+    used[i] = nullptr;
+  }
+  
+  for(auto& reg: listReg){
+    bool found = false;
+    for(int i = 0; i < num_reg-1; i++){
+      if(used[i] && reg->def < used[i]->lastUse){
+	continue;
+      }
+      reg->rn = i;
+      //lirNode->rn = i;
+      //if(reg->parent) reg->parent->rn = i;
+      //std::cout << i << ": " << (int)lirNode->opcode << std::endl;
+      used[i] = reg;
+      found = true;
+      break;
+    }
+    if(found) continue;
+
+    //spill code
+    std::cerr << "reg alloc failed! spill code" << std::endl;
+    exit(1);
+  } //for
+  /*
   int n = 0;
   for(auto& lirNode: lirList){
     if(n < num_reg){
-      lirNode->d->rn = n++;
-      lirNode->rn = lirNode->d->rn;
+      if(lirNode->d){
+	lirNode->d->rn = n++;
+	lirNode->rn = lirNode->d->rn;
+      }
     } else {
       std::cerr << "reg alloc failed!" << std::endl;
       exit(1);
     }
   }
+  */
 }
 
 void allocateRegister_x86_64(std::list<std::shared_ptr<LirNode>>& lirList){

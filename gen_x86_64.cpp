@@ -58,10 +58,33 @@ void gen(const std::shared_ptr<LirNode>& lirNode){
   case LirKind::LIR_NE:
     print_cmp("setne", lirNode);
     break;
+  case LirKind::LIR_LVAR:
+    std::cout << "  lea " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]" << std::endl;
+    break;
+  case LirKind::LIR_LOAD:
+    std::cout << "  mov " << regs[d] << ", [" << regs[b] << "]" << std::endl;
+    break;
+  case LirKind::LIR_STORE:
+    std::cout << "  mov [" << regs[a] << "], " << regs[b] << std::endl;
+    break;
+  case LirKind::LIR_RETURN:
+    std::cout << "  mov rax, " << regs[a] << std::endl
+	      << "  mov rsp, rbp" << std::endl
+	      << "  pop rbp" << std::endl
+	      << "  ret" << std::endl;
+    break;
   } //switch
 }
 
 void gen_x86_64(const std::list<std::shared_ptr<LirNode>>& lirList){
+  std::cout << ".intel_syntax noprefix" << std::endl
+	    << ".global main" << std::endl
+	    << "main:" << std::endl;
+
+  std::cout << "  push rbp" << std::endl
+	    << "  mov rbp, rsp" << std::endl
+	    << "  sub rsp, " << localVars.size() << std::endl;
+  
   for(const auto& lirNode: lirList){
     gen(lirNode);
   }

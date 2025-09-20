@@ -7,6 +7,7 @@
 #include <memory>
 #include <cassert>
 #include <list>
+#include <unordered_map>
 
 //--------------------
 //Tokenizer
@@ -26,14 +27,18 @@ enum class TokenType {
   NOT, //!
   PAREN_L, //(
   PAREN_R, //)
+  SEMICOLON, //;
+  IDENT, //identifier
+  RETURN, //return
   TK_EOF,
 };
 
 struct Token {                   
   TokenType tokenType;                                     
   int value; //available when tokenType is NUM
-  Token(TokenType _tokenType, int _value) 
-    : tokenType(_tokenType), value(_value)                
+  std::string str;
+  Token(TokenType _tokenType, int _value, std::string _str) 
+    : tokenType(_tokenType), value(_value), str(_str)
   {}                                                   
 };
 
@@ -42,6 +47,8 @@ extern std::queue<std::unique_ptr<Token>> tokens;
 void expect(TokenType tk_type);
 int expect_number();
 bool consume_symbol(TokenType tk_type);
+std::unique_ptr<Token> consume_ident();
+bool at_eof();
 void tokenize(const std::string& input);
 
 //-------------------
@@ -56,6 +63,14 @@ enum class AstKind {
   AST_LE, //<=
   AST_EQ, //==
   AST_NE, //!=
+  AST_ASSIGN, //=
+  AST_LVAR, //local variable
+  AST_RETURN,
+};
+
+struct LVar {
+  std::string name;
+  int offset;
 };
 
 struct AstNode {
@@ -63,9 +78,11 @@ struct AstNode {
   std::unique_ptr<AstNode> lhs;
   std::unique_ptr<AstNode> rhs;
   int val;
-};
 
-std::unique_ptr<AstNode> program();
+  std::shared_ptr<LVar> lvar;
+};
+extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
+std::list<std::unique_ptr<AstNode>> program();
 
 
 //---------------------------
@@ -80,20 +97,25 @@ enum class HirKind {
   HIR_LE, //<=
   HIR_EQ, //==
   HIR_NE, //!=
+  HIR_ASSIGN, //=
+  HIR_LVAR, //local variable
+  HIR_RETURN,
 };
 
 struct HirNode {
   HirKind kind;
   std::unique_ptr<HirNode> lhs;
   std::unique_ptr<HirNode> rhs;
-  int val;  
+  int val;
+
+  std::shared_ptr<LVar> lvar;
 };
 
-  std::unique_ptr<HirNode> generateHirNode(const std::unique_ptr<AstNode>&);
+std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);
   
 //---------------------------
 //LIR
-enum class LirKind {
+enum class LirKind: int {
   LIR_REG,
   LIR_MOV,
   LIR_IMM,
@@ -105,6 +127,10 @@ enum class LirKind {
   LIR_LE, //<=
   LIR_EQ, //==
   LIR_NE, //!=
+  LIR_LVAR,
+  LIR_LOAD,
+  LIR_STORE,
+  LIR_RETURN,
   LIR_NULL,
 };
 
@@ -115,19 +141,23 @@ struct LirNode {
   std::shared_ptr<LirNode> b; //right source operand
   int imm;
 
-  //The following two variables are valid when LIR_REG.
   int vn; //virtual register number
   int rn; //real register number
-  //----------------------------
+  int def;
+  int lastUse;
+
+  std::shared_ptr<LVar> lvar;
 
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
-	     a(nullptr), b(nullptr), imm(-1),
-	     vn(-1), rn(-1)
+	     a(nullptr), b(nullptr), parent(nullptr),
+	     imm(-1),
+	     vn(-1), rn(-1), def(0), lastUse(0),
+	     lvar(nullptr)
   {}
 };
 
 std::list<std::shared_ptr<LirNode>>
-generateLirNode(const std::unique_ptr<HirNode>&);
+generateLirNode(const std::list<std::unique_ptr<HirNode>>&);
 
 //---------------------------
 //Register Allocation
