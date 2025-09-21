@@ -2,24 +2,24 @@
 
 const int num_reg = 7;
 
-static void convertThreeAddress2Two(std::list<std::shared_ptr<LirNode>>& lirList){
+static void convertThreeAddress2Two(std::list<std::shared_ptr<BasicBlock>>& bbList){
   //d = a op b; --> d = a; d = d op b;
-
-  for(auto iter = lirList.begin(); iter != lirList.end(); iter++){
-    if(!(*iter)->d || !(*iter)->a){
-      continue;
-    }
-    auto movNode = std::make_shared<LirNode>();
-    movNode->opcode = LirKind::LIR_MOV;
-    movNode->d = (*iter)->d;
-    movNode->b = (*iter)->a;
-    //movNode->d->parent = (*iter);
+  for(auto& bb: bbList){
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
+      if(!(*iter)->d || !(*iter)->a){
+	continue;
+      }
+      auto movNode = std::make_shared<LirNode>();
+      movNode->opcode = LirKind::LIR_MOV;
+      movNode->d = (*iter)->d;
+      movNode->b = (*iter)->a;
       
-    (*iter)->a = (*iter)->d;
-    iter = lirList.insert(iter, std::move(movNode));
-    //Now, iter points movNode, so increment iter
-    iter++;
-  } //for
+      (*iter)->a = (*iter)->d;
+      iter = bb->insts.insert(iter, std::move(movNode));
+      //Now, iter points movNode, so increment iter
+      iter++;
+    } //for iter
+  } //for bb
 }
 
 static void setLastUse(std::shared_ptr<LirNode>& lirNode,
@@ -30,25 +30,27 @@ static void setLastUse(std::shared_ptr<LirNode>& lirNode,
 }
 
 static std::list<std::shared_ptr<LirNode>>
-collectReg(std::list<std::shared_ptr<LirNode>>& lirList){
+collectReg(std::list<std::shared_ptr<BasicBlock>>& bbList){
   std::list<std::shared_ptr<LirNode>> listReg;
-  int instCount = 1; 
-  for(auto& lirNode: lirList){
-    if(lirNode->d && !lirNode->d->def){
-      lirNode->d->def = instCount;
-      listReg.push_back(lirNode->d);
+  int instCount = 1;
+  for(auto& bb: bbList){
+    for(auto& lirNode: bb->insts){
+      if(lirNode->d && !lirNode->d->def){
+	lirNode->d->def = instCount;
+	listReg.push_back(lirNode->d);
+      }
+      setLastUse(lirNode->a, instCount);
+      setLastUse(lirNode->b, instCount);
+      instCount++;
     }
-    setLastUse(lirNode->a, instCount);
-    setLastUse(lirNode->b, instCount);
-    instCount++;
   }
   return listReg;
 }
 
 static std::unordered_map<int, std::shared_ptr<LirNode>> used;
 
-static void allocate(std::list<std::shared_ptr<LirNode>>& lirList){
-  const auto listReg = collectReg(lirList);
+static void allocate(std::list<std::shared_ptr<BasicBlock>>& bbList){
+  const auto listReg = collectReg(bbList);
 
   for(int i = 0; i < num_reg; i++){
     used[i] = nullptr;
@@ -61,9 +63,6 @@ static void allocate(std::list<std::shared_ptr<LirNode>>& lirList){
 	continue;
       }
       reg->rn = i;
-      //lirNode->rn = i;
-      //if(reg->parent) reg->parent->rn = i;
-      //std::cout << i << ": " << (int)lirNode->opcode << std::endl;
       used[i] = reg;
       found = true;
       break;
@@ -74,23 +73,9 @@ static void allocate(std::list<std::shared_ptr<LirNode>>& lirList){
     std::cerr << "reg alloc failed! spill code" << std::endl;
     exit(1);
   } //for
-  /*
-  int n = 0;
-  for(auto& lirNode: lirList){
-    if(n < num_reg){
-      if(lirNode->d){
-	lirNode->d->rn = n++;
-	lirNode->rn = lirNode->d->rn;
-      }
-    } else {
-      std::cerr << "reg alloc failed!" << std::endl;
-      exit(1);
-    }
-  }
-  */
 }
 
-void allocateRegister_x86_64(std::list<std::shared_ptr<LirNode>>& lirList){
-  convertThreeAddress2Two(lirList);
-  allocate(lirList);
+void allocateRegister_x86_64(std::list<std::shared_ptr<BasicBlock>>& bbList){
+  convertThreeAddress2Two(bbList);
+  allocate(bbList);
 }

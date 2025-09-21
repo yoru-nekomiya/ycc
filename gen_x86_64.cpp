@@ -73,10 +73,18 @@ void gen(const std::shared_ptr<LirNode>& lirNode){
 	      << "  pop rbp" << std::endl
 	      << "  ret" << std::endl;
     break;
+  case LirKind::LIR_BR:
+    std::cout << "  cmp " << regs[b] << ", 0" << std::endl;
+    std::cout << "  jne .L" << lirNode->bb1->label << std::endl;
+    std::cout << "  jmp .L" << lirNode->bb2->label << std::endl;
+    break;
+  case LirKind::LIR_JMP:
+    std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
+    break;
   } //switch
 }
 
-void gen_x86_64(const std::list<std::shared_ptr<LirNode>>& lirList){
+void gen_x86_64(const std::list<std::shared_ptr<BasicBlock>>& bbList){
   std::cout << ".intel_syntax noprefix" << std::endl
 	    << ".global main" << std::endl
 	    << "main:" << std::endl;
@@ -84,8 +92,10 @@ void gen_x86_64(const std::list<std::shared_ptr<LirNode>>& lirList){
   std::cout << "  push rbp" << std::endl
 	    << "  mov rbp, rsp" << std::endl
 	    << "  sub rsp, " << localVars.size() << std::endl;
-  
-  for(const auto& lirNode: lirList){
-    gen(lirNode);
+  for(const auto& bb: bbList){
+    std::cout << ".L" << bb->label << ":" << std::endl;
+    for(const auto& lirNode: bb->insts){
+      gen(lirNode);
+    }
   }
 }

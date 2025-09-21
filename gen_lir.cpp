@@ -2,12 +2,16 @@
 
 static std::list<std::shared_ptr<LirNode>> lirList = {};
 static int nreg = 1; //represents a virtual register number
+static std::shared_ptr<BasicBlock> outBB = nullptr;
+static int label = 0;
+static std::list<std::shared_ptr<BasicBlock>> BBList = {};
 
 static std::shared_ptr<LirNode>
 new_lir(LirKind opcode){
   auto lirNode = std::make_shared<LirNode>();
   lirNode->opcode = opcode;
-  lirList.push_back(lirNode);
+  //lirList.push_back(lirNode);
+  outBB->insts.push_back(lirNode);
   return std::move(lirNode);
 }
 
@@ -49,12 +53,38 @@ new_imm(int imm){
   return lirNode->d;
 }
 
+static std::shared_ptr<BasicBlock>
+new_bb(){
+  auto bb = std::make_shared<BasicBlock>();
+  bb->label = label++;
+  BBList.push_back(bb);
+  return bb;
+}
+
 static std::shared_ptr<LirNode>
 load(const std::shared_ptr<LirNode>& dst,
      const std::shared_ptr<LirNode>& src){
   auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
   node->lvar = src->lvar;
   return node->d;
+}
+
+static std::shared_ptr<LirNode>
+br(const std::shared_ptr<LirNode>& b,
+   const std::shared_ptr<BasicBlock>& then,
+   const std::shared_ptr<BasicBlock>& els){
+  auto lirNode = new_lir(LirKind::LIR_BR);
+  lirNode->b = b;
+  lirNode->bb1 = then;
+  lirNode->bb2 = els;
+  return lirNode;
+}
+
+static std::shared_ptr<LirNode>
+jmp(const std::shared_ptr<BasicBlock>& bb){
+  auto lirNode = new_lir(LirKind::LIR_JMP);
+  lirNode->bb1 = bb;
+  return lirNode;
 }
 
 static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<HirNode>& hirNode){
@@ -115,8 +145,75 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     auto a = gen_expr_lir(hirNode->lhs);
     auto lirNode = new_lir(LirKind::LIR_RETURN);
     lirNode->a = a;
+    outBB = new_bb();
     return std::move(a);
   }
+  case HirKind::HIR_IF: {
+    std::shared_ptr<BasicBlock> then = new_bb();
+    std::shared_ptr<BasicBlock> els = new_bb();
+    std::shared_ptr<BasicBlock> last = new_bb();
+
+    auto node_cond = gen_expr_lir(hirNode->cond);    
+    br(node_cond, then, els);
+
+    outBB = then;
+    gen_expr_lir(hirNode->then);
+    jmp(last);
+
+    outBB = els;
+    if(hirNode->els){
+      gen_expr_lir(hirNode->els);
+    }
+    jmp(last);
+
+    outBB = last;
+    return nullptr;
+  }
+  case HirKind::HIR_WHILE: {
+    std::shared_ptr<BasicBlock> cond = new_bb();
+    std::shared_ptr<BasicBlock> body = new_bb();
+    std::shared_ptr<BasicBlock> _break = new_bb();
+
+    outBB = cond;
+    auto node_cond = gen_expr_lir(hirNode->cond);
+    br(node_cond, body, _break);
+
+    outBB = body;
+    gen_expr_lir(hirNode->then);
+    jmp(cond);
+
+    outBB = _break;
+    return nullptr;
+  }
+  case HirKind::HIR_FOR: {
+    std::shared_ptr<BasicBlock> cond = new_bb();
+    std::shared_ptr<BasicBlock> body = new_bb();
+    std::shared_ptr<BasicBlock> _break = new_bb();
+
+    if(hirNode->init){
+      gen_expr_lir(hirNode->init);
+    }
+    jmp(cond);
+
+    outBB = cond;
+    if(hirNode->cond){
+      auto node_cond = gen_expr_lir(hirNode->cond);
+      br(node_cond, body, _break);
+    } else {
+      jmp(body);
+    }
+
+    outBB = body;
+    gen_expr_lir(hirNode->then);
+
+    if(hirNode->inc){
+      gen_expr_lir(hirNode->inc);
+    }
+    jmp(cond);
+
+    outBB = _break;
+    return nullptr;
+  } 
   } //switch
   return nullptr;
 }
@@ -141,11 +238,12 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
   } //for
 }
 
-std::list<std::shared_ptr<LirNode>>
+std::list<std::shared_ptr<BasicBlock>>
 generateLirNode(const std::list<std::unique_ptr<HirNode>>& hirNodeList){
+  outBB = new_bb();
   for(const auto& hirNode: hirNodeList){
     gen_expr_lir(hirNode);
   }
   //dumpLIR(lirList);
-  return std::move(lirList);
+  return std::move(BBList);
 }

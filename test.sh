@@ -40,6 +40,10 @@ try 1 'return 5!=6;'
 try 0 'return 9!=9;'
 try 4 'return +5+(-1);'
 try 5 'a=2+3; return a;'
+try 3 'a=4-1; b=a; return b;'
+try 20 'x = 0; y = 0; for(;x < 10; x = x + 1) y = y + 2; return y;'
+try 20 'b = 0; while(b < 20) b = b + 1; return b;'
+try 5 'a = 0; b = 1; if(b > 5) a = 30; else a = 5; return a;'
 
 echo 'Tests are passed!'
 

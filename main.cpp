@@ -7,8 +7,8 @@ int main(int argc, char* argv[]){
   tokenize(input);
   auto astNode = program();
   auto hirNode = generateHirNode(astNode);
-  auto lirList = generateLirNode(hirNode);
-  allocateRegister_x86_64(lirList);  
-  gen_x86_64(lirList);
+  auto bbList = generateLirNode(hirNode);
+  allocateRegister_x86_64(bbList);  
+  gen_x86_64(bbList);
   return 0;
 }

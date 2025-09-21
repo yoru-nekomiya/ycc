@@ -50,16 +50,71 @@ std::list<std::unique_ptr<AstNode>> program(){
   return astNodeList;
 }
 
-//stmt = expr ";" | "return" expr ";"
+//stmt = expr ";"
+//       | "return" expr ";"
+//       | "if" "(" expr ")" stmt ("else" stmt)?
+//       | "while" "(" expr ")" stmt
+//       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 static std::unique_ptr<AstNode> stmt(){
   std::unique_ptr<AstNode> node;
+  
+  //"return" expr ";"
   if(consume_symbol(TokenType::RETURN)){
     node = new_node(AstKind::AST_RETURN);
     auto node_expr = expr();
     node->lhs = std::move(node_expr);
-  } else {
-    node = expr();
+    expect(TokenType::SEMICOLON);
+    return node;
   }
+
+  //"if" "(" expr ")" stmt ("else" stmt)?
+  if(consume_symbol(TokenType::IF)){
+    node = new_node(AstKind::AST_IF);
+    expect(TokenType::PAREN_L);
+    node->cond = expr();
+    expect(TokenType::PAREN_R);
+    node->then = stmt();
+    if(consume_symbol(TokenType::ELSE)){
+      node->els = stmt();
+    }
+    return node;
+  }
+
+  //"while" "(" expr ")" stmt
+  if(consume_symbol(TokenType::WHILE)){
+    node = new_node(AstKind::AST_WHILE);
+    expect(TokenType::PAREN_L);
+    node->cond = expr();
+    expect(TokenType::PAREN_R);
+    node->then = stmt();
+    return node;
+  }
+
+  //"for" "(" expr? ";" expr? ";" expr? ")" stmt
+  if(consume_symbol(TokenType::FOR)){
+    node = new_node(AstKind::AST_FOR);
+    expect(TokenType::PAREN_L);    
+    if(!consume_symbol(TokenType::SEMICOLON)){
+      //first expr
+      node->init = expr();
+      expect(TokenType::SEMICOLON);
+    }
+    if(!consume_symbol(TokenType::SEMICOLON)){
+      //second expr
+      node->cond = expr();
+      expect(TokenType::SEMICOLON);
+    }
+    if(!consume_symbol(TokenType::PAREN_R)){
+      //third expr
+      node->inc = expr();
+      expect(TokenType::PAREN_R);
+    }
+    node->then = stmt();
+    return node;
+  }
+  
+  //expr ";"
+  node = expr();
   expect(TokenType::SEMICOLON);
   return node;
 }

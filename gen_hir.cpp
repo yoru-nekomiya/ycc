@@ -42,7 +42,47 @@ program(const std::unique_ptr<AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     hirNode->lhs = std::move(lhs);
     return hirNode;
-  }else {
+  } else if(astNode->kind == AstKind::AST_IF){
+    auto hirNode = new_node(HirKind::HIR_IF);
+    auto cond = program(astNode->cond);
+    auto then = program(astNode->then);
+    std::unique_ptr<HirNode> els = nullptr;
+    if(astNode->els){
+      els = program(astNode->els);
+    }
+    hirNode->cond = std::move(cond);
+    hirNode->then = std::move(then);
+    hirNode->els = std::move(els);
+    return hirNode;
+  } else if(astNode->kind == AstKind::AST_WHILE){
+    auto hirNode = new_node(HirKind::HIR_WHILE);
+    auto cond = program(astNode->cond);
+    auto then = program(astNode->then);
+    hirNode->cond = std::move(cond);
+    hirNode->then = std::move(then);
+    return hirNode;
+  } else if(astNode->kind == AstKind::AST_FOR){
+    auto hirNode = new_node(HirKind::HIR_FOR);
+    std::unique_ptr<HirNode> init = nullptr;
+    std::unique_ptr<HirNode> cond = nullptr;
+    std::unique_ptr<HirNode> inc = nullptr;
+    if(astNode->init){
+      init = program(astNode->init);
+    }
+    if(astNode->cond){
+      cond = program(astNode->cond);
+    }
+    if(astNode->inc){
+      inc = program(astNode->inc);
+    }
+
+    auto then = program(astNode->then);
+    hirNode->init = std::move(init);
+    hirNode->cond = std::move(cond);
+    hirNode->inc = std::move(inc);
+    hirNode->then = std::move(then);
+    return hirNode;
+  } else {
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);
     switch(astNode->kind){

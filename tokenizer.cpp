@@ -52,17 +52,25 @@ bool at_eof(){
 }
 
 static TokenType starts_keyword(const std::string& str){
-  const std::list<std::string> keyword =
+  const std::vector<std::string> keyword =
     {"return","if","else","while","for",
      "int","char","short","long","void",
      "break","continue","switch","case","goto",
-     "default","do"};
+     "default","do"};  
   int i = 0;
   for(const auto& kw: keyword){
     if(str == kw){
       switch(i){
       case 0:
 	return TokenType::RETURN;
+      case 1:
+	return TokenType::IF;
+      case 2:
+	return TokenType::ELSE;
+      case 3:
+	return TokenType::WHILE;
+      case 4:
+	return TokenType::FOR;
       }
     }
     i++;

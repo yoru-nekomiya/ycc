@@ -8,6 +8,7 @@
 #include <cassert>
 #include <list>
 #include <unordered_map>
+#include <vector>
 
 //--------------------
 //Tokenizer
@@ -30,11 +31,15 @@ enum class TokenType {
   SEMICOLON, //;
   IDENT, //identifier
   RETURN, //return
+  IF, //if
+  ELSE, //else
+  WHILE, //while
+  FOR, //for
   TK_EOF,
 };
 
 struct Token {                   
-  TokenType tokenType;                                     
+  TokenType tokenType;
   int value; //available when tokenType is NUM
   std::string str;
   Token(TokenType _tokenType, int _value, std::string _str) 
@@ -65,7 +70,10 @@ enum class AstKind {
   AST_NE, //!=
   AST_ASSIGN, //=
   AST_LVAR, //local variable
-  AST_RETURN,
+  AST_RETURN, //return
+  AST_IF, //if
+  AST_WHILE, //while
+  AST_FOR, //for
 };
 
 struct LVar {
@@ -80,6 +88,12 @@ struct AstNode {
   int val;
 
   std::shared_ptr<LVar> lvar;
+
+  std::unique_ptr<AstNode> cond; //if,while,for
+  std::unique_ptr<AstNode> then; //if,while,for
+  std::unique_ptr<AstNode> els; //if
+  std::unique_ptr<AstNode> init; //for
+  std::unique_ptr<AstNode> inc; //for
 };
 extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
 std::list<std::unique_ptr<AstNode>> program();
@@ -100,6 +114,9 @@ enum class HirKind {
   HIR_ASSIGN, //=
   HIR_LVAR, //local variable
   HIR_RETURN,
+  HIR_IF, //if
+  HIR_WHILE, //while
+  HIR_FOR, //for
 };
 
 struct HirNode {
@@ -109,6 +126,12 @@ struct HirNode {
   int val;
 
   std::shared_ptr<LVar> lvar;
+
+  std::unique_ptr<HirNode> cond; //if,while,for
+  std::unique_ptr<HirNode> then; //if,while,for
+  std::unique_ptr<HirNode> els; //if
+  std::unique_ptr<HirNode> init; //for
+  std::unique_ptr<HirNode> inc; //for
 };
 
 std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);
@@ -131,7 +154,17 @@ enum class LirKind: int {
   LIR_LOAD,
   LIR_STORE,
   LIR_RETURN,
+  LIR_BR, //branch
+  LIR_JMP, //jump
   LIR_NULL,
+};
+
+struct LirNode;
+struct BasicBlock {
+  int label;
+  std::list<std::shared_ptr<LirNode>> insts;
+  std::list<std::shared_ptr<BasicBlock>> pred;
+  std::list<std::shared_ptr<BasicBlock>> succ;
 };
 
 struct LirNode {
@@ -148,24 +181,27 @@ struct LirNode {
 
   std::shared_ptr<LVar> lvar;
 
+  std::shared_ptr<BasicBlock> bb1;
+  std::shared_ptr<BasicBlock> bb2;
+
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
-	     a(nullptr), b(nullptr), parent(nullptr),
-	     imm(-1),
+	     a(nullptr), b(nullptr), imm(-1),
 	     vn(-1), rn(-1), def(0), lastUse(0),
 	     lvar(nullptr)
   {}
 };
 
-std::list<std::shared_ptr<LirNode>>
+//extern std::list<std::shared_ptr<BasicBlock>> BBList;
+std::list<std::shared_ptr<BasicBlock>>
 generateLirNode(const std::list<std::unique_ptr<HirNode>>&);
 
 //---------------------------
 //Register Allocation
-void allocateRegister_x86_64(std::list<std::shared_ptr<LirNode>>& lirList);
+void allocateRegister_x86_64(std::list<std::shared_ptr<BasicBlock>>& bbList);
 
 //---------------------------
 //Code Generation
 extern std::string regs[7];
-void gen_x86_64(const std::list<std::shared_ptr<LirNode>>& lirList);
+void gen_x86_64(const std::list<std::shared_ptr<BasicBlock>>& bbList);
 
 #endif
