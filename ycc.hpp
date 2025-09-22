@@ -28,6 +28,8 @@ enum class TokenType {
   NOT, //!
   PAREN_L, //(
   PAREN_R, //)
+  BRACE_L, //{
+  BRACE_R, //}
   SEMICOLON, //;
   IDENT, //identifier
   RETURN, //return
@@ -74,6 +76,7 @@ enum class AstKind {
   AST_IF, //if
   AST_WHILE, //while
   AST_FOR, //for
+  AST_BLOCK, //{}
 };
 
 struct LVar {
@@ -94,6 +97,8 @@ struct AstNode {
   std::unique_ptr<AstNode> els; //if
   std::unique_ptr<AstNode> init; //for
   std::unique_ptr<AstNode> inc; //for
+
+  std::list<std::unique_ptr<AstNode>> body;
 };
 extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
 std::list<std::unique_ptr<AstNode>> program();
@@ -117,6 +122,7 @@ enum class HirKind {
   HIR_IF, //if
   HIR_WHILE, //while
   HIR_FOR, //for
+  HIR_BLOCK, //{}
 };
 
 struct HirNode {
@@ -132,6 +138,8 @@ struct HirNode {
   std::unique_ptr<HirNode> els; //if
   std::unique_ptr<HirNode> init; //for
   std::unique_ptr<HirNode> inc; //for
+
+  std::list<std::unique_ptr<HirNode>> body;
 };
 
 std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);

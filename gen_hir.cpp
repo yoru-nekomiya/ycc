@@ -42,6 +42,12 @@ program(const std::unique_ptr<AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     hirNode->lhs = std::move(lhs);
     return hirNode;
+  } else if(astNode->kind == AstKind::AST_BLOCK){
+    auto hirNode = new_node(HirKind::HIR_BLOCK);
+    for(const auto& n: astNode->body){
+      hirNode->body.push_back(program(n));
+    }
+    return hirNode;
   } else if(astNode->kind == AstKind::AST_IF){
     auto hirNode = new_node(HirKind::HIR_IF);
     auto cond = program(astNode->cond);

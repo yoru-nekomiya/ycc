@@ -213,7 +213,13 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
 
     outBB = _break;
     return nullptr;
-  } 
+  }
+  case HirKind::HIR_BLOCK: {
+    for(const auto& n: hirNode->body){
+      gen_expr_lir(n);
+    }
+    return nullptr;
+  }
   } //switch
   return nullptr;
 }

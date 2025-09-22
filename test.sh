@@ -44,6 +44,9 @@ try 3 'a=4-1; b=a; return b;'
 try 20 'x = 0; y = 0; for(;x < 10; x = x + 1) y = y + 2; return y;'
 try 20 'b = 0; while(b < 20) b = b + 1; return b;'
 try 5 'a = 0; b = 1; if(b > 5) a = 30; else a = 5; return a;'
+try 10 'x=0; y=0; for(; x<10; ){x=x+1; y=y+1;} return y;'
+try 0 'x=-10; y=10; while(x<10){x=x+1; y=y-1;} return x+y;'
+try 7 'x=0; y=1; if(y<10){x=x+2; y=y+4;}else{x=x+1;} return x+y;'
 
 echo 'Tests are passed!'
 

@@ -126,6 +126,16 @@ void tokenize(const std::string& input){
       continue; 
     }
 
+    if(c == '{'){ 
+      new_token(TokenType::BRACE_L);
+      continue; 
+    }
+
+    if(c == '}'){ 
+      new_token(TokenType::BRACE_R);
+      continue; 
+    }
+
     if(c == '<'){
       if(input[end] == '='){
 	end++;

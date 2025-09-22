@@ -51,6 +51,7 @@ std::list<std::unique_ptr<AstNode>> program(){
 }
 
 //stmt = expr ";"
+//       | "{" stmt* "}"
 //       | "return" expr ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
@@ -110,6 +111,15 @@ static std::unique_ptr<AstNode> stmt(){
       expect(TokenType::PAREN_R);
     }
     node->then = stmt();
+    return node;
+  }
+
+  //"{" stmt* "}"
+  if(consume_symbol(TokenType::BRACE_L)){
+    node = new_node(AstKind::AST_BLOCK);
+    while(!consume_symbol(TokenType::BRACE_R)){
+      node->body.push_back(stmt());
+    }
     return node;
   }
   
