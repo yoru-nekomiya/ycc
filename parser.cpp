@@ -230,7 +230,9 @@ static std::unique_ptr<AstNode> unary(){
   return primary();
 }
 
-//primary = "(" expr ")" | ident | num
+//primary = "(" expr ")"
+//          | ident ("(" ")")?
+//          | num
 static std::unique_ptr<AstNode> primary(){
   if(consume_symbol(TokenType::PAREN_L)){
     auto node_expr = expr();
@@ -240,6 +242,15 @@ static std::unique_ptr<AstNode> primary(){
 
   auto token = consume_ident();
   if(token){
+    if(consume_symbol(TokenType::PAREN_L)){
+      //function call
+      auto node = new_node(AstKind::AST_FUNCALL);
+      node->funcName = token->str;
+      expect(TokenType::PAREN_R);
+      return node;
+    }
+
+    //variable
     auto node = new_node(AstKind::AST_LVAR);
     auto lvar = findLvar(token);
     if(lvar){

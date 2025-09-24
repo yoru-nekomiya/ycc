@@ -77,6 +77,7 @@ enum class AstKind {
   AST_WHILE, //while
   AST_FOR, //for
   AST_BLOCK, //{}
+  AST_FUNCALL, //function call
 };
 
 struct LVar {
@@ -99,6 +100,8 @@ struct AstNode {
   std::unique_ptr<AstNode> inc; //for
 
   std::list<std::unique_ptr<AstNode>> body;
+
+  std::string funcName; //function name
 };
 extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
 std::list<std::unique_ptr<AstNode>> program();
@@ -123,6 +126,7 @@ enum class HirKind {
   HIR_WHILE, //while
   HIR_FOR, //for
   HIR_BLOCK, //{}
+  HIR_FUNCALL, //function call
 };
 
 struct HirNode {
@@ -140,6 +144,8 @@ struct HirNode {
   std::unique_ptr<HirNode> inc; //for
 
   std::list<std::unique_ptr<HirNode>> body;
+
+  std::string funcName; //function name
 };
 
 std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);
@@ -164,6 +170,7 @@ enum class LirKind: int {
   LIR_RETURN,
   LIR_BR, //branch
   LIR_JMP, //jump
+  LIR_FUNCALL,
   LIR_NULL,
 };
 
@@ -192,10 +199,14 @@ struct LirNode {
   std::shared_ptr<BasicBlock> bb1;
   std::shared_ptr<BasicBlock> bb2;
 
+  std::string funcName;
+
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1),
 	     vn(-1), rn(-1), def(0), lastUse(0),
-	     lvar(nullptr)
+	     lvar(nullptr),
+	     bb1(nullptr), bb2(nullptr),
+	     funcName("")
   {}
 };
 

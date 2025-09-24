@@ -220,6 +220,12 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     }
     return nullptr;
   }
+  case HirKind::HIR_FUNCALL: {
+    auto lirNode = new_lir(LirKind::LIR_FUNCALL);
+    lirNode->d = new_reg();
+    lirNode->funcName = hirNode->funcName;
+    return lirNode->d;
+  }
   } //switch
   return nullptr;
 }

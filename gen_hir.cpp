@@ -48,6 +48,10 @@ program(const std::unique_ptr<AstNode>& astNode){
       hirNode->body.push_back(program(n));
     }
     return hirNode;
+  } else if(astNode->kind == AstKind::AST_FUNCALL){
+    auto hirNode = new_node(HirKind::HIR_FUNCALL);
+    hirNode->funcName = astNode->funcName;
+    return hirNode;
   } else if(astNode->kind == AstKind::AST_IF){
     auto hirNode = new_node(HirKind::HIR_IF);
     auto cond = program(astNode->cond);

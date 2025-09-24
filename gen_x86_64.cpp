@@ -81,6 +81,15 @@ void gen(const std::shared_ptr<LirNode>& lirNode){
   case LirKind::LIR_JMP:
     std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
     break;
+  case LirKind::LIR_FUNCALL:
+    std::cout << "  push r10" << std::endl
+	      << "  push r11" << std::endl
+	      << "  mov rax, 0" << std::endl
+	      << "  call " << lirNode->funcName << std::endl
+	      << "  pop r11" << std::endl
+	      << "  pop r10" << std::endl
+	      << "  mov " << regs[d] << ", rax" << std::endl;
+    break;
   } //switch
 }
 
@@ -89,9 +98,12 @@ void gen_x86_64(const std::list<std::shared_ptr<BasicBlock>>& bbList){
 	    << ".global main" << std::endl
 	    << "main:" << std::endl;
 
+  const int offset = localVars.size() % 2 == 0 ?
+    localVars.size()*8 + 8 : localVars.size()*8; //16 byte alignment
   std::cout << "  push rbp" << std::endl
 	    << "  mov rbp, rsp" << std::endl
-	    << "  sub rsp, " << localVars.size() << std::endl;
+	    << "  sub rsp, " << offset << std::endl;
+  
   for(const auto& bb: bbList){
     std::cout << ".L" << bb->label << ":" << std::endl;
     for(const auto& lirNode: bb->insts){
