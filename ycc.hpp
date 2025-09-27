@@ -37,6 +37,7 @@ enum class TokenType {
   ELSE, //else
   WHILE, //while
   FOR, //for
+  COMMA, //,
   TK_EOF,
 };
 
@@ -102,6 +103,7 @@ struct AstNode {
   std::list<std::unique_ptr<AstNode>> body;
 
   std::string funcName; //function name
+  std::list<std::unique_ptr<AstNode>> args;
 };
 extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
 std::list<std::unique_ptr<AstNode>> program();
@@ -146,6 +148,7 @@ struct HirNode {
   std::list<std::unique_ptr<HirNode>> body;
 
   std::string funcName; //function name
+  std::list<std::unique_ptr<HirNode>> args;
 };
 
 std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);
@@ -200,13 +203,14 @@ struct LirNode {
   std::shared_ptr<BasicBlock> bb2;
 
   std::string funcName;
+  std::vector<std::shared_ptr<LirNode>> args;
 
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1),
 	     vn(-1), rn(-1), def(0), lastUse(0),
 	     lvar(nullptr),
 	     bb1(nullptr), bb2(nullptr),
-	     funcName("")
+	     funcName(""), args({})
   {}
 };
 
@@ -220,7 +224,7 @@ void allocateRegister_x86_64(std::list<std::shared_ptr<BasicBlock>>& bbList);
 
 //---------------------------
 //Code Generation
-extern std::string regs[7];
+//extern std::string regs[7];
 void gen_x86_64(const std::list<std::shared_ptr<BasicBlock>>& bbList);
 
 #endif

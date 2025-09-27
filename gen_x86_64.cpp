@@ -1,7 +1,8 @@
 #include "ycc.hpp"
 
-std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
-const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
+static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 static void print_cmp(const std::string& cmp,
 		      const std::shared_ptr<LirNode>& lirNode){
@@ -82,6 +83,10 @@ void gen(const std::shared_ptr<LirNode>& lirNode){
     std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
     break;
   case LirKind::LIR_FUNCALL:
+    for(int i = 0; i < lirNode->args.size(); i++){
+      std::cout << "  mov " << argregs[i] << ", "
+		<< regs[lirNode->args[i]->rn] << std::endl;
+    }
     std::cout << "  push r10" << std::endl
 	      << "  push r11" << std::endl
 	      << "  mov rax, 0" << std::endl

@@ -10,7 +10,6 @@ static std::shared_ptr<LirNode>
 new_lir(LirKind opcode){
   auto lirNode = std::make_shared<LirNode>();
   lirNode->opcode = opcode;
-  //lirList.push_back(lirNode);
   outBB->insts.push_back(lirNode);
   return std::move(lirNode);
 }
@@ -221,9 +220,15 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     return nullptr;
   }
   case HirKind::HIR_FUNCALL: {
+    std::vector<std::shared_ptr<LirNode>> args;
+    for(const auto& n: hirNode->args){
+      auto d = gen_expr_lir(n);
+      args.push_back(d);
+    }
     auto lirNode = new_lir(LirKind::LIR_FUNCALL);
     lirNode->d = new_reg();
     lirNode->funcName = hirNode->funcName;
+    lirNode->args = std::move(args);
     return lirNode->d;
   }
   } //switch

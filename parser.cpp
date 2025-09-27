@@ -230,6 +230,22 @@ static std::unique_ptr<AstNode> unary(){
   return primary();
 }
 
+static std::list<std::unique_ptr<AstNode>> funcArgs(){
+  std::list<std::unique_ptr<AstNode>> lirList = {};
+  if(consume_symbol(TokenType::PAREN_R)){
+    //no function args
+    return lirList;
+  }
+  auto node = assign();
+  lirList.push_back(std::move(node));
+  while(consume_symbol(TokenType::COMMA)){
+    node = assign();
+    lirList.push_back(std::move(node));
+  }
+  expect(TokenType::PAREN_R);
+  return lirList;
+}
+
 //primary = "(" expr ")"
 //          | ident ("(" ")")?
 //          | num
@@ -246,7 +262,8 @@ static std::unique_ptr<AstNode> primary(){
       //function call
       auto node = new_node(AstKind::AST_FUNCALL);
       node->funcName = token->str;
-      expect(TokenType::PAREN_R);
+      //expect(TokenType::PAREN_R);
+      node->args = funcArgs();
       return node;
     }
 

@@ -41,6 +41,13 @@ collectReg(std::list<std::shared_ptr<BasicBlock>>& bbList){
       }
       setLastUse(lirNode->a, instCount);
       setLastUse(lirNode->b, instCount);
+
+      if(lirNode->opcode == LirKind::LIR_FUNCALL){
+	for(auto& n: lirNode->args){
+	  setLastUse(n, instCount);
+	}
+      }
+      
       instCount++;
     }
   }

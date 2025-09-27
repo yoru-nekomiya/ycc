@@ -79,7 +79,7 @@ static TokenType starts_keyword(const std::string& str){
 }
 
 
-void tokenize(const std::string& input){                           
+void tokenize(const std::string& input){ 
   std::size_t end = 0;
   
   while(end < input.size()){ 
@@ -92,7 +92,7 @@ void tokenize(const std::string& input){
     
     if(std::isdigit(c)){     
       while(std::isdigit(input[end])) ++end;
-      new_token(TokenType::NUM, std::stoi(input.substr(begin, end-begin)));                                               
+      new_token(TokenType::NUM, std::stoi(input.substr(begin, end-begin)));
       continue;      
     }
     
@@ -178,6 +178,11 @@ void tokenize(const std::string& input){
 
     if(c == ';'){
       new_token(TokenType::SEMICOLON);
+      continue; 
+    }
+
+    if(c == ','){
+      new_token(TokenType::COMMA);
       continue; 
     }
     
