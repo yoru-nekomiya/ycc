@@ -2,62 +2,66 @@
 
 const int num_reg = 7;
 
-static void convertThreeAddress2Two(std::list<std::shared_ptr<BasicBlock>>& bbList){
+static void convertThreeAddress2Two(std::unique_ptr<myLIR::Program>& prog){
   //d = a op b; --> d = a; d = d op b;
-  for(auto& bb: bbList){
-    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
-      if(!(*iter)->d || !(*iter)->a){
-	continue;
-      }
-      auto movNode = std::make_shared<LirNode>();
-      movNode->opcode = LirKind::LIR_MOV;
-      movNode->d = (*iter)->d;
-      movNode->b = (*iter)->a;
-      
-      (*iter)->a = (*iter)->d;
-      iter = bb->insts.insert(iter, std::move(movNode));
-      //Now, iter points movNode, so increment iter
-      iter++;
-    } //for iter
-  } //for bb
+  for(auto& fn: prog->fns){
+    for(auto& bb: fn->bbs){
+      for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
+	if(!(*iter)->d || !(*iter)->a){
+	  continue;
+	}
+	auto movNode = std::make_shared<myLIR::LirNode>();
+	movNode->opcode = myLIR::LirKind::LIR_MOV;
+	movNode->d = (*iter)->d;
+	movNode->b = (*iter)->a;
+	
+	(*iter)->a = (*iter)->d;
+	iter = bb->insts.insert(iter, std::move(movNode));
+	//Now, iter points movNode, so increment iter
+	iter++;
+      } //for iter
+    } //for bbs
+  } //for fn
 }
 
-static void setLastUse(std::shared_ptr<LirNode>& lirNode,
+static void setLastUse(std::shared_ptr<myLIR::LirNode>& lirNode,
 		       int c){
   if(lirNode && lirNode->lastUse < c){
     lirNode->lastUse = c;
   }
 }
 
-static std::list<std::shared_ptr<LirNode>>
-collectReg(std::list<std::shared_ptr<BasicBlock>>& bbList){
-  std::list<std::shared_ptr<LirNode>> listReg;
+static std::list<std::shared_ptr<myLIR::LirNode>>
+collectReg(std::unique_ptr<myLIR::Program>& prog){
+  std::list<std::shared_ptr<myLIR::LirNode>> listReg;
   int instCount = 1;
-  for(auto& bb: bbList){
-    for(auto& lirNode: bb->insts){
-      if(lirNode->d && !lirNode->d->def){
-	lirNode->d->def = instCount;
-	listReg.push_back(lirNode->d);
-      }
-      setLastUse(lirNode->a, instCount);
-      setLastUse(lirNode->b, instCount);
-
-      if(lirNode->opcode == LirKind::LIR_FUNCALL){
-	for(auto& n: lirNode->args){
-	  setLastUse(n, instCount);
+  for(auto& fn: prog->fns){
+    for(auto& bb: fn->bbs){
+      for(auto& lirNode: bb->insts){
+	if(lirNode->d && !lirNode->d->def){
+	  lirNode->d->def = instCount;
+	  listReg.push_back(lirNode->d);
 	}
+	setLastUse(lirNode->a, instCount);
+	setLastUse(lirNode->b, instCount);
+	
+	if(lirNode->opcode == myLIR::LirKind::LIR_FUNCALL){
+	  for(auto& n: lirNode->args){
+	    setLastUse(n, instCount);
+	  }
+	}
+	
+	instCount++;
       }
-      
-      instCount++;
-    }
-  }
+    } //for bb
+  } //for fn
   return listReg;
 }
 
-static std::unordered_map<int, std::shared_ptr<LirNode>> used;
+static std::unordered_map<int, std::shared_ptr<myLIR::LirNode>> used;
 
-static void allocate(std::list<std::shared_ptr<BasicBlock>>& bbList){
-  const auto listReg = collectReg(bbList);
+static void allocate(std::unique_ptr<myLIR::Program>& prog){
+  const auto listReg = collectReg(prog);
 
   for(int i = 0; i < num_reg; i++){
     used[i] = nullptr;
@@ -82,7 +86,7 @@ static void allocate(std::list<std::shared_ptr<BasicBlock>>& bbList){
   } //for
 }
 
-void allocateRegister_x86_64(std::list<std::shared_ptr<BasicBlock>>& bbList){
-  convertThreeAddress2Two(bbList);
-  allocate(bbList);
+void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
+  convertThreeAddress2Two(prog);
+  allocate(prog);
 }

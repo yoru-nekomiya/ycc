@@ -1,5 +1,8 @@
 #include "ycc.hpp"
 
+namespace myTokenizer {
+  std::queue<std::unique_ptr<Token>> tokens = {};
+  
 void expect(TokenType tk_type){
   auto& token = tokens.front();
   if(token->tokenType != tk_type){
@@ -19,7 +22,18 @@ int expect_number(){
   const int retVal = token->value;
   tokens.pop();
   return retVal;
-} 
+}
+
+std::string expect_ident(){
+  auto& token = tokens.front();
+  if(token->tokenType != TokenType::IDENT){
+    std::cerr << "not an identifier" << std::endl;
+    exit(1);
+  }
+  const auto str = token->str;
+  tokens.pop();
+  return str;
+}
 
 bool consume_symbol(TokenType tk_type){
   auto& token = tokens.front();
@@ -208,3 +222,4 @@ void tokenize(const std::string& input){
   } //while()
   new_token(TokenType::TK_EOF);
 } //tokenize()
+} //namespace myTokenizer

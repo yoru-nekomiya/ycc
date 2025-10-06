@@ -12,6 +12,7 @@
 
 //--------------------
 //Tokenizer
+namespace myTokenizer {
 enum class TokenType {
   NUM, //number
   PLUS, //+
@@ -54,13 +55,16 @@ extern std::queue<std::unique_ptr<Token>> tokens;
 
 void expect(TokenType tk_type);
 int expect_number();
+std::string expect_ident();
 bool consume_symbol(TokenType tk_type);
 std::unique_ptr<Token> consume_ident();
 bool at_eof();
 void tokenize(const std::string& input);
+} //namespace myTokenizer
 
 //-------------------
 //Parser
+namespace myParser {
 enum class AstKind {
   AST_NUM,
   AST_ADD,
@@ -105,12 +109,25 @@ struct AstNode {
   std::string funcName; //function name
   std::list<std::unique_ptr<AstNode>> args;
 };
-extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
-std::list<std::unique_ptr<AstNode>> program();
 
+struct Function {
+  std::string name;
+  std::list<std::shared_ptr<LVar>> params;
+  std::list<std::unique_ptr<AstNode>> body;
+  std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
+};
+
+struct Program {
+  std::list<std::unique_ptr<Function>> fns;
+};
+
+extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
+std::unique_ptr<Program> program();
+} //namespace myParser
 
 //---------------------------
 //HIR
+namespace myHIR {
 enum class HirKind {
   HIR_IMM,
   HIR_ADD,
@@ -137,7 +154,7 @@ struct HirNode {
   std::unique_ptr<HirNode> rhs;
   int val;
 
-  std::shared_ptr<LVar> lvar;
+  std::shared_ptr<myParser::LVar> lvar;
 
   std::unique_ptr<HirNode> cond; //if,while,for
   std::unique_ptr<HirNode> then; //if,while,for
@@ -151,11 +168,24 @@ struct HirNode {
   std::list<std::unique_ptr<HirNode>> args;
 };
 
-std::list<std::unique_ptr<HirNode>> generateHirNode(const std::list<std::unique_ptr<AstNode>>&);
-  
+  struct Function {
+    std::string name;
+    std::list<std::shared_ptr<myParser::LVar>> params;
+    std::list<std::unique_ptr<HirNode>> body;
+    std::unordered_map<std::string, std::shared_ptr<myParser::LVar>> localVars;
+  };
+
+  struct Program {
+    std::list<std::unique_ptr<Function>> fns;
+  };
+
+std::unique_ptr<Program>
+  generateHirNode(const std::unique_ptr<myParser::Program>&);
+} //namespace myHIR
 //---------------------------
 //LIR
-enum class LirKind: int {
+namespace myLIR {
+enum class LirKind {
   LIR_REG,
   LIR_MOV,
   LIR_IMM,
@@ -170,6 +200,7 @@ enum class LirKind: int {
   LIR_LVAR,
   LIR_LOAD,
   LIR_STORE,
+  LIR_STORE_ARG,
   LIR_RETURN,
   LIR_BR, //branch
   LIR_JMP, //jump
@@ -197,7 +228,7 @@ struct LirNode {
   int def;
   int lastUse;
 
-  std::shared_ptr<LVar> lvar;
+  std::shared_ptr<myParser::LVar> lvar;
 
   std::shared_ptr<BasicBlock> bb1;
   std::shared_ptr<BasicBlock> bb2;
@@ -214,17 +245,28 @@ struct LirNode {
   {}
 };
 
-//extern std::list<std::shared_ptr<BasicBlock>> BBList;
-std::list<std::shared_ptr<BasicBlock>>
-generateLirNode(const std::list<std::unique_ptr<HirNode>>&);
+  struct Function {
+    std::string name;
+    std::list<std::shared_ptr<myParser::LVar>> params;
+    std::unordered_map<std::string, std::shared_ptr<myParser::LVar>> localVars;
+    
+    std::list<std::shared_ptr<BasicBlock>> bbs;
+  };
+
+  struct Program {
+    std::list<std::shared_ptr<Function>> fns;
+  };
+
+std::unique_ptr<Program>
+generateLirNode(const std::unique_ptr<myHIR::Program>&);
+} //namespace myLIR
 
 //---------------------------
 //Register Allocation
-void allocateRegister_x86_64(std::list<std::shared_ptr<BasicBlock>>& bbList);
+void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>&);
 
 //---------------------------
 //Code Generation
-//extern std::string regs[7];
-void gen_x86_64(const std::list<std::shared_ptr<BasicBlock>>& bbList);
+void gen_x86_64(const std::unique_ptr<myLIR::Program>&);
 
 #endif

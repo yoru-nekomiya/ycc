@@ -1,10 +1,10 @@
 #include "ycc.hpp"
 
-static std::list<std::shared_ptr<LirNode>> lirList = {};
-static int nreg = 1; //represents a virtual register number
-static std::shared_ptr<BasicBlock> outBB = nullptr;
-static int label = 0;
-static std::list<std::shared_ptr<BasicBlock>> BBList = {};
+namespace myLIR {
+  static int nreg = 1; //represents a virtual register number
+  static std::shared_ptr<Function> func = nullptr;
+  static std::shared_ptr<BasicBlock> outBB = nullptr;
+  static int label = 0;
 
 static std::shared_ptr<LirNode>
 new_lir(LirKind opcode){
@@ -56,7 +56,8 @@ static std::shared_ptr<BasicBlock>
 new_bb(){
   auto bb = std::make_shared<BasicBlock>();
   bb->label = label++;
-  BBList.push_back(bb);
+  //BBList.push_back(bb);
+  func->bbs.push_back(bb);
   return bb;
 }
 
@@ -86,7 +87,7 @@ jmp(const std::shared_ptr<BasicBlock>& bb){
   return lirNode;
 }
 
-static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<HirNode>& hirNode){
+static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   auto lirNode = new_lir(LirKind::LIR_LVAR);
   auto d = new_reg(hirNode->lvar->name);
   lirNode->vn = d->vn;
@@ -95,11 +96,11 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<HirNode>& hir
   return lirNode->d;
 }
 
-std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<HirNode>& hirNode);
+std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode);
 
 static std::shared_ptr<LirNode>
 gen_binop_lir(LirKind opcode,
-	      const std::unique_ptr<HirNode>& hirNode){
+	      const std::unique_ptr<myHIR::HirNode>& hirNode){
   auto d = new_reg();
   auto a = gen_expr_lir(hirNode->lhs);
   auto b = gen_expr_lir(hirNode->rhs);
@@ -108,46 +109,46 @@ gen_binop_lir(LirKind opcode,
 }
 
 std::shared_ptr<LirNode>
-gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
+gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   switch(hirNode->kind){
-  case HirKind::HIR_IMM:
+  case myHIR::HirKind::HIR_IMM:
     return new_imm(hirNode->val);
-  case HirKind::HIR_ADD:
+  case myHIR::HirKind::HIR_ADD:
     return gen_binop_lir(LirKind::LIR_ADD, hirNode);
-  case HirKind::HIR_SUB:
+  case myHIR::HirKind::HIR_SUB:
     return gen_binop_lir(LirKind::LIR_SUB, hirNode);
-  case HirKind::HIR_MUL:
+  case myHIR::HirKind::HIR_MUL:
     return gen_binop_lir(LirKind::LIR_MUL, hirNode);
-  case HirKind::HIR_DIV:
+  case myHIR::HirKind::HIR_DIV:
     return gen_binop_lir(LirKind::LIR_DIV, hirNode);
-  case HirKind::HIR_LT:
+  case myHIR::HirKind::HIR_LT:
     return gen_binop_lir(LirKind::LIR_LT, hirNode);
-  case HirKind::HIR_LE:
+  case myHIR::HirKind::HIR_LE:
     return gen_binop_lir(LirKind::LIR_LE, hirNode);
-  case HirKind::HIR_EQ:
+  case myHIR::HirKind::HIR_EQ:
     return gen_binop_lir(LirKind::LIR_EQ, hirNode);
-  case HirKind::HIR_NE:
+  case myHIR::HirKind::HIR_NE:
     return gen_binop_lir(LirKind::LIR_NE, hirNode);
-  case HirKind::HIR_LVAR: {
+  case myHIR::HirKind::HIR_LVAR: {
     auto reg = new_reg(hirNode->lvar->name);
     auto node_lval = gen_lval_lir(hirNode);
     auto lirNode = load(reg, node_lval);
     return lirNode;
   }
-  case HirKind::HIR_ASSIGN: {
+  case myHIR::HirKind::HIR_ASSIGN: {
     auto a = gen_lval_lir(hirNode->lhs);
     auto b = gen_expr_lir(hirNode->rhs);
     auto lirNode = emit_lir(LirKind::LIR_STORE, nullptr, a, b);
     return std::move(a);
   }
-  case HirKind::HIR_RETURN: {
+  case myHIR::HirKind::HIR_RETURN: {
     auto a = gen_expr_lir(hirNode->lhs);
     auto lirNode = new_lir(LirKind::LIR_RETURN);
     lirNode->a = a;
     outBB = new_bb();
     return std::move(a);
   }
-  case HirKind::HIR_IF: {
+  case myHIR::HirKind::HIR_IF: {
     std::shared_ptr<BasicBlock> then = new_bb();
     std::shared_ptr<BasicBlock> els = new_bb();
     std::shared_ptr<BasicBlock> last = new_bb();
@@ -168,7 +169,7 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     outBB = last;
     return nullptr;
   }
-  case HirKind::HIR_WHILE: {
+  case myHIR::HirKind::HIR_WHILE: {
     std::shared_ptr<BasicBlock> cond = new_bb();
     std::shared_ptr<BasicBlock> body = new_bb();
     std::shared_ptr<BasicBlock> _break = new_bb();
@@ -184,7 +185,7 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     outBB = _break;
     return nullptr;
   }
-  case HirKind::HIR_FOR: {
+  case myHIR::HirKind::HIR_FOR: {
     std::shared_ptr<BasicBlock> cond = new_bb();
     std::shared_ptr<BasicBlock> body = new_bb();
     std::shared_ptr<BasicBlock> _break = new_bb();
@@ -213,13 +214,13 @@ gen_expr_lir(const std::unique_ptr<HirNode>& hirNode){
     outBB = _break;
     return nullptr;
   }
-  case HirKind::HIR_BLOCK: {
+  case myHIR::HirKind::HIR_BLOCK: {
     for(const auto& n: hirNode->body){
       gen_expr_lir(n);
     }
     return nullptr;
   }
-  case HirKind::HIR_FUNCALL: {
+  case myHIR::HirKind::HIR_FUNCALL: {
     std::vector<std::shared_ptr<LirNode>> args;
     for(const auto& n: hirNode->args){
       auto d = gen_expr_lir(n);
@@ -255,12 +256,37 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
   } //for
 }
 
-std::list<std::shared_ptr<BasicBlock>>
-generateLirNode(const std::list<std::unique_ptr<HirNode>>& hirNodeList){
-  outBB = new_bb();
-  for(const auto& hirNode: hirNodeList){
-    gen_expr_lir(hirNode);
+  static void gen_param(std::shared_ptr<myParser::LVar> param,
+		      unsigned int i){
+  auto lirNode = new_lir(LirKind::LIR_STORE_ARG);
+  lirNode->lvar = param;
+  lirNode->imm = i;
+  return;
+}
+
+std::unique_ptr<Program>
+generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
+  auto progLir = std::make_unique<Program>();
+  for(auto& fn: prog->fns){
+    auto fnLir = std::make_shared<Function>();
+    fnLir->name = fn->name;
+    fnLir->params = fn->params;
+    fnLir->localVars = fn->localVars;
+    
+    func = fnLir;
+    outBB = new_bb();
+
+    unsigned int i = 0;
+    for(const auto& param: fn->params){
+      gen_param(param, i++);
+    }
+    
+    for(const auto& hirNode: fn->body){
+      gen_expr_lir(hirNode);
+    }
+    progLir->fns.push_back(fnLir);
   }
   //dumpLIR(lirList);
-  return std::move(BBList);
+  return progLir;
 }
+} //namespace myLIR
