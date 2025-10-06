@@ -43,7 +43,20 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     hirNode->lhs = std::move(lhs);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_BLOCK){
+  }
+  else if(astNode->kind == myParser::AstKind::AST_DEREF){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_DEREF);
+    hirNode->lhs = std::move(lhs);
+    return hirNode;
+  }
+  else if(astNode->kind == myParser::AstKind::AST_ADDR){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_ADDR);
+    hirNode->lhs = std::move(lhs);
+    return hirNode;
+  }
+  else if(astNode->kind == myParser::AstKind::AST_BLOCK){
     auto hirNode = new_node(HirKind::HIR_BLOCK);
     for(const auto& n: astNode->body){
       hirNode->body.push_back(program(n));
@@ -118,7 +131,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       return new_binary(HirKind::HIR_NE, lhs, rhs);
     case myParser::AstKind::AST_ASSIGN:
       return new_binary(HirKind::HIR_ASSIGN, lhs, rhs);
-    }
+    } //switch
   }
   return nullptr;
 }

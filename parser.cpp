@@ -278,7 +278,7 @@ static std::unique_ptr<AstNode> mul(){
   }
 }
 
-//unary = ("+" | "-")? unary
+//unary = ("+" | "-" | "*" | "&")? unary
 //        | primary
 static std::unique_ptr<AstNode> unary(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
@@ -288,6 +288,16 @@ static std::unique_ptr<AstNode> unary(){
     auto node_unary = unary();
     auto node_zero = new_num(0);
     return new_binary(AstKind::AST_SUB, node_zero, node_unary);
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
+    auto node_deref = new_node(AstKind::AST_DEREF);
+    node_deref->lhs = unary();
+    return node_deref;
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::AND)){
+    auto node_addr = new_node(AstKind::AST_ADDR);
+    node_addr->lhs = unary();
+    return node_addr;
   }
   return primary();
 }

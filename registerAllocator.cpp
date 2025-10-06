@@ -1,5 +1,6 @@
 #include "ycc.hpp"
 
+namespace myRegAlloc {
 const int num_reg = 7;
 
 static void convertThreeAddress2Two(std::unique_ptr<myLIR::Program>& prog){
@@ -90,3 +91,5 @@ void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
   convertThreeAddress2Two(prog);
   allocate(prog);
 }
+
+} //namespace myRegAlloc

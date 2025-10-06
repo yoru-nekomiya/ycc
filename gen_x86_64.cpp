@@ -1,5 +1,6 @@
 #include "ycc.hpp"
 
+namespace myCodeGen {
 static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
 static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
 static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -151,3 +152,5 @@ void gen_x86_64(const std::unique_ptr<myLIR::Program>& prog){
   std::cout << ".intel_syntax noprefix" << std::endl;
   emit_text(prog);
 }
+
+} //namespace myCodeGen

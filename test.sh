@@ -49,6 +49,7 @@ try 0 'main(){x=-10; y=10; while(x<10){x=x+1; y=y-1;} return x+y;}'
 try 7 'main(){x=0; y=1; if(y<10){x=x+2; y=y+4;}else{x=x+1;} return x+y;}'
 try 120 'kaijo(a){ if(a == 0) return 1; b = a * kaijo(a-1); return b;} main(){return kaijo(5);}'
 try 55 'fib(a){if(a == 0) return 0; else if(a == 1) return 1; else return (fib(a-1)+fib(a-2));} main(){return fib(10);}'
+try 100 'main(){a = 100; b = &a; return *b;}'
 
 echo 'Tests are passed!'
 

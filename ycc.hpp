@@ -39,6 +39,7 @@ enum class TokenType {
   WHILE, //while
   FOR, //for
   COMMA, //,
+  AND, //&
   TK_EOF,
 };
 
@@ -83,6 +84,8 @@ enum class AstKind {
   AST_FOR, //for
   AST_BLOCK, //{}
   AST_FUNCALL, //function call
+  AST_DEREF, //*
+  AST_ADDR, //&
 };
 
 struct LVar {
@@ -146,6 +149,8 @@ enum class HirKind {
   HIR_FOR, //for
   HIR_BLOCK, //{}
   HIR_FUNCALL, //function call
+  HIR_DEREF, //*
+  HIR_ADDR, //&
 };
 
 struct HirNode {
@@ -263,10 +268,14 @@ generateLirNode(const std::unique_ptr<myHIR::Program>&);
 
 //---------------------------
 //Register Allocation
+namespace myRegAlloc {
 void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>&);
+}
 
 //---------------------------
 //Code Generation
+namespace myCodeGen {
 void gen_x86_64(const std::unique_ptr<myLIR::Program>&);
+}
 
 #endif

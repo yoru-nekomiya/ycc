@@ -199,6 +199,11 @@ void tokenize(const std::string& input){
       new_token(TokenType::COMMA);
       continue; 
     }
+
+    if(c == '&'){
+      new_token(TokenType::AND);
+      continue; 
+    }
     
     //identifier or keyword
     if(std::isalpha(c) || c == '_'){

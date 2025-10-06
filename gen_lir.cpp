@@ -232,6 +232,14 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     lirNode->args = std::move(args);
     return lirNode->d;
   }
+  case myHIR::HirKind::HIR_DEREF: {
+    auto reg = new_reg();
+    auto lirNode = load(reg, gen_expr_lir(hirNode->lhs));
+    return lirNode;
+  }
+  case myHIR::HirKind::HIR_ADDR: {
+    return gen_lval_lir(hirNode->lhs);
+  }
   } //switch
   return nullptr;
 }

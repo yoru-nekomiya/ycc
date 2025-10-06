@@ -6,7 +6,7 @@ int main(int argc, char* argv[]){
   auto prog = myParser::program();
   auto progHir = myHIR::generateHirNode(prog);
   auto progLir = myLIR::generateLirNode(progHir);
-  allocateRegister_x86_64(progLir);  
-  gen_x86_64(progLir);
+  myRegAlloc::allocateRegister_x86_64(progLir);  
+  myCodeGen::gen_x86_64(progLir);
   return 0;
 }
