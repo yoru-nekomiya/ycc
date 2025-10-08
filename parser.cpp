@@ -9,6 +9,12 @@ std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
   }
   return lvar;
 }
+  std::shared_ptr<LVar> new_lvar(const std::string& name){
+    auto lvar = std::make_shared<LVar>();
+    lvar->name = name;
+    localVars[lvar->name] = lvar;
+    return lvar;
+  }
 
 static std::unique_ptr<AstNode> new_node(AstKind kind){
   auto astNode = std::make_unique<AstNode>();
@@ -32,6 +38,10 @@ static std::unique_ptr<AstNode> new_num(int val){
   return node;
 }
 
+  static bool isTypeName(){
+    return look(myTokenizer::TokenType::INT);
+  }
+
   static std::unique_ptr<Function> function();
 static std::unique_ptr<AstNode> stmt();
 static std::unique_ptr<AstNode> expr();
@@ -45,13 +55,6 @@ static std::unique_ptr<AstNode> primary();
 
 //program = function*
 std::unique_ptr<Program> program(){
-  /*
-  std::list<std::unique_ptr<AstNode>> astNodeList;
-  while(!at_eof()){
-    astNodeList.push_back(stmt());
-  }
-  return astNodeList;
-  */
   std::list<std::unique_ptr<Function>> fns;
   while(!myTokenizer::at_eof()){
     auto fn = function();
@@ -65,19 +68,30 @@ std::unique_ptr<Program> program(){
   prog->fns = std::move(fns);
   return prog;
 }
+  
+  //basetype = int
+  static void basetype(){
+    expect(myTokenizer::TokenType::INT);
+  }
 
+//param = basetype ident
 static std::shared_ptr<LVar> readFuncParam(){
+  basetype();
   auto token = myTokenizer::consume_ident();
   if(token){
+    /*
     auto lvar = std::make_shared<LVar>();
     lvar->name = token->str;
     lvar->offset = (localVars.size()+1) * 8;
     localVars[lvar->name] = lvar;
     return lvar;
+    */
+    return new_lvar(token->str);
   }
   return nullptr;
 }
-
+  
+//params = param ("," param)*
 static std::list<std::shared_ptr<LVar>> readFuncParams(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
     //no params
@@ -92,12 +106,13 @@ static std::list<std::shared_ptr<LVar>> readFuncParams(){
   return params;
 }
 
-//function = ident "(" params? ")" "{" stmt* "}"
+//function = basetype ident "(" params? ")" "{" stmt* "}"
 //params = param ("," param)*
-//param = ident
+//param = basetype ident
 static std::unique_ptr<Function> function(){
   localVars.clear();
 
+  basetype();
   const auto funcName = myTokenizer::expect_ident();
   auto fn = std::make_unique<Function>();
   fn->name = funcName;
@@ -112,12 +127,23 @@ static std::unique_ptr<Function> function(){
   return fn;
 }
 
+//declaration = basetype ident ";"
+  static std::unique_ptr<AstNode> declaration(){
+    basetype();
+    const auto name = myTokenizer::expect_ident();
+    expect(myTokenizer::TokenType::SEMICOLON);
+
+    auto lvar = new_lvar(name);
+    return new_node(AstKind::AST_NULL);
+  }
+
 //stmt = expr ";"
 //       | "{" stmt* "}"
 //       | "return" expr ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
 //       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+//       | declaration
 static std::unique_ptr<AstNode> stmt(){
   std::unique_ptr<AstNode> node;
   
@@ -183,6 +209,11 @@ static std::unique_ptr<AstNode> stmt(){
       node->body.push_back(stmt());
     }
     return node;
+  }
+
+  //declaration
+  if(isTypeName()){
+    return declaration();
   }
   
   //expr ";"
@@ -343,12 +374,16 @@ static std::unique_ptr<AstNode> primary(){
     auto lvar = findLvar(token);
     if(lvar){
       node->lvar = lvar;
-    } else {    
+    } else {
+      /*
       auto lvar = std::make_shared<LVar>();
       lvar->name = token->str;  
       lvar->offset = (localVars.size()+1) * 8;
       node->lvar = lvar;
       localVars[lvar->name] = lvar;
+      */
+      std::cerr << "undefined variable" << std::endl;
+      exit(1);
     }
     return node;
   } //if(token)

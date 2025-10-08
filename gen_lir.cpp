@@ -113,6 +113,8 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   switch(hirNode->kind){
   case myHIR::HirKind::HIR_IMM:
     return new_imm(hirNode->val);
+  case myHIR::HirKind::HIR_NULL:
+    return nullptr;
   case myHIR::HirKind::HIR_ADD:
     return gen_binop_lir(LirKind::LIR_ADD, hirNode);
   case myHIR::HirKind::HIR_SUB:

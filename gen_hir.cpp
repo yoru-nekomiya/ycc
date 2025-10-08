@@ -36,6 +36,8 @@ std::unique_ptr<HirNode>
 program(const std::unique_ptr<myParser::AstNode>& astNode){
   if(astNode->kind == myParser::AstKind::AST_NUM){
     return new_num(astNode);
+  } else if(astNode->kind == myParser::AstKind::AST_NULL){
+    return new_node(HirKind::HIR_NULL);
   } else if(astNode->kind == myParser::AstKind::AST_LVAR){
     return new_lvar(astNode);
   } else if(astNode->kind == myParser::AstKind::AST_RETURN){

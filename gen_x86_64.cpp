@@ -115,12 +115,22 @@ void emit_text(const std::unique_ptr<myLIR::Program>& prog){
 	      << fn->name << ":" << std::endl;
     funcname = fn->name;
 
+    //calculate stack size
+    int offset = 0;
+    for(const auto& [name, lvar]: fn->localVars){
+      offset += 8;
+      lvar->offset = offset;
+    }
+    fn->stackSize = offset % 16 == 0 ? offset + 8 : offset; //16 byte alignment
+
     //prologue
+    /*
     const int offset = fn->localVars.size() % 2 == 0 ?
       fn->localVars.size()*8 + 8 : fn->localVars.size()*8; //16 byte alignment
+    */
     std::cout << "  push rbp" << std::endl
 	      << "  mov rbp, rsp" << std::endl
-	      << "  sub rsp, " << offset << std::endl;
+	      << "  sub rsp, " << fn->stackSize << std::endl;
     std::cout << "  push r12" << std::endl
 	      << "  push r13" << std::endl
 	      << "  push r14" << std::endl

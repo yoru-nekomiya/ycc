@@ -54,6 +54,14 @@ std::unique_ptr<Token> consume_ident(){
   return ret;
 }
 
+  bool look(TokenType tk_type){
+    auto& token = tokens.front();
+    if(token->tokenType != tk_type){
+      return false;
+    }
+    return true;
+  }
+
 static void new_token(TokenType tk_type,
 		      int value = 0,
 		      const std::string& str = ""){
@@ -85,6 +93,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::WHILE;
       case 4:
 	return TokenType::FOR;
+      case 5:
+	return TokenType::INT;
       }
     }
     i++;

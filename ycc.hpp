@@ -40,6 +40,7 @@ enum class TokenType {
   FOR, //for
   COMMA, //,
   AND, //&
+  INT, //int
   TK_EOF,
 };
 
@@ -59,6 +60,7 @@ int expect_number();
 std::string expect_ident();
 bool consume_symbol(TokenType tk_type);
 std::unique_ptr<Token> consume_ident();
+bool look(TokenType tk_type);
 bool at_eof();
 void tokenize(const std::string& input);
 } //namespace myTokenizer
@@ -86,6 +88,7 @@ enum class AstKind {
   AST_FUNCALL, //function call
   AST_DEREF, //*
   AST_ADDR, //&
+  AST_NULL,
 };
 
 struct LVar {
@@ -151,6 +154,7 @@ enum class HirKind {
   HIR_FUNCALL, //function call
   HIR_DEREF, //*
   HIR_ADDR, //&
+  HIR_NULL,
 };
 
 struct HirNode {
@@ -254,7 +258,7 @@ struct LirNode {
     std::string name;
     std::list<std::shared_ptr<myParser::LVar>> params;
     std::unordered_map<std::string, std::shared_ptr<myParser::LVar>> localVars;
-    
+    int stackSize;
     std::list<std::shared_ptr<BasicBlock>> bbs;
   };
 
