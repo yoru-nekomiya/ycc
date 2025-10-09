@@ -1,17 +1,18 @@
 #include "ycc.hpp"
 
 namespace myParser {
-std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
-  std::shared_ptr<LVar> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
-  std::shared_ptr<LVar> lvar = nullptr;
+  static std::unordered_map<std::string, std::shared_ptr<Lunaria::LVar>> localVars;
+  std::shared_ptr<Lunaria::LVar> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
+  std::shared_ptr<Lunaria::LVar> lvar = nullptr;
   if(localVars.contains(token->str)){
     lvar = localVars[token->str];
   }
   return lvar;
 }
-  std::shared_ptr<LVar> new_lvar(const std::string& name){
-    auto lvar = std::make_shared<LVar>();
+  std::shared_ptr<Lunaria::LVar> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
+    auto lvar = std::make_shared<Lunaria::LVar>();
     lvar->name = name;
+    lvar->type = type;
     localVars[lvar->name] = lvar;
     return lvar;
   }
@@ -69,35 +70,33 @@ std::unique_ptr<Program> program(){
   return prog;
 }
   
-  //basetype = int
-  static void basetype(){
+  //basetype = "int" "*"*
+  static std::shared_ptr<Lunaria::Type> basetype(){
     expect(myTokenizer::TokenType::INT);
+    auto type = Lunaria::int_type;
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
+      type = Lunaria::pointer_to(type);
+    }
+    return type;
   }
 
 //param = basetype ident
-static std::shared_ptr<LVar> readFuncParam(){
-  basetype();
-  auto token = myTokenizer::consume_ident();
+static std::shared_ptr<Lunaria::LVar> readFuncParam(){
+  const auto type = basetype();
+  const auto token = myTokenizer::consume_ident();
   if(token){
-    /*
-    auto lvar = std::make_shared<LVar>();
-    lvar->name = token->str;
-    lvar->offset = (localVars.size()+1) * 8;
-    localVars[lvar->name] = lvar;
-    return lvar;
-    */
-    return new_lvar(token->str);
+    return new_lvar(token->str, type);
   }
   return nullptr;
 }
   
 //params = param ("," param)*
-static std::list<std::shared_ptr<LVar>> readFuncParams(){
+static std::list<std::shared_ptr<Lunaria::LVar>> readFuncParams(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
     //no params
-    return std::list<std::shared_ptr<LVar>>();
+    return std::list<std::shared_ptr<Lunaria::LVar>>();
   }
-  std::list<std::shared_ptr<LVar>> params;
+  std::list<std::shared_ptr<Lunaria::LVar>> params;
   params.push_back(readFuncParam());
   while(!myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
     myTokenizer::expect(myTokenizer::TokenType::COMMA);
@@ -112,7 +111,7 @@ static std::list<std::shared_ptr<LVar>> readFuncParams(){
 static std::unique_ptr<Function> function(){
   localVars.clear();
 
-  basetype();
+  const auto type = basetype();
   const auto funcName = myTokenizer::expect_ident();
   auto fn = std::make_unique<Function>();
   fn->name = funcName;
@@ -129,11 +128,11 @@ static std::unique_ptr<Function> function(){
 
 //declaration = basetype ident ";"
   static std::unique_ptr<AstNode> declaration(){
-    basetype();
+    const auto type = basetype();
     const auto name = myTokenizer::expect_ident();
     expect(myTokenizer::TokenType::SEMICOLON);
 
-    auto lvar = new_lvar(name);
+    auto lvar = new_lvar(name, type);
     return new_node(AstKind::AST_NULL);
   }
 
@@ -374,14 +373,7 @@ static std::unique_ptr<AstNode> primary(){
     auto lvar = findLvar(token);
     if(lvar){
       node->lvar = lvar;
-    } else {
-      /*
-      auto lvar = std::make_shared<LVar>();
-      lvar->name = token->str;  
-      lvar->offset = (localVars.size()+1) * 8;
-      node->lvar = lvar;
-      localVars[lvar->name] = lvar;
-      */
+    } else {      
       std::cerr << "undefined variable" << std::endl;
       exit(1);
     }

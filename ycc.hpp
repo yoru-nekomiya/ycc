@@ -10,6 +10,34 @@
 #include <unordered_map>
 #include <vector>
 
+//---------------------------
+//Lunaria Utility
+namespace Lunaria {
+  enum class TypeKind {
+    INT,
+    PTR,
+  };
+
+  struct Type {
+    TypeKind kind;
+    std::shared_ptr<Type> base;
+
+    Type(){}
+    Type(TypeKind k): kind(k){}
+    Type(TypeKind k, const std::shared_ptr<Type>& b)
+      : kind(k), base(b){}
+  };
+
+  extern std::shared_ptr<Type> int_type;
+  std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
+  
+  struct LVar {
+    std::string name;
+    int offset;
+    std::shared_ptr<Type> type;
+  };
+} //namespace Lunaria
+
 //--------------------
 //Tokenizer
 namespace myTokenizer {
@@ -91,18 +119,13 @@ enum class AstKind {
   AST_NULL,
 };
 
-struct LVar {
-  std::string name;
-  int offset;
-};
-
 struct AstNode {
   AstKind kind;
   std::unique_ptr<AstNode> lhs;
   std::unique_ptr<AstNode> rhs;
   int val;
 
-  std::shared_ptr<LVar> lvar;
+  std::shared_ptr<Lunaria::LVar> lvar;
 
   std::unique_ptr<AstNode> cond; //if,while,for
   std::unique_ptr<AstNode> then; //if,while,for
@@ -114,20 +137,21 @@ struct AstNode {
 
   std::string funcName; //function name
   std::list<std::unique_ptr<AstNode>> args;
+
+  std::shared_ptr<Lunaria::Type> type;
 };
 
 struct Function {
   std::string name;
-  std::list<std::shared_ptr<LVar>> params;
+  std::list<std::shared_ptr<Lunaria::LVar>> params;
   std::list<std::unique_ptr<AstNode>> body;
-  std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
+  std::unordered_map<std::string, std::shared_ptr<Lunaria::LVar>> localVars;
 };
 
 struct Program {
   std::list<std::unique_ptr<Function>> fns;
 };
 
-extern std::unordered_map<std::string, std::shared_ptr<LVar>> localVars;
 std::unique_ptr<Program> program();
 } //namespace myParser
 
@@ -163,7 +187,7 @@ struct HirNode {
   std::unique_ptr<HirNode> rhs;
   int val;
 
-  std::shared_ptr<myParser::LVar> lvar;
+  std::shared_ptr<Lunaria::LVar> lvar;
 
   std::unique_ptr<HirNode> cond; //if,while,for
   std::unique_ptr<HirNode> then; //if,while,for
@@ -179,9 +203,9 @@ struct HirNode {
 
   struct Function {
     std::string name;
-    std::list<std::shared_ptr<myParser::LVar>> params;
+    std::list<std::shared_ptr<Lunaria::LVar>> params;
     std::list<std::unique_ptr<HirNode>> body;
-    std::unordered_map<std::string, std::shared_ptr<myParser::LVar>> localVars;
+    std::unordered_map<std::string, std::shared_ptr<Lunaria::LVar>> localVars;
   };
 
   struct Program {
@@ -237,7 +261,7 @@ struct LirNode {
   int def;
   int lastUse;
 
-  std::shared_ptr<myParser::LVar> lvar;
+  std::shared_ptr<Lunaria::LVar> lvar;
 
   std::shared_ptr<BasicBlock> bb1;
   std::shared_ptr<BasicBlock> bb2;
@@ -256,8 +280,8 @@ struct LirNode {
 
   struct Function {
     std::string name;
-    std::list<std::shared_ptr<myParser::LVar>> params;
-    std::unordered_map<std::string, std::shared_ptr<myParser::LVar>> localVars;
+    std::list<std::shared_ptr<Lunaria::LVar>> params;
+    std::unordered_map<std::string, std::shared_ptr<Lunaria::LVar>> localVars;
     int stackSize;
     std::list<std::shared_ptr<BasicBlock>> bbs;
   };

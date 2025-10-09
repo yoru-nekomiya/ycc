@@ -266,7 +266,7 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
   } //for
 }
 
-  static void gen_param(std::shared_ptr<myParser::LVar> param,
+  static void gen_param(std::shared_ptr<Lunaria::LVar> param,
 		      unsigned int i){
   auto lirNode = new_lir(LirKind::LIR_STORE_ARG);
   lirNode->lvar = param;

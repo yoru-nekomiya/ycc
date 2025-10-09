@@ -49,7 +49,8 @@ try 0 'int main(){int x; x=-10; int y; y=10; while(x<10){x=x+1; y=y-1;} return x
 try 7 'int main(){int x; x=0; int y; y=1; if(y<10){x=x+2; y=y+4;}else{x=x+1;} return x+y;}'
 try 120 'int kaijo(int a){ if(a == 0) return 1; int b; b = a * kaijo(a-1); return b;} int main(){return kaijo(5);}'
 try 55 'int fib(int a){if(a == 0) return 0; else if(a == 1) return 1; else return (fib(a-1)+fib(a-2));} int main(){return fib(10);}'
-try 100 'int main(){int a; a = 100; int b; b = &a; return *b;}'
+try 100 'int main(){int a; a = 100; int* b; b = &a; return *b;}'
+try 100 'int main(){int a; a = 100; int* b; b = &a; int** c; c = &b; return **c;}'
 
 echo 'Tests are passed!'
 
