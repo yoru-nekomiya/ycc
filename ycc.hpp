@@ -21,15 +21,21 @@ namespace Lunaria {
   struct Type {
     TypeKind kind;
     std::shared_ptr<Type> base;
-
+    int size;
+    int align;
+    
     Type(){}
     Type(TypeKind k): kind(k){}
     Type(TypeKind k, const std::shared_ptr<Type>& b)
       : kind(k), base(b){}
+    Type(TypeKind k, int sz, int al)
+      : kind(k), base(nullptr), size(sz), align(al){}
   };
 
   extern std::shared_ptr<Type> int_type;
+  bool is_integer(const std::shared_ptr<Type>& type);
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
+  int align_to(int n, int align);
   
   struct LVar {
     std::string name;
@@ -69,6 +75,7 @@ enum class TokenType {
   COMMA, //,
   AND, //&
   INT, //int
+  SIZEOF, //sizeof
   TK_EOF,
 };
 
@@ -116,6 +123,9 @@ enum class AstKind {
   AST_FUNCALL, //function call
   AST_DEREF, //*
   AST_ADDR, //&
+  AST_PTR_ADD,
+  AST_PTR_SUB,
+  AST_PTR_DIFF,
   AST_NULL,
 };
 
@@ -153,6 +163,7 @@ struct Program {
 };
 
 std::unique_ptr<Program> program();
+  void add_type(std::unique_ptr<AstNode>& node);
 } //namespace myParser
 
 //---------------------------
@@ -178,6 +189,9 @@ enum class HirKind {
   HIR_FUNCALL, //function call
   HIR_DEREF, //*
   HIR_ADDR, //&
+  HIR_PTR_ADD,
+  HIR_PTR_SUB,
+  HIR_PTR_DIFF,
   HIR_NULL,
 };
 
@@ -199,6 +213,8 @@ struct HirNode {
 
   std::string funcName; //function name
   std::list<std::unique_ptr<HirNode>> args;
+
+  std::shared_ptr<Lunaria::Type> type;
 };
 
   struct Function {
@@ -238,6 +254,9 @@ enum class LirKind {
   LIR_BR, //branch
   LIR_JMP, //jump
   LIR_FUNCALL,
+  LIR_PTR_ADD,
+  LIR_PTR_SUB,
+  LIR_PTR_DIFF,
   LIR_NULL,
 };
 
@@ -269,12 +288,16 @@ struct LirNode {
   std::string funcName;
   std::vector<std::shared_ptr<LirNode>> args;
 
+  int type_size;
+  int type_base_size;
+
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1),
 	     vn(-1), rn(-1), def(0), lastUse(0),
 	     lvar(nullptr),
 	     bb1(nullptr), bb2(nullptr),
-	     funcName(""), args({})
+	     funcName(""), args({}),
+	     type_size(0), type_base_size(0)
   {}
 };
 

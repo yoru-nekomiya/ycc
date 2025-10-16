@@ -63,9 +63,11 @@ new_bb(){
 
 static std::shared_ptr<LirNode>
 load(const std::shared_ptr<LirNode>& dst,
-     const std::shared_ptr<LirNode>& src){
+     const std::shared_ptr<LirNode>& src,
+     int type_size){
   auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
   node->lvar = src->lvar;
+  node->type_size = type_size;
   return node->d;
 }
 
@@ -105,6 +107,7 @@ gen_binop_lir(LirKind opcode,
   auto a = gen_expr_lir(hirNode->lhs);
   auto b = gen_expr_lir(hirNode->rhs);
   auto lirNode = emit_lir(opcode, d, a, b);
+  lirNode->type_base_size = (hirNode->type->base) ? hirNode->type->base->size : 0;
   return lirNode->d;
 }
 
@@ -131,16 +134,23 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_EQ, hirNode);
   case myHIR::HirKind::HIR_NE:
     return gen_binop_lir(LirKind::LIR_NE, hirNode);
+  case myHIR::HirKind::HIR_PTR_ADD:
+    return gen_binop_lir(LirKind::LIR_PTR_ADD, hirNode);
+  case myHIR::HirKind::HIR_PTR_SUB:
+    return gen_binop_lir(LirKind::LIR_PTR_SUB, hirNode);
+  case myHIR::HirKind::HIR_PTR_DIFF:
+    return gen_binop_lir(LirKind::LIR_PTR_DIFF, hirNode);
   case myHIR::HirKind::HIR_LVAR: {
     auto reg = new_reg(hirNode->lvar->name);
     auto node_lval = gen_lval_lir(hirNode);
-    auto lirNode = load(reg, node_lval);
+    auto lirNode = load(reg, node_lval, hirNode->type->size);
     return lirNode;
   }
   case myHIR::HirKind::HIR_ASSIGN: {
     auto a = gen_lval_lir(hirNode->lhs);
     auto b = gen_expr_lir(hirNode->rhs);
     auto lirNode = emit_lir(LirKind::LIR_STORE, nullptr, a, b);
+    lirNode->type_size = hirNode->type->size;
     return std::move(a);
   }
   case myHIR::HirKind::HIR_RETURN: {
@@ -236,7 +246,7 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   }
   case myHIR::HirKind::HIR_DEREF: {
     auto reg = new_reg();
-    auto lirNode = load(reg, gen_expr_lir(hirNode->lhs));
+    auto lirNode = load(reg, gen_expr_lir(hirNode->lhs), hirNode->type->size);
     return lirNode;
   }
   case myHIR::HirKind::HIR_ADDR: {

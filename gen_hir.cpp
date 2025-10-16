@@ -22,12 +22,14 @@ static std::unique_ptr<HirNode>
 new_num(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = astNode->val;
+  hirNode->type = Lunaria::int_type;
   return hirNode;
 }
 
 static std::unique_ptr<HirNode>
 new_lvar(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_LVAR);
+  hirNode->type = astNode->lvar->type;
   hirNode->lvar = std::move(astNode->lvar);
   return hirNode;
 }
@@ -49,12 +51,18 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
   else if(astNode->kind == myParser::AstKind::AST_DEREF){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_DEREF);
+    if(!lhs->type->base){
+      std::cerr << "invalid pointer reference" << std::endl;
+      exit(1);
+    }
+    hirNode->type = lhs->type->base;
     hirNode->lhs = std::move(lhs);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_ADDR){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_ADDR);
+    hirNode->type = Lunaria::pointer_to(lhs->type);
     hirNode->lhs = std::move(lhs);
     return hirNode;
   }
@@ -115,24 +123,66 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);
     switch(astNode->kind){
-    case myParser::AstKind::AST_ADD:
-      return new_binary(HirKind::HIR_ADD, lhs, rhs);
-    case myParser::AstKind::AST_SUB:
-      return new_binary(HirKind::HIR_SUB, lhs, rhs);
-    case myParser::AstKind::AST_MUL:
-      return new_binary(HirKind::HIR_MUL, lhs, rhs);
-    case myParser::AstKind::AST_DIV:
-      return new_binary(HirKind::HIR_DIV, lhs, rhs);
-    case myParser::AstKind::AST_LT:
-      return new_binary(HirKind::HIR_LT, lhs, rhs);
-    case myParser::AstKind::AST_LE:
-      return new_binary(HirKind::HIR_LE, lhs, rhs);
-    case myParser::AstKind::AST_EQ:
-      return new_binary(HirKind::HIR_EQ, lhs, rhs);
-    case myParser::AstKind::AST_NE:
-      return new_binary(HirKind::HIR_NE, lhs, rhs);
-    case myParser::AstKind::AST_ASSIGN:
-      return new_binary(HirKind::HIR_ASSIGN, lhs, rhs);
+    case myParser::AstKind::AST_ADD: {
+      auto node = new_binary(HirKind::HIR_ADD, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_SUB: {
+      auto node = new_binary(HirKind::HIR_SUB, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_MUL: {
+      auto node = new_binary(HirKind::HIR_MUL, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_DIV: {
+      auto node = new_binary(HirKind::HIR_DIV, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_LT: {
+      auto node = new_binary(HirKind::HIR_LT, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_LE: {
+      auto node = new_binary(HirKind::HIR_LE, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_EQ: {
+      auto node = new_binary(HirKind::HIR_EQ, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_NE: {
+      auto node = new_binary(HirKind::HIR_NE, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_ASSIGN: {
+      auto node = new_binary(HirKind::HIR_ASSIGN, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_PTR_ADD: {
+      auto node = new_binary(HirKind::HIR_PTR_ADD, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_PTR_SUB: {
+      auto node = new_binary(HirKind::HIR_PTR_SUB, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_PTR_DIFF: {
+      auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
     } //switch
   }
   return nullptr;

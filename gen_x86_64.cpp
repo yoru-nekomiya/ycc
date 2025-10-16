@@ -104,6 +104,21 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << "  pop r10" << std::endl
 	      << "  mov " << regs[d] << ", rax" << std::endl;
     break;
+  case myLIR::LirKind::LIR_PTR_ADD:
+    std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+    std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
+    break;
+  case myLIR::LirKind::LIR_PTR_SUB:
+    std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+    std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    break;
+  case myLIR::LirKind::LIR_PTR_DIFF:
+    std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    std::cout << "  cqo" << std::endl;
+    std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+    std::cout << "  idiv " << regs[b] << std::endl;
+    std::cout << "  mov " << regs[d] << ", rax" << std::endl;
+    break;
   } //switch
 }
 

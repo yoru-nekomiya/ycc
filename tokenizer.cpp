@@ -76,9 +76,9 @@ bool at_eof(){
 static TokenType starts_keyword(const std::string& str){
   const std::vector<std::string> keyword =
     {"return","if","else","while","for",
-     "int","char","short","long","void",
-     "break","continue","switch","case","goto",
-     "default","do"};  
+     "int","sizeof","char","short","long",
+     "void","break","continue","switch","case",
+     "goto","default","do"};  
   int i = 0;
   for(const auto& kw: keyword){
     if(str == kw){
@@ -95,6 +95,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::FOR;
       case 5:
 	return TokenType::INT;
+      case 6:
+	return TokenType::SIZEOF;
       }
     }
     i++;

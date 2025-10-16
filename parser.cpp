@@ -45,6 +45,7 @@ static std::unique_ptr<AstNode> new_num(int val){
 
   static std::unique_ptr<Function> function();
 static std::unique_ptr<AstNode> stmt();
+static std::unique_ptr<AstNode> stmt2();
 static std::unique_ptr<AstNode> expr();
 static std::unique_ptr<AstNode> assign();
 static std::unique_ptr<AstNode> equality();
@@ -136,14 +137,21 @@ static std::unique_ptr<Function> function(){
     return new_node(AstKind::AST_NULL);
   }
 
-//stmt = expr ";"
+  //stmt = stmt2
+  static std::unique_ptr<AstNode> stmt(){
+    auto node = stmt2();
+    add_type(node);
+    return node;
+  }
+  
+//stmt2 = expr ";"
 //       | "{" stmt* "}"
 //       | "return" expr ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
 //       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //       | declaration
-static std::unique_ptr<AstNode> stmt(){
+static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
   
   //"return" expr ";"
@@ -274,6 +282,46 @@ static std::unique_ptr<AstNode> relational(){
   }
 }
 
+  static std::unique_ptr<AstNode> new_add(std::unique_ptr<AstNode>& lhs, std::unique_ptr<AstNode>& rhs){
+    add_type(lhs);
+    add_type(rhs);
+    
+    if(is_integer(lhs->type) && is_integer(rhs->type)){
+      //lhs:int rhs:int
+      return new_binary(AstKind::AST_ADD, lhs, rhs);
+    }
+    if(lhs->type->base && is_integer(rhs->type)){
+      //lhs:pointer rhs:int
+      return new_binary(AstKind::AST_PTR_ADD, lhs, rhs);
+    }
+    if(is_integer(lhs->type) && rhs->type->base){
+      //lhs:int rhs:pointer
+      return new_binary(AstKind::AST_PTR_ADD, rhs, lhs);
+    }
+    std::cerr << "invalid operands" << std::endl;
+    exit(1);
+  }
+
+  static std::unique_ptr<AstNode> new_sub(std::unique_ptr<AstNode>& lhs, std::unique_ptr<AstNode>& rhs){
+    add_type(lhs);
+    add_type(rhs);
+    
+    if(is_integer(lhs->type) && is_integer(rhs->type)){
+      //lhs:int rhs:int
+      return new_binary(AstKind::AST_SUB, lhs, rhs);
+    }
+    if(lhs->type->base && is_integer(rhs->type)){
+      //lhs:pointer rhs:int
+      return new_binary(AstKind::AST_PTR_SUB, lhs, rhs);
+    }
+    if(lhs->type->base && rhs->type->base){
+      //lhs:pointer rhs:pointer
+      return new_binary(AstKind::AST_PTR_DIFF, rhs, lhs);
+    }
+    std::cerr << "invalid operands" << std::endl;
+    exit(1);
+  }
+  
 //add = mul ("+" mul | "-" mul)*
 static std::unique_ptr<AstNode> add(){
   auto node = mul();
@@ -281,10 +329,12 @@ static std::unique_ptr<AstNode> add(){
   while(1){
     if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
       auto node_mul = mul();
-      node = new_binary(AstKind::AST_ADD, node, node_mul);
+      //node = new_binary(AstKind::AST_ADD, node, node_mul);
+      node = new_add(node, node_mul);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUS)){
       auto node_mul = mul();
-      node = new_binary(AstKind::AST_SUB, node, node_mul);
+      //node = new_binary(AstKind::AST_SUB, node, node_mul);
+      node = new_sub(node, node_mul);
     } else {
       return node;
     }
@@ -309,6 +359,7 @@ static std::unique_ptr<AstNode> mul(){
 }
 
 //unary = ("+" | "-" | "*" | "&")? unary
+//        | "sizeof" unary
 //        | primary
 static std::unique_ptr<AstNode> unary(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
@@ -328,6 +379,11 @@ static std::unique_ptr<AstNode> unary(){
     auto node_addr = new_node(AstKind::AST_ADDR);
     node_addr->lhs = unary();
     return node_addr;
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::SIZEOF)){
+    auto node_unary = unary();
+    add_type(node_unary);
+    return new_num(node_unary->type->size);
   }
   return primary();
 }
