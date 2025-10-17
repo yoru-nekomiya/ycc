@@ -281,6 +281,7 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
   auto lirNode = new_lir(LirKind::LIR_STORE_ARG);
   lirNode->lvar = param;
   lirNode->imm = i;
+  lirNode->type_size = param->type->size;
   return;
 }
 

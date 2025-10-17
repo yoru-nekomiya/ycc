@@ -1,11 +1,38 @@
 #include "ycc.hpp"
 
 namespace myCodeGen {
-static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
-static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
-static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+  static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"}; 
+  static const std::string regs32[] = {"r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
+  static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
+
+  static const std::string argregs8[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"}; 
+  static const std::string argregs32[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"}; 
+  static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+  
 static std::string funcname = "";
 
+  static std::string reg(int r, int size){
+    if(size == 1){
+      return regs8[r];
+    }
+    if(size == 4){
+      return regs32[r];
+    }
+    assert(size == 8);
+    return regs[r];
+  }
+
+  static std::string argreg(int r, int size){
+    if(size == 1){
+      return argregs8[r];
+    }
+    if(size == 4){
+      return argregs32[r];
+    }
+    assert(size == 8);
+    return argregs[r];
+  }
+  
 static void print_cmp(const std::string& cmp,
 		      const std::shared_ptr<myLIR::LirNode>& lirNode){
   //print instructions for LT, LE, EQ, NE
@@ -37,11 +64,14 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
     break;
   case myLIR::LirKind::LIR_MUL:
-    
+    /*
     std::cout << "  mov rax, " << regs[b] << std::endl;
     std::cout << "  imul " << regs[d] << std::endl;
-    std::cout << "  mov " << regs[d] << ", rax" << std::endl;
-    //std::cout << "  imul " << regs[d] << ", " << regs[b] << std::endl;
+    std::cout << "  mov " << regs[d] << ", rax" << std::endl;*/
+    //for 64 bit
+    //In this style, discard the upper 64 bits of the result
+    std::cout << "  imul " << regs[d] << ", " << regs[b] << std::endl;
+    //TODO: for 128 bit
     break;
   case myLIR::LirKind::LIR_DIV:
     std::cout << "  mov rax, " << regs[d] << std::endl;
@@ -65,14 +95,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  lea " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]" << std::endl;
     break;
   case myLIR::LirKind::LIR_LOAD:
-    std::cout << "  mov " << regs[d] << ", [" << regs[b] << "]" << std::endl;
+    std::cout << "  mov " << reg(d, lirNode->type_size) << ", [" << regs[b] << "]" << std::endl;
     break;
   case myLIR::LirKind::LIR_STORE:
-    std::cout << "  mov [" << regs[a] << "], " << regs[b] << std::endl;
+    std::cout << "  mov [" << regs[a] << "], " << reg(b, lirNode->type_size) << std::endl;
     break;
   case myLIR::LirKind::LIR_STORE_ARG:
-    std::cout << "  mov [rbp-" << lirNode->lvar->offset << "], "
-	      << argregs[lirNode->imm] << std::endl;
+    std::cout << "  mov [rbp-" << lirNode->lvar->offset
+	      << "], "
+	      << argreg(lirNode->imm, lirNode->type_size)
+	      << std::endl;
     break;
   case myLIR::LirKind::LIR_RETURN:
     std::cout << "  mov rax, " << regs[a] << std::endl;
@@ -133,16 +165,14 @@ void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     //calculate stack size
     int offset = 0;
     for(const auto& [name, lvar]: fn->localVars){
-      offset += 8;
+      //offset += 8;
+      offset = Lunaria::align_to(offset, lvar->type->align);
+      offset += lvar->type->size;
       lvar->offset = offset;
     }
     fn->stackSize = offset % 16 == 0 ? offset + 8 : offset; //16 byte alignment
 
     //prologue
-    /*
-    const int offset = fn->localVars.size() % 2 == 0 ?
-      fn->localVars.size()*8 + 8 : fn->localVars.size()*8; //16 byte alignment
-    */
     std::cout << "  push rbp" << std::endl
 	      << "  mov rbp, rsp" << std::endl
 	      << "  sub rsp, " << fn->stackSize << std::endl;

@@ -30,6 +30,8 @@ namespace Lunaria {
       : kind(k), base(b){}
     Type(TypeKind k, int sz, int al)
       : kind(k), base(nullptr), size(sz), align(al){}
+    Type(TypeKind k, const std::shared_ptr<Type>& bs, int sz, int al)
+      : kind(k), base(bs), size(sz), align(al){}
   };
 
   extern std::shared_ptr<Type> int_type;

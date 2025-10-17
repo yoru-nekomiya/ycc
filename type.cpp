@@ -13,7 +13,7 @@ namespace Lunaria {
   }
 
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>& base){
-    auto type = std::make_shared<Type>(TypeKind::PTR, base);
+    auto type = std::make_shared<Type>(TypeKind::PTR, base, 8, 8);
     return type;
   }
 
