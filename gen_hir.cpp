@@ -62,7 +62,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
   else if(astNode->kind == myParser::AstKind::AST_ADDR){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_ADDR);
-    hirNode->type = Lunaria::pointer_to(lhs->type);
+    if(lhs->type->kind == Lunaria::TypeKind::ARRAY){
+      hirNode->type = Lunaria::pointer_to(lhs->type->base);
+    } else {
+      hirNode->type = Lunaria::pointer_to(lhs->type);
+    }
     hirNode->lhs = std::move(lhs);
     return hirNode;
   }

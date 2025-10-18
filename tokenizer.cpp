@@ -162,6 +162,16 @@ void tokenize(const std::string& input){
       continue; 
     }
 
+    if(c == '['){ 
+      new_token(TokenType::BRACKET_L);
+      continue; 
+    }
+
+    if(c == ']'){ 
+      new_token(TokenType::BRACKET_R);
+      continue; 
+    }
+
     if(c == '<'){
       if(input[end] == '='){
 	end++;

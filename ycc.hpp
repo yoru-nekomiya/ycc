@@ -16,6 +16,7 @@ namespace Lunaria {
   enum class TypeKind {
     INT,
     PTR,
+    ARRAY,
   };
 
   struct Type {
@@ -23,11 +24,12 @@ namespace Lunaria {
     std::shared_ptr<Type> base;
     int size;
     int align;
+    int array_size;
     
     Type(){}
-    Type(TypeKind k): kind(k){}
-    Type(TypeKind k, const std::shared_ptr<Type>& b)
-      : kind(k), base(b){}
+    //Type(TypeKind k): kind(k){}
+    //Type(TypeKind k, const std::shared_ptr<Type>& b)
+    //  : kind(k), base(b){}
     Type(TypeKind k, int sz, int al)
       : kind(k), base(nullptr), size(sz), align(al){}
     Type(TypeKind k, const std::shared_ptr<Type>& bs, int sz, int al)
@@ -38,6 +40,7 @@ namespace Lunaria {
   bool is_integer(const std::shared_ptr<Type>& type);
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
   int align_to(int n, int align);
+  std::shared_ptr<Type> array_of(const std::shared_ptr<Type>&, int size);
   
   struct LVar {
     std::string name;
@@ -67,6 +70,8 @@ enum class TokenType {
   PAREN_R, //)
   BRACE_L, //{
   BRACE_R, //}
+  BRACKET_L, //[
+  BRACKET_R, //]
   SEMICOLON, //;
   IDENT, //identifier
   RETURN, //return

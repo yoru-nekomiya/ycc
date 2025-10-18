@@ -89,7 +89,13 @@ jmp(const std::shared_ptr<BasicBlock>& bb){
   return lirNode;
 }
 
+  std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode);
+
 static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
+  if(hirNode->kind == myHIR::HirKind::HIR_DEREF){
+    return gen_expr_lir(hirNode->lhs);
+  }
+  
   auto lirNode = new_lir(LirKind::LIR_LVAR);
   auto d = new_reg(hirNode->lvar->name);
   lirNode->vn = d->vn;
@@ -97,8 +103,6 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
   lirNode->lvar = std::move(hirNode->lvar);
   return lirNode->d;
 }
-
-std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode);
 
 static std::shared_ptr<LirNode>
 gen_binop_lir(LirKind opcode,

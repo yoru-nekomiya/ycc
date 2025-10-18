@@ -127,16 +127,59 @@ static std::unique_ptr<Function> function(){
   return fn;
 }
 
-//declaration = basetype ident ";"
+  static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
+  static int const_expr();
+  static int eval(const std::unique_ptr<AstNode>&);
+
+//declaration = basetype ident type_suffix ";"
   static std::unique_ptr<AstNode> declaration(){
-    const auto type = basetype();
+    auto type = basetype();
     const auto name = myTokenizer::expect_ident();
-    expect(myTokenizer::TokenType::SEMICOLON);
+    type = type_suffix(type);
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
 
     auto lvar = new_lvar(name, type);
     return new_node(AstKind::AST_NULL);
   }
 
+  //type_suffix = ("[" const_expr "]" type_suffix)?
+  static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>& type){
+    if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACKET_L)){
+      return type;
+    }
+    
+    int size = 0;
+    if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACKET_R)){
+      size = const_expr();
+      myTokenizer::expect(myTokenizer::TokenType::BRACKET_R);
+    } //if
+    
+    type = type_suffix(type);
+    type = Lunaria::array_of(type, size);
+    return type;
+  }
+
+  static int const_expr(){
+    return eval(add());
+  }
+
+  static int eval(const std::unique_ptr<AstNode>& node){
+    switch(node->kind){
+    case AstKind::AST_ADD:
+      return eval(node->lhs) + eval(node->rhs);
+    case AstKind::AST_SUB:
+      return eval(node->lhs) - eval(node->rhs);
+    case AstKind::AST_MUL:
+      return eval(node->lhs) * eval(node->rhs);
+    case AstKind::AST_DIV:
+      return eval(node->lhs) / eval(node->rhs);
+    case AstKind::AST_NUM:
+      return node->val;   
+    } 
+    std::cerr << "not a constant expression" << std::endl;
+    exit(1);
+  }
+  
   //stmt = stmt2
   static std::unique_ptr<AstNode> stmt(){
     auto node = stmt2();

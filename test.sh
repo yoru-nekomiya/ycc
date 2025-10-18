@@ -52,6 +52,11 @@ try 55 'int fib(int a){if(a == 0) return 0; else if(a == 1) return 1; else retur
 try 100 'int main(){int a; a = 100; int* b; b = &a; return *b;}'
 try 100 'int main(){int a; a = 100; int* b; b = &a; int** c; c = &b; return **c;}'
 try 4 'int main(){int a; return sizeof(a);}'
+try 4 'int main(){int a; return sizeof(a+1);}'
+try 4 'int main(){return sizeof(1);}'
+try 4 'int main(){return sizeof(sizeof(1));}'
+try 8 'int main(){int* a; return sizeof(a);}'
+try 3 'int main(){int a[1+1]; *a=1; *(a+1)=2; int* p; p=a; return *p + *(p+1);}'
 
 echo 'Tests are passed!'
 

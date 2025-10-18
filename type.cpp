@@ -20,6 +20,15 @@ namespace Lunaria {
   int align_to(int n, int align){
     return (n+align-1) & ~(align-1);
   }
+
+  std::shared_ptr<Type> array_of(const std::shared_ptr<Type>& base, int size){
+    auto type = std::make_shared<Type>(TypeKind::ARRAY,
+					base,
+					base->size * size,
+					base->align);
+    type->array_size = size;
+    return type;
+  } 
 } //namespace Lunaria
 
 namespace myParser {
@@ -66,7 +75,12 @@ namespace myParser {
       node->type = node->lvar->type;
       return;
     case AstKind::AST_ADDR: //address &
-      node->type = pointer_to(node->lhs->type);
+      //node->type = pointer_to(node->lhs->type);
+      if(node->lhs->type->kind == Lunaria::TypeKind::ARRAY){
+	node->type = pointer_to(node->lhs->type->base);
+      } else {
+	node->type = pointer_to(node->lhs->type);
+      }
       return;
     case AstKind::AST_DEREF: //dereferrence *
       if(!node->lhs->type->base){
