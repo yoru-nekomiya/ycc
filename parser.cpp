@@ -53,6 +53,7 @@ static std::unique_ptr<AstNode> relational();
 static std::unique_ptr<AstNode> add();
 static std::unique_ptr<AstNode> mul();
 static std::unique_ptr<AstNode> unary();
+static std::unique_ptr<AstNode> postfix();
 static std::unique_ptr<AstNode> primary();
 
 //program = function*
@@ -403,7 +404,7 @@ static std::unique_ptr<AstNode> mul(){
 
 //unary = ("+" | "-" | "*" | "&")? unary
 //        | "sizeof" unary
-//        | primary
+//        | postfix
 static std::unique_ptr<AstNode> unary(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
     return unary();
@@ -428,8 +429,26 @@ static std::unique_ptr<AstNode> unary(){
     add_type(node_unary);
     return new_num(node_unary->type->size);
   }
-  return primary();
+  return postfix();
 }
+
+  //postfix = primary ("[" expr "]")*
+  static std::unique_ptr<AstNode> postfix(){
+    auto node = primary();
+    while(true){
+      if(consume_symbol(myTokenizer::TokenType::BRACKET_L)){
+	//a[b] => AST_SUBSCRIPTED, lhs=a, rhs=b
+	auto node_expr = expr();
+	//auto tmp = new_add(node, expr());
+	expect(myTokenizer::TokenType::BRACKET_R);
+	//node = new_unary(ND_DEREF, tmp);
+	node = new_binary(AstKind::AST_SUBSCRIPTED, node, node_expr);
+	continue;
+      } 
+      break;
+    } 
+    return node;
+  }
 
 static std::list<std::unique_ptr<AstNode>> funcArgs(){
   std::list<std::unique_ptr<AstNode>> lirList = {};

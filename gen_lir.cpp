@@ -95,6 +95,13 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
   if(hirNode->kind == myHIR::HirKind::HIR_DEREF){
     return gen_expr_lir(hirNode->lhs);
   }
+  if(hirNode->kind == myHIR::HirKind::HIR_SUBSCRIPTED){
+    //return gen_expr_lir(hirNode);
+    auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
+			       hirNode->lhs, hirNode->rhs);
+    hirPtrAdd->type = hirPtrAdd->lhs->type;
+    return gen_expr_lir(hirPtrAdd);
+  }
   
   auto lirNode = new_lir(LirKind::LIR_LVAR);
   auto d = new_reg(hirNode->lvar->name);
@@ -145,6 +152,9 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   case myHIR::HirKind::HIR_PTR_DIFF:
     return gen_binop_lir(LirKind::LIR_PTR_DIFF, hirNode);
   case myHIR::HirKind::HIR_LVAR: {
+    if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
+      return gen_lval_lir(hirNode);
+    }    
     auto reg = new_reg(hirNode->lvar->name);
     auto node_lval = gen_lval_lir(hirNode);
     auto lirNode = load(reg, node_lval, hirNode->type->size);
@@ -249,12 +259,25 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     return lirNode->d;
   }
   case myHIR::HirKind::HIR_DEREF: {
+    if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
+      return gen_expr_lir(hirNode->lhs);
+    }
     auto reg = new_reg();
     auto lirNode = load(reg, gen_expr_lir(hirNode->lhs), hirNode->type->size);
     return lirNode;
   }
   case myHIR::HirKind::HIR_ADDR: {
     return gen_lval_lir(hirNode->lhs);
+  }
+  case myHIR::HirKind::HIR_SUBSCRIPTED: {
+    //a[i] -> *(a+i)
+    auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
+			       hirNode->lhs, hirNode->rhs);
+    hirPtrAdd->type = hirPtrAdd->lhs->type;
+    auto hirDeref = myHIR::new_node(myHIR::HirKind::HIR_DEREF);
+    hirDeref->lhs = std::move(hirPtrAdd);
+    hirDeref->type = hirDeref->lhs->type->base;
+    return gen_expr_lir(hirDeref);
   }
   } //switch
   return nullptr;

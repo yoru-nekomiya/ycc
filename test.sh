@@ -57,6 +57,10 @@ try 4 'int main(){return sizeof(1);}'
 try 4 'int main(){return sizeof(sizeof(1));}'
 try 8 'int main(){int* a; return sizeof(a);}'
 try 3 'int main(){int a[1+1]; *a=1; *(a+1)=2; int* p; p=a; return *p + *(p+1);}'
+try 3 'int main(){int a[1+1]; *a=1; *(a+1)=2; int* p; p=(a+1); return *p + *(p-1);}'
+try 6 'int main(){int a[1+2]; *a=1; *(a+1)=2; *(a+2)=3; int* p; p=a; return *p + *(p+1) + *(p+2);}'
+try 5 'int main(){int a[2]; a[0] = 2; a[1] = 3; return a[0]+a[1];}'
+try 10 'int main(){int a[2][2]; a[0][0] = 1; a[0][1] = 2; a[1][0] = 3; a[1][1] = 4; return a[0][0]+a[0][1]+a[1][0]+a[1][1];}'
 
 echo 'Tests are passed!'
 

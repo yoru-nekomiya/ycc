@@ -86,11 +86,16 @@ namespace myParser {
       if(!node->lhs->type->base){
 	std::cerr << "invalid pointer dereference" << std::endl;
 	exit(1);
-      } //if
-      
-      auto t = node->lhs->type->base;
-      node->type = t;
+      } //if      
+      node->type = node->lhs->type->base;
       return;
+    case AstKind::AST_SUBSCRIPTED: //a[i]
+      if(!node->lhs->type->base){
+	std::cerr << "invalid array reference" << std::endl;
+	exit(1);
+      } //if
+      node->type = node->lhs->type->base;      
+      return;    
     } //switch()
   } //add_type()
   

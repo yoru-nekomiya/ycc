@@ -133,6 +133,7 @@ enum class AstKind {
   AST_PTR_ADD,
   AST_PTR_SUB,
   AST_PTR_DIFF,
+  AST_SUBSCRIPTED, //a[i]
   AST_NULL,
 };
 
@@ -199,6 +200,7 @@ enum class HirKind {
   HIR_PTR_ADD,
   HIR_PTR_SUB,
   HIR_PTR_DIFF,
+  HIR_SUBSCRIPTED,
   HIR_NULL,
 };
 
@@ -235,6 +237,10 @@ struct HirNode {
     std::list<std::unique_ptr<Function>> fns;
   };
 
+  std::unique_ptr<HirNode> new_node(HirKind kind);
+  std::unique_ptr<HirNode> new_binary(HirKind kind,
+				      std::unique_ptr<HirNode>& lhs,
+				      std::unique_ptr<HirNode>& rhs);
 std::unique_ptr<Program>
   generateHirNode(const std::unique_ptr<myParser::Program>&);
 } //namespace myHIR

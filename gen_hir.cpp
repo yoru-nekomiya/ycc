@@ -1,14 +1,14 @@
 #include "ycc.hpp"
 
 namespace myHIR {
-static std::unique_ptr<HirNode>
+std::unique_ptr<HirNode>
 new_node(HirKind kind){
   auto node = std::make_unique<HirNode>();
   node->kind = kind;
   return node;
 }
 
-static std::unique_ptr<HirNode>
+std::unique_ptr<HirNode>
 new_binary(HirKind kind,
 	   std::unique_ptr<HirNode>& lhs,
 	   std::unique_ptr<HirNode>& rhs){
@@ -185,6 +185,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     case myParser::AstKind::AST_PTR_DIFF: {
       auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);
       node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_SUBSCRIPTED: {
+      auto node = new_binary(HirKind::HIR_SUBSCRIPTED, lhs, rhs);
+      node->type = node->lhs->type->base;
       return node;
     }
     } //switch
