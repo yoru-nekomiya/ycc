@@ -137,8 +137,27 @@ void tokenize(const std::string& input){
       continue;           
     }
     
-    if(c == '/'){             
-      new_token(TokenType::SLASH);
+    if(c == '/'){
+      if(input[end] == '/'){
+	while(input[end] != '\n') ++end;
+	++end;
+      } else if(input[end] == '*'){
+	++end;
+	while(true){
+	  if(input[end] == EOF){
+	    std::cerr << "unterminated block comment" << std::endl;
+	    exit(1);
+	  }
+	  if(input[end] == '*' && input[end+1] == '/'){
+	    end += 2;
+	    break;
+	  }
+	  ++end;
+	}
+      }
+      else {
+	new_token(TokenType::SLASH);
+      }
       continue; 
     }
 
