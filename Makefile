@@ -1,18 +1,22 @@
 CXX=g++
 CXXFLAGS=-g -static -std=c++20
-SRCS=$(wildcard *.cpp)
-OBJS=$(SRCS:.cpp=.o)
+SRCS=$(wildcard src/*.cpp)
+OBJS=$(patsubst src/%.cpp,build/%.o,$(SRCS))
+TARGET=build/ycc
 
-ycc: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o ycc
+$(shell mkdir -p build)
 
-%.o: %.cpp
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@
+
+build/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test: ycc
-	sh test.sh
+test: $(TARGET)
+	sh run_tests.sh
 
 clean:
-	rm -f ycc *.o *.s *~ tmp
+	rm -rf build/
+	rm -rf tests/out/ 
 
 .PHONY: test clean

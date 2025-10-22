@@ -2,6 +2,8 @@
 #define YCC_H
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <queue>
 #include <memory>

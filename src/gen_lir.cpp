@@ -96,7 +96,7 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
     return gen_expr_lir(hirNode->lhs);
   }
   if(hirNode->kind == myHIR::HirKind::HIR_SUBSCRIPTED){
-    //return gen_expr_lir(hirNode);
+    //lhs in assign
     auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
 			       hirNode->lhs, hirNode->rhs);
     hirPtrAdd->type = hirPtrAdd->lhs->type;
@@ -270,6 +270,7 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     return gen_lval_lir(hirNode->lhs);
   }
   case myHIR::HirKind::HIR_SUBSCRIPTED: {
+    //rhs in assign
     //a[i] -> *(a+i)
     auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
 			       hirNode->lhs, hirNode->rhs);
