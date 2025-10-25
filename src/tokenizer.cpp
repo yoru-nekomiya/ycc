@@ -1,7 +1,7 @@
 #include "ycc.hpp"
 
 namespace myTokenizer {
-  std::queue<std::unique_ptr<Token>> tokens = {};
+  std::deque<std::unique_ptr<Token>> tokens = {};
   
 void expect(TokenType tk_type){
   auto& token = tokens.front();
@@ -9,7 +9,7 @@ void expect(TokenType tk_type){
     std::cerr << "not a expected token" << std::endl;
     exit(1);
   }
-  tokens.pop();
+  tokens.pop_front();
   return;
 }
 
@@ -20,7 +20,7 @@ int expect_number(){
     exit(1);
   }
   const int retVal = token->value;
-  tokens.pop();
+  tokens.pop_front();
   return retVal;
 }
 
@@ -31,7 +31,7 @@ std::string expect_ident(){
     exit(1);
   }
   const auto str = token->str;
-  tokens.pop();
+  tokens.pop_front();
   return str;
 }
 
@@ -40,7 +40,7 @@ bool consume_symbol(TokenType tk_type){
   if(token->tokenType != tk_type){
     return false;
   }
-  tokens.pop();
+  tokens.pop_front();
   return true;
 }
 
@@ -50,7 +50,7 @@ std::unique_ptr<Token> consume_ident(){
     return nullptr;
   }
   auto ret = std::move(tokens.front());
-  tokens.pop();
+  tokens.pop_front();
   return ret;
 }
 
@@ -66,7 +66,7 @@ static void new_token(TokenType tk_type,
 		      int value = 0,
 		      const std::string& str = ""){
   auto token = std::make_unique<Token>(tk_type, value, str);
-  tokens.push(std::move(token)); 
+  tokens.push_back(std::move(token)); 
 }
 
 bool at_eof(){

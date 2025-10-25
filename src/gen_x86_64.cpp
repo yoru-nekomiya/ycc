@@ -94,6 +94,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_LVAR:
     std::cout << "  lea " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]" << std::endl;
     break;
+  case myLIR::LirKind::LIR_LABEL_ADDR:
+    std::cout << "  lea " << regs[d] << ", " << lirNode->name << std::endl;
+    break;
   case myLIR::LirKind::LIR_LOAD:
     std::cout << "  mov " << reg(d, lirNode->type_size) << ", [" << regs[b] << "]" << std::endl;
     break;
@@ -154,7 +157,18 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   } //switch
 }
 
-void emit_text(const std::unique_ptr<myLIR::Program>& prog){
+
+  static void emit_data(const std::unique_ptr<myLIR::Program>& prog){
+    std::cout << ".bss" << std::endl;
+
+    for(const auto& [name, gvar]: prog->globalVars){
+      std::cout << ".align " << gvar->type->align << std::endl;
+      std::cout << gvar->name << ":" << std::endl;
+      std::cout << "  .zero " << gvar->type->size << std::endl;
+    }
+  }
+  
+static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
   std::cout << ".text" << std::endl;
 
   for(const auto& fn: prog->fns){
@@ -165,7 +179,6 @@ void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     //calculate stack size
     int offset = 0;
     for(const auto& [name, lvar]: fn->localVars){
-      //offset += 8;
       offset = Lunaria::align_to(offset, lvar->type->align);
       offset += lvar->type->size;
       lvar->offset = offset;
@@ -205,6 +218,7 @@ void emit_text(const std::unique_ptr<myLIR::Program>& prog){
 
 void gen_x86_64(const std::unique_ptr<myLIR::Program>& prog){
   std::cout << ".intel_syntax noprefix" << std::endl;
+  emit_data(prog);
   emit_text(prog);
 }
 

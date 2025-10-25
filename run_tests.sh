@@ -31,11 +31,11 @@ for file in "$TEST_DIR"/*.c; do
     fi
 
     #assemble and link
-    gcc -z noexecstack -o "$exe" "$asm" "$LIB"
+    gcc -z noexecstack -fno-pie -no-pie -o "$exe" "$asm" "$LIB"
     if [ $? -ne 0 ]; then
 	echo "Linking failed for $file"
 	FAIL=$((FAIL+1))
-	[ -z "$FAILED_TESTS" ] && FAILED_TESTS=" - $filename (asm error)" || FAILED_TESTS="$FAILED_TESTS\n - $filename (asm error)"
+	[ -z "$FAILED_TESTS" ] && FAILED_TESTS=" - $filename (asm or link error)" || FAILED_TESTS="$FAILED_TESTS\n - $filename (asm or link error)"
 	continue
     fi
 

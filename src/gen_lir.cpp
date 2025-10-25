@@ -102,12 +102,22 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
     hirPtrAdd->type = hirPtrAdd->lhs->type;
     return gen_expr_lir(hirPtrAdd);
   }
-  
-  auto lirNode = new_lir(LirKind::LIR_LVAR);
-  auto d = new_reg(hirNode->lvar->name);
-  lirNode->vn = d->vn;
-  lirNode->d = std::move(d);
-  lirNode->lvar = std::move(hirNode->lvar);
+
+  assert(hirNode->kind == myHIR::HirKind::HIR_VAR);
+  std::shared_ptr<LirNode> lirNode = nullptr;
+  if(hirNode->var->isLocal){
+    lirNode = new_lir(LirKind::LIR_LVAR);
+    auto d = new_reg(hirNode->var->name);
+    lirNode->vn = d->vn;
+    lirNode->d = std::move(d);
+    lirNode->lvar = std::move(hirNode->var);
+  } else {
+    lirNode = new_lir(LirKind::LIR_LABEL_ADDR);
+    auto d = new_reg(hirNode->var->name);
+    lirNode->vn = d->vn;
+    lirNode->d = std::move(d);
+    lirNode->name = hirNode->var->name;
+  }
   return lirNode->d;
 }
 
@@ -151,11 +161,11 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_PTR_SUB, hirNode);
   case myHIR::HirKind::HIR_PTR_DIFF:
     return gen_binop_lir(LirKind::LIR_PTR_DIFF, hirNode);
-  case myHIR::HirKind::HIR_LVAR: {
+  case myHIR::HirKind::HIR_VAR: {
     if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
       return gen_lval_lir(hirNode);
     }    
-    auto reg = new_reg(hirNode->lvar->name);
+    auto reg = new_reg(hirNode->var->name);
     auto node_lval = gen_lval_lir(hirNode);
     auto lirNode = load(reg, node_lval, hirNode->type->size);
     return lirNode;
@@ -304,18 +314,20 @@ void dumpLIR(const std::list<std::shared_ptr<LirNode>>& lirList){
   } //for
 }
 
-  static void gen_param(std::shared_ptr<Lunaria::LVar> param,
-		      unsigned int i){
-  auto lirNode = new_lir(LirKind::LIR_STORE_ARG);
-  lirNode->lvar = param;
-  lirNode->imm = i;
-  lirNode->type_size = param->type->size;
-  return;
-}
+  static void gen_param(std::shared_ptr<Lunaria::Var> param,
+			unsigned int i){
+    auto lirNode = new_lir(LirKind::LIR_STORE_ARG);
+    lirNode->lvar = param;
+    lirNode->imm = i;
+    lirNode->type_size = param->type->size;
+    return;
+  }
 
 std::unique_ptr<Program>
 generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
   auto progLir = std::make_unique<Program>();
+  progLir->globalVars = prog->globalVars;
+  
   for(auto& fn: prog->fns){
     auto fnLir = std::make_shared<Function>();
     fnLir->name = fn->name;

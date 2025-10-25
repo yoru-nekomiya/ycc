@@ -71,8 +71,8 @@ namespace myParser {
     case AstKind::AST_ASSIGN:
       node->type = node->lhs->type;
       return;
-    case AstKind::AST_LVAR:
-      node->type = node->lvar->type;
+    case AstKind::AST_VAR:
+      node->type = node->var->type;
       return;
     case AstKind::AST_ADDR: //address &
       //node->type = pointer_to(node->lhs->type);

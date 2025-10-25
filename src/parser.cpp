@@ -1,20 +1,43 @@
 #include "ycc.hpp"
 
 namespace myParser {
-  static std::unordered_map<std::string, std::shared_ptr<Lunaria::LVar>> localVars;
-  std::shared_ptr<Lunaria::LVar> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
-  std::shared_ptr<Lunaria::LVar> lvar = nullptr;
-  if(localVars.contains(token->str)){
-    lvar = localVars[token->str];
+  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  
+  static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
+    std::shared_ptr<Lunaria::Var> lvar = nullptr;
+    if(localVars.contains(token->str)){
+      lvar = localVars[token->str];
+    }
+    return lvar;
   }
-  return lvar;
-}
-  std::shared_ptr<Lunaria::LVar> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
-    auto lvar = std::make_shared<Lunaria::LVar>();
-    lvar->name = name;
-    lvar->type = type;
+
+  static std::shared_ptr<Lunaria::Var> findGvar(const std::unique_ptr<myTokenizer::Token>& token){
+    std::shared_ptr<Lunaria::Var> gvar = nullptr;
+    if(globalVars.contains(token->str)){
+      gvar = globalVars[token->str];
+    }
+    return gvar;
+  }
+
+  static std::shared_ptr<Lunaria::Var> new_var(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLocal){
+    auto var = std::make_shared<Lunaria::Var>();
+    var->name = name;
+    var->type = type;
+    var->isLocal = isLocal;
+    return var;
+  }
+  
+  static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
+    auto lvar = new_var(name, type, true);
     localVars[lvar->name] = lvar;
     return lvar;
+  }
+
+  static std::shared_ptr<Lunaria::Var> new_gvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
+    auto gvar = new_var(name, type, false);
+    globalVars[gvar->name] = gvar;
+    return gvar;
   }
 
 static std::unique_ptr<AstNode> new_node(AstKind kind){
@@ -43,6 +66,34 @@ static std::unique_ptr<AstNode> new_num(int val){
     return look(myTokenizer::TokenType::INT);
   }
 
+  //static std::shared_ptr<Lunaria::Type> basetype();
+  static bool isFunction(){
+    bool isFunc = false;
+
+    //basetype()
+    if(myTokenizer::tokens[0]->tokenType != myTokenizer::TokenType::INT){
+      std::cerr << "parse error in isFunction()" << std::endl;
+      exit(1);
+    }
+    int i = 1;
+    while(myTokenizer::tokens[i]->tokenType == myTokenizer::TokenType::STAR){
+      i++;
+    }
+
+    //expect_ident()
+    if(myTokenizer::tokens[i]->tokenType != myTokenizer::TokenType::IDENT){
+      std::cerr << "parse error in isFunction()" << std::endl;
+      exit(1);
+    }
+    i++;
+
+    //consume_symbol("(")
+    if(myTokenizer::tokens[i]->tokenType == myTokenizer::TokenType::PAREN_L){
+      isFunc = true;
+    }
+    return isFunc;
+  }
+
   static std::unique_ptr<Function> function();
 static std::unique_ptr<AstNode> stmt();
 static std::unique_ptr<AstNode> stmt2();
@@ -55,20 +106,38 @@ static std::unique_ptr<AstNode> mul();
 static std::unique_ptr<AstNode> unary();
 static std::unique_ptr<AstNode> postfix();
 static std::unique_ptr<AstNode> primary();
+  static std::shared_ptr<Lunaria::Type> basetype();
+  static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
 
-//program = function*
+  //global_var = basetype ident type_suffix ";"
+  void global_var(){
+    auto type = basetype();
+    auto name = myTokenizer::expect_ident();
+    type = type_suffix(type);
+    expect(myTokenizer::TokenType::SEMICOLON);
+    auto gvar = new_gvar(name, type);
+    return;
+  } //global_var()
+  
+//program = (global_var | function)*
 std::unique_ptr<Program> program(){
+  globalVars.clear();
   std::list<std::unique_ptr<Function>> fns;
   while(!myTokenizer::at_eof()){
-    auto fn = function();
-    if(!fn){
+    if(isFunction()){
+      auto fn = function();
+      if(!fn){
+	continue;
+      }
+      fns.push_back(std::move(fn));
       continue;
+    } else {
+      global_var();
     }
-    fns.push_back(std::move(fn));
-    continue;
-  }
+  } //while
   auto prog = std::make_unique<Program>();
   prog->fns = std::move(fns);
+  prog->globalVars = globalVars;
   return prog;
 }
   
@@ -83,7 +152,7 @@ std::unique_ptr<Program> program(){
   }
 
 //param = basetype ident
-static std::shared_ptr<Lunaria::LVar> readFuncParam(){
+static std::shared_ptr<Lunaria::Var> readFuncParam(){
   const auto type = basetype();
   const auto token = myTokenizer::consume_ident();
   if(token){
@@ -93,12 +162,12 @@ static std::shared_ptr<Lunaria::LVar> readFuncParam(){
 }
   
 //params = param ("," param)*
-static std::list<std::shared_ptr<Lunaria::LVar>> readFuncParams(){
+static std::list<std::shared_ptr<Lunaria::Var>> readFuncParams(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
     //no params
-    return std::list<std::shared_ptr<Lunaria::LVar>>();
+    return std::list<std::shared_ptr<Lunaria::Var>>();
   }
-  std::list<std::shared_ptr<Lunaria::LVar>> params;
+  std::list<std::shared_ptr<Lunaria::Var>> params;
   params.push_back(readFuncParam());
   while(!myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
     myTokenizer::expect(myTokenizer::TokenType::COMMA);
@@ -128,7 +197,6 @@ static std::unique_ptr<Function> function(){
   return fn;
 }
 
-  static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
   static int const_expr();
   static int eval(const std::unique_ptr<AstNode>&);
 
@@ -487,10 +555,13 @@ static std::unique_ptr<AstNode> primary(){
     }
 
     //variable
-    auto node = new_node(AstKind::AST_LVAR);
+    auto node = new_node(AstKind::AST_VAR);
     auto lvar = findLvar(token);
+    auto gvar = findGvar(token);
     if(lvar){
-      node->lvar = lvar;
+      node->var = lvar;
+    } else if(gvar){
+      node->var = gvar;
     } else {      
       std::cerr << "undefined variable" << std::endl;
       exit(1);

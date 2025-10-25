@@ -27,10 +27,10 @@ new_num(const std::unique_ptr<myParser::AstNode>& astNode){
 }
 
 static std::unique_ptr<HirNode>
-new_lvar(const std::unique_ptr<myParser::AstNode>& astNode){
-  auto hirNode = new_node(HirKind::HIR_LVAR);
-  hirNode->type = astNode->lvar->type;
-  hirNode->lvar = std::move(astNode->lvar);
+new_var(const std::unique_ptr<myParser::AstNode>& astNode){
+  auto hirNode = new_node(HirKind::HIR_VAR);
+  hirNode->type = astNode->var->type;
+  hirNode->var = std::move(astNode->var);
   return hirNode;
 }
 
@@ -40,8 +40,8 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     return new_num(astNode);
   } else if(astNode->kind == myParser::AstKind::AST_NULL){
     return new_node(HirKind::HIR_NULL);
-  } else if(astNode->kind == myParser::AstKind::AST_LVAR){
-    return new_lvar(astNode);
+  } else if(astNode->kind == myParser::AstKind::AST_VAR){
+    return new_var(astNode);
   } else if(astNode->kind == myParser::AstKind::AST_RETURN){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_RETURN);
@@ -200,6 +200,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
 std::unique_ptr<Program>
 generateHirNode(const std::unique_ptr<myParser::Program>& prog){
   auto progHir = std::make_unique<Program>();
+  progHir->globalVars = prog->globalVars;
   for(auto& fn: prog->fns){
     auto fnHir = std::make_unique<Function>();
     fnHir->name = fn->name;
