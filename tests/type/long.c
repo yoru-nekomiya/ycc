@@ -1,6 +1,14 @@
 
 long g;
 
+long add(long a, long b){
+  return a+b;
+}
+
+long mul(long a){
+  return a * 2;
+}
+
 int main(){
   
   long a;
@@ -26,5 +34,8 @@ int main(){
   g = 1;
   assert(g, 1);
 
+  assert(-9223372036854775807, add(a,b));
+  assert(-2, mul(-1));
+  
   return 0;
 }

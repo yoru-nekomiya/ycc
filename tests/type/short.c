@@ -1,6 +1,14 @@
 
 short g;
 
+short add(short a, short b){
+  return a+b;
+}
+
+short mul(short a){
+  return a * 2;
+}
+
 int main(){
   
   short a;
@@ -25,6 +33,9 @@ int main(){
 
   g = 1;
   assert(g, 1);
+
+  assert(-32767, add(a,b));
+  assert(-2, mul(-1));
 
   return 0;
 }

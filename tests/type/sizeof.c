@@ -25,6 +25,12 @@ int main(){
   assert(3*4*4, sizeof(arr2));
   assert(4*4, sizeof(arr2[0]));
   assert(4, sizeof(arr2[0][0]));
+
+  char d;
+  short e;
+  long f;
+  assert(1, sizeof(d));
+  assert(2, sizeof(e));
+  assert(8, sizeof(f));
   return 0;
-  
 }
