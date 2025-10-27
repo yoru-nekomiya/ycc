@@ -1,11 +1,13 @@
 #include "ycc.hpp"
 
 namespace myCodeGen {
-  static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"}; 
+  static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+  static const std::string regs16[] = {"r10w", "r11w", "bx", "r12w", "r13w", "r14w", "r15w"};
   static const std::string regs32[] = {"r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
   static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
 
-  static const std::string argregs8[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"}; 
+  static const std::string argregs8[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+  static const std::string argregs16[] = {"di", "si", "dx", "cx", "r8w", "r9w"};
   static const std::string argregs32[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"}; 
   static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
   
@@ -14,6 +16,9 @@ static std::string funcname = "";
   static std::string reg(int r, int size){
     if(size == 1){
       return regs8[r];
+    }
+    if(size == 2){
+      return regs16[r];
     }
     if(size == 4){
       return regs32[r];
@@ -25,6 +30,9 @@ static std::string funcname = "";
   static std::string argreg(int r, int size){
     if(size == 1){
       return argregs8[r];
+    }
+    if(size == 2){
+      return argregs16[r];
     }
     if(size == 4){
       return argregs32[r];
@@ -44,6 +52,23 @@ static void print_cmp(const std::string& cmp,
   std::cout << "  " << cmp << " " << regs8[d] << std::endl; //store the result stored in the flag register into an 8-bit register
   std::cout << "  movzb " << regs[d] << ", " << regs8[d] << std::endl; //clear the upper 56 bits of the 64-bit register to zero
 }
+
+  static void load(const std::shared_ptr<myLIR::LirNode>& lirNode){
+    const int d = lirNode->d ? lirNode->d->rn : 0;
+    const int b = lirNode->b ? lirNode->b->rn : 0;
+    const int size = lirNode->type_size;
+    //signed extension
+    if(size == 1){
+      std::cout << "  movsx " << regs[d] << ", byte ptr [" << regs[b] << "]" << std::endl;
+    } else if(size == 2){
+      std::cout << "  movsx " << regs[d] << ", word ptr [" << regs[b] << "]" << std::endl;
+    } else if(size == 4){
+      std::cout << "  movsxd " << regs[d] << ", dword ptr [" << regs[b] << "]" << std::endl;
+    } else {
+      assert(size == 8);
+      std::cout << "  mov " << regs[d] << ", [" << regs[b] << "]" << std::endl;
+    }
+  }
 
 static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   const int d = lirNode->d ? lirNode->d->rn : 0;
@@ -98,7 +123,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  lea " << regs[d] << ", " << lirNode->name << std::endl;
     break;
   case myLIR::LirKind::LIR_LOAD:
-    std::cout << "  mov " << reg(d, lirNode->type_size) << ", [" << regs[b] << "]" << std::endl;
+    //std::cout << "  mov " << reg(d, lirNode->type_size) << ", [" << regs[b] << "]" << std::endl;
+    load(lirNode);
     break;
   case myLIR::LirKind::LIR_STORE:
     std::cout << "  mov [" << regs[a] << "], " << reg(b, lirNode->type_size) << std::endl;

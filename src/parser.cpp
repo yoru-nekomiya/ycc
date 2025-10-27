@@ -63,15 +63,28 @@ static std::unique_ptr<AstNode> new_num(int val){
 }
 
   static bool isTypeName(){
-    return look(myTokenizer::TokenType::INT);
+    return look(myTokenizer::TokenType::INT)
+      || look(myTokenizer::TokenType::CHAR)
+      || look(myTokenizer::TokenType::SHORT)
+      || look(myTokenizer::TokenType::LONG)
+      ;
   }
 
-  //static std::shared_ptr<Lunaria::Type> basetype();
+  static bool isNotBuildinType(myTokenizer::TokenType t){
+    if(t != myTokenizer::TokenType::INT
+       && t != myTokenizer::TokenType::CHAR
+       && t != myTokenizer::TokenType::SHORT
+       && t != myTokenizer::TokenType::LONG){
+      return true;
+    }
+    return false;
+  }
+  
   static bool isFunction(){
     bool isFunc = false;
 
     //basetype()
-    if(myTokenizer::tokens[0]->tokenType != myTokenizer::TokenType::INT){
+    if(isNotBuildinType(myTokenizer::tokens[0]->tokenType)){
       std::cerr << "parse error in isFunction()" << std::endl;
       exit(1);
     }
@@ -141,10 +154,22 @@ std::unique_ptr<Program> program(){
   return prog;
 }
   
-  //basetype = "int" "*"*
+  //basetype = builtin-type "*"*
+  //builtin-type = "int" | "char" | "short" | "long"
   static std::shared_ptr<Lunaria::Type> basetype(){
-    expect(myTokenizer::TokenType::INT);
-    auto type = Lunaria::int_type;
+    //expect(myTokenizer::TokenType::INT);
+    //auto type = Lunaria::int_type;
+    std::shared_ptr<Lunaria::Type> type = nullptr;
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::INT)){
+      type = Lunaria::int_type;
+    } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::CHAR)){
+      type = Lunaria::char_type;
+    } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::SHORT)){
+      type = Lunaria::short_type;
+    } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::LONG)){
+      type = Lunaria::long_type;
+    }
+    
     while(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
       type = Lunaria::pointer_to(type);
     }

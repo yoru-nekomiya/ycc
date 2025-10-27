@@ -100,6 +100,7 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
     auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
 			       hirNode->lhs, hirNode->rhs);
     hirPtrAdd->type = hirPtrAdd->lhs->type;
+    //hirPtrAdd->type->base = hirPtrAdd->lhs->type->base;
     return gen_expr_lir(hirPtrAdd);
   }
 

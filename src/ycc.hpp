@@ -17,6 +17,9 @@
 namespace Lunaria {
   enum class TypeKind {
     INT,
+    CHAR,
+    SHORT,
+    LONG,
     PTR,
     ARRAY,
   };
@@ -36,6 +39,9 @@ namespace Lunaria {
   };
 
   extern std::shared_ptr<Type> int_type;
+  extern std::shared_ptr<Type> char_type;
+  extern std::shared_ptr<Type> short_type;
+  extern std::shared_ptr<Type> long_type;
   bool is_integer(const std::shared_ptr<Type>& type);
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
   int align_to(int n, int align);
@@ -82,15 +88,18 @@ enum class TokenType {
   COMMA, //,
   AND, //&
   INT, //int
+  CHAR, //char
+  SHORT, //short
+  LONG, //long
   SIZEOF, //sizeof
   TK_EOF,
 };
 
 struct Token {                   
   TokenType tokenType;
-  int value; //available when tokenType is NUM
+  unsigned long long value; //available when tokenType is NUM
   std::string str;
-  Token(TokenType _tokenType, int _value, std::string _str) 
+  Token(TokenType _tokenType, unsigned long long _value, std::string _str) 
     : tokenType(_tokenType), value(_value), str(_str)
   {}                                                   
 };
