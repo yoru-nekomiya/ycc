@@ -184,7 +184,8 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     }
     case myParser::AstKind::AST_PTR_DIFF: {
       auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      node->type = node->lhs->type;
       return node;
     }
     case myParser::AstKind::AST_SUBSCRIPTED: {

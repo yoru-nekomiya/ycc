@@ -1,6 +1,14 @@
 
 char g;
 
+char add(char a, char b){
+  return a+b;
+}
+
+char mul(char a){
+  return a*2;
+}
+
 int main(){
   
   char a;
@@ -26,5 +34,7 @@ int main(){
   g = 1+2;
   assert(g, 3);
 
+  assert(-118, add(a,b));
+  assert(20, mul(a));
   return 0;
 }

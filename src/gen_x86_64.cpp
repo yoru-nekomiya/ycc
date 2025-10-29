@@ -165,16 +165,40 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << "  pop r10" << std::endl
 	      << "  mov " << regs[d] << ", rax" << std::endl;
     break;
-  case myLIR::LirKind::LIR_PTR_ADD:
+  case myLIR::LirKind::LIR_PTR_ADD: {
+    /*
     std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
     std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
+    */
+    const int size = lirNode->type_base_size;
+    if(size == 1){
+      std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
+    } else if(size == 2 || size == 4 || size == 8){
+      std::cout << "  lea " << regs[d] << ", ["
+		<< regs[d] << "+" << regs[b] << "*" << size
+		<< "]" << std::endl;
+    }
     break;
-  case myLIR::LirKind::LIR_PTR_SUB:
+  }
+  case myLIR::LirKind::LIR_PTR_SUB: {
+    /*
     std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
     std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    */
+    const int size = lirNode->type_base_size;
+    if(size == 1){
+      std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    } else if(size == 2 || size == 4 || size == 8){
+      std::cout << "  neg " << regs[b] << std::endl;
+      std::cout << "  lea " << regs[d] << ", ["
+		<< regs[d] << "+" << regs[b] << "*" << size
+		<< "]" << std::endl;
+    }
     break;
+  }
   case myLIR::LirKind::LIR_PTR_DIFF:
     std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    std::cout << "  mov rax, " << regs[d] << std::endl;
     std::cout << "  cqo" << std::endl;
     std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
     std::cout << "  idiv " << regs[b] << std::endl;

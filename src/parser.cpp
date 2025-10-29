@@ -453,7 +453,7 @@ static std::unique_ptr<AstNode> relational(){
     }
     if(lhs->type->base && rhs->type->base){
       //lhs:pointer rhs:pointer
-      return new_binary(AstKind::AST_PTR_DIFF, rhs, lhs);
+      return new_binary(AstKind::AST_PTR_DIFF, lhs, rhs);
     }
     std::cerr << "invalid operands" << std::endl;
     exit(1);
