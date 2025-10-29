@@ -251,6 +251,37 @@ void tokenize(const std::string& input){
       new_token(TokenType::AND);
       continue; 
     }
+
+    if(c == '\''){
+      char c = 0;
+      if(input[end] == '\\'){
+	end++;
+	switch(input[end]){
+	case 'n': c = '\n'; break;
+	case 't': c = '\t'; break;
+	case 'r': c = '\r'; break;
+	case '\\': c = '\\'; break;
+	case '\'': c = '\''; break;
+	case '\"': c = '\"'; break;
+	case '0': c = '\0'; break;
+	case 'v': c = '\v'; break;
+	case 'b': c = '\b'; break;
+	case 'f': c = '\f'; break;
+	case 'a': c = '\a'; break;
+	case '?': c = '\?'; break;
+	}
+      } else {
+	c = input[end];
+      }
+      end++;
+      if(input[end] != '\''){
+	std::cerr << "missing closing quote for character literal" << std::endl;
+	exit(1);
+      }
+      end++;
+      new_token(TokenType::NUM, c);
+      continue;
+    }
     
     //identifier or keyword
     if(std::isalpha(c) || c == '_'){
