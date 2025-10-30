@@ -34,8 +34,10 @@ namespace myParser {
     return lvar;
   }
 
-  static std::shared_ptr<Lunaria::Var> new_gvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
+  static std::shared_ptr<Lunaria::Var> new_gvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLiteral, const std::string& literal){
     auto gvar = new_var(name, type, false);
+    gvar->isLiteral = isLiteral;
+    gvar->literal = literal;
     globalVars[gvar->name] = gvar;
     return gvar;
   }
@@ -45,6 +47,12 @@ static std::unique_ptr<AstNode> new_node(AstKind kind){
   astNode->kind = kind;
   return astNode;
 }
+
+  static std::unique_ptr<AstNode> new_var_node(const std::shared_ptr<Lunaria::Var>& v){
+    auto astNode = new_node(AstKind::AST_VAR);
+    astNode->var = v;
+    return astNode;
+  }
 
 static std::unique_ptr<AstNode>
 new_binary(AstKind kind,
@@ -128,7 +136,7 @@ static std::unique_ptr<AstNode> primary();
     auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
     expect(myTokenizer::TokenType::SEMICOLON);
-    auto gvar = new_gvar(name, type);
+    auto gvar = new_gvar(name, type, false, "");
     return;
   } //global_var()
   
@@ -559,8 +567,16 @@ static std::list<std::unique_ptr<AstNode>> funcArgs(){
   return lirList;
 }
 
+  static std::string new_label(){
+    static int count = 0;
+    const std::string label = ".L.data." + std::to_string(count);
+    ++count;
+    return label;
+  }
+
 //primary = "(" expr ")"
 //          | ident funcArgs?
+//          | string_literal
 //          | num
 static std::unique_ptr<AstNode> primary(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_L)){
@@ -594,6 +610,14 @@ static std::unique_ptr<AstNode> primary(){
     return node;
   } //if(token)
 
+  auto tok_str = myTokenizer::consume_str();
+  if(tok_str){
+    //string_literal
+    auto type = Lunaria::array_of(Lunaria::char_type, tok_str->literal.size());
+    auto gvar = new_gvar(new_label(), type, true, tok_str->literal);
+    return new_var_node(gvar);
+  }
+  
   return new_num(myTokenizer::expect_number());
 }
 } //namespace myParser

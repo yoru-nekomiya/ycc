@@ -207,14 +207,55 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   } //switch
 }
 
+  static void print_literal(const std::string& literal){
+    std::string out;
+    out.reserve(literal.size());
+    for(char c: literal){
+      switch(c){
+      case '\n': out += "\\n"; break;
+      case '\t': out += "\\t"; break;
+      case '\r': out += "\\r"; break;
+      case '\\': out += "\\\\"; break;
+      case '\'': out += "\\\'"; break;
+      case '\"': out += "\\\""; break;
+      case '\v': out += "\\v"; break;
+      case '\b': out += "\\b"; break;
+      case '\f': out += "\\f"; break;
+      case '\a': out += "\\a"; break;	
+      case '\?': out += "\\\?"; break;
+      default:
+	if(c < 32 || c >= 127){
+	  char buf[8];
+	  std::snprintf(buf, sizeof(buf), "\\%03o", c);
+	  out += buf;
+	} else {
+	  out += c;
+	}
+	break;
+      }
+    }
+    std::cout << "  .string \"" << out << "\"\n";
+  }
 
   static void emit_data(const std::unique_ptr<myLIR::Program>& prog){
     std::cout << ".bss" << std::endl;
 
     for(const auto& [name, gvar]: prog->globalVars){
+      if(gvar->isLiteral){
+	continue;
+      }
       std::cout << ".align " << gvar->type->align << std::endl;
-      std::cout << gvar->name << ":" << std::endl;
+      std::cout << gvar->name << ":\n";
       std::cout << "  .zero " << gvar->type->size << std::endl;
+    }
+
+    std::cout << ".data\n";
+    for(const auto& [name, gvar]: prog->globalVars){
+      if(gvar->isLiteral){
+	std::cout << ".align " << gvar->type->align << std::endl;
+	std::cout << gvar->name << ":\n";
+	print_literal(gvar->literal);
+      }
     }
   }
   

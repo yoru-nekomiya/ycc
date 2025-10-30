@@ -1,15 +1,18 @@
 
 int main(){
   
-  int a[1+1];
+  int a[1+1]; int i;
   *a=1;
   *(a+1)=2;
+  i=1;
   int* p;
   p=a;
   assert(3, *p + *(p+1));
-
+  assert(3, *p + *(p+i));
+  
   p=(a+1);
   assert(3, *p + *(p-1));
+  assert(3, *p + *(p-i));
 
   int b[1+2]; *b=1; *(b+1)=2; *(b+2)=3;
   p=b;

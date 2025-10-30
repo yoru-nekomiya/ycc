@@ -52,6 +52,8 @@ namespace Lunaria {
     int offset; //for local variable
     std::shared_ptr<Type> type;
     bool isLocal;
+    bool isLiteral;
+    std::string literal; //for global variable
   };
 } //namespace Lunaria
 
@@ -92,6 +94,7 @@ enum class TokenType {
   SHORT, //short
   LONG, //long
   SIZEOF, //sizeof
+  STR, //string literal
   TK_EOF,
 };
 
@@ -99,9 +102,10 @@ struct Token {
   TokenType tokenType;
   unsigned long long value; //available when tokenType is NUM
   std::string str;
-  Token(TokenType _tokenType, unsigned long long _value, std::string _str) 
-    : tokenType(_tokenType), value(_value), str(_str)
-  {}                                                   
+  std::string literal; //string literal
+  Token(TokenType _tokenType, unsigned long long _value, const std::string& _str, const std::string& _literal) 
+    : tokenType(_tokenType), value(_value), str(_str), literal(_literal)
+  {}
 };
 
 extern std::deque<std::unique_ptr<Token>> tokens;
@@ -111,6 +115,7 @@ int expect_number();
 std::string expect_ident();
 bool consume_symbol(TokenType tk_type);
 std::unique_ptr<Token> consume_ident();
+std::unique_ptr<Token> consume_str();
 bool look(TokenType tk_type);
 bool at_eof();
 void tokenize(const std::string& input);

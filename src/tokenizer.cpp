@@ -54,6 +54,16 @@ std::unique_ptr<Token> consume_ident(){
   return ret;
 }
 
+  std::unique_ptr<Token> consume_str(){
+    auto& token = tokens.front();
+    if(token->tokenType != TokenType::STR){
+      return nullptr;
+    }
+    auto ret = std::move(tokens.front());
+    tokens.pop_front();
+    return ret;
+  }
+
   bool look(TokenType tk_type){
     auto& token = tokens.front();
     if(token->tokenType != tk_type){
@@ -64,8 +74,9 @@ std::unique_ptr<Token> consume_ident(){
 
 static void new_token(TokenType tk_type,
 		      unsigned long long value = 0,
-		      const std::string& str = ""){
-  auto token = std::make_unique<Token>(tk_type, value, str);
+		      const std::string& str = "",
+		      const std::string& literal = ""){
+  auto token = std::make_unique<Token>(tk_type, value, str, literal);
   tokens.push_back(std::move(token)); 
 }
 
@@ -110,6 +121,24 @@ static TokenType starts_keyword(const std::string& str){
   return TokenType::TK_EOF;
 }
 
+  static char escape_char(char c){
+    switch(c){
+    case 'n': return '\n'; 
+    case 't': return '\t'; 
+    case 'r': return '\r';
+    case '\\': return '\\'; 
+    case '\'': return '\''; 
+    case '\"': return '\"'; 
+    case '0': return '\0'; 
+    case 'v': return '\v'; 
+    case 'b': return '\b'; 
+    case 'f': return '\f'; 
+    case 'a': return '\a'; 
+    case '?': return '\?'; 
+    }
+    std::cerr << "unknown escape character" << std::endl;
+    exit(1);
+  }
 
 void tokenize(const std::string& input){ 
   std::size_t end = 0;
@@ -256,20 +285,7 @@ void tokenize(const std::string& input){
       char c = 0;
       if(input[end] == '\\'){
 	end++;
-	switch(input[end]){
-	case 'n': c = '\n'; break;
-	case 't': c = '\t'; break;
-	case 'r': c = '\r'; break;
-	case '\\': c = '\\'; break;
-	case '\'': c = '\''; break;
-	case '\"': c = '\"'; break;
-	case '0': c = '\0'; break;
-	case 'v': c = '\v'; break;
-	case 'b': c = '\b'; break;
-	case 'f': c = '\f'; break;
-	case 'a': c = '\a'; break;
-	case '?': c = '\?'; break;
-	}
+	c = escape_char(input[end]);	
       } else {
 	c = input[end];
       }
@@ -280,6 +296,23 @@ void tokenize(const std::string& input){
       }
       end++;
       new_token(TokenType::NUM, c);
+      continue;
+    }
+
+    if(c == '"'){
+      std::string str = "";
+      while(input[end] != '"'){
+	if(input[end] == '\\'){
+	  end++;
+	  str += escape_char(input[end]);
+	} else {
+	  str += input[end];
+	}
+	end++;
+      } //while
+      end++;
+      str += '\0';
+      new_token(TokenType::STR, 0, "", str);
       continue;
     }
     
