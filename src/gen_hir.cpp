@@ -26,12 +26,66 @@ new_num(const std::unique_ptr<myParser::AstNode>& astNode){
   return hirNode;
 }
 
+std::unique_ptr<HirNode>
+new_num(int i){
+  auto hirNode = new_node(HirKind::HIR_IMM);
+  hirNode->val = i;
+  hirNode->type = Lunaria::int_type;
+  return hirNode;
+}
+
 static std::unique_ptr<HirNode>
 new_var(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_VAR);
   hirNode->type = astNode->var->type;
   hirNode->var = std::move(astNode->var);
   return hirNode;
+}
+
+std::unique_ptr<HirNode>
+copy_var_node(const std::unique_ptr<HirNode>& lhs){
+  auto hirNode = new_node(HirKind::HIR_VAR);
+  hirNode->type = lhs->type;
+  hirNode->var = lhs->var;
+  return hirNode;
+}
+
+std::unique_ptr<HirNode>
+new_add(std::unique_ptr<HirNode>& lhs,
+	std::unique_ptr<HirNode>& rhs){
+  if(is_integer(lhs->type) && is_integer(rhs->type)){
+      //lhs:int rhs:int
+      return new_binary(HirKind::HIR_ADD, lhs, rhs);
+    }
+    if(lhs->type->base && is_integer(rhs->type)){
+      //lhs:pointer rhs:int
+      return new_binary(HirKind::HIR_PTR_ADD, lhs, rhs);
+    }
+    if(is_integer(lhs->type) && rhs->type->base){
+      //lhs:int rhs:pointer
+      return new_binary(HirKind::HIR_PTR_ADD, rhs, lhs);
+    }
+    std::cerr << "invalid operands" << std::endl;
+    exit(1);
+}
+
+std::unique_ptr<HirNode>
+new_sub(std::unique_ptr<HirNode>& lhs,
+	std::unique_ptr<HirNode>& rhs){
+  if(is_integer(lhs->type) && is_integer(rhs->type)){
+      //lhs:int rhs:int
+      return new_binary(HirKind::HIR_SUB, lhs, rhs);
+    }
+    if(lhs->type->base && is_integer(rhs->type)){
+      //lhs:pointer rhs:int
+      return new_binary(HirKind::HIR_PTR_SUB, lhs, rhs);
+    }
+    if(lhs->type->base && rhs->type->base){
+      //lhs:pointer rhs:pointer
+      return new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);
+    }
+    std::cerr << "invalid operands" << std::endl;
+    exit(1);
 }
 
 std::unique_ptr<HirNode>
@@ -68,6 +122,20 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       hirNode->type = Lunaria::pointer_to(lhs->type);
     }
     hirNode->lhs = std::move(lhs);
+    return hirNode;
+  }
+  else if(astNode->kind == myParser::AstKind::AST_PRE_INC){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_PRE_INC);
+    hirNode->lhs = std::move(lhs);
+    hirNode->type = hirNode->lhs->type;
+    return hirNode;
+  }
+  else if(astNode->kind == myParser::AstKind::AST_PRE_DEC){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_PRE_DEC);
+    hirNode->lhs = std::move(lhs);
+    hirNode->type = hirNode->lhs->type;
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_BLOCK){

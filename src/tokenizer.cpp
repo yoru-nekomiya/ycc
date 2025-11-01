@@ -158,12 +158,22 @@ void tokenize(const std::string& input){
     }
     
     if(c == '+'){
-      new_token(TokenType::PLUS);
+      if(input[end] == '+'){
+	end++;
+	new_token(TokenType::PLUSPLUS);
+      } else {
+	new_token(TokenType::PLUS);
+      }
       continue;
     }
     
-    if(c == '-'){         
-      new_token(TokenType::MINUS);
+    if(c == '-'){
+      if(input[end] == '-'){
+	end++;
+	new_token(TokenType::MINUSMINUS);
+      } else {
+	new_token(TokenType::MINUS);
+      }
       continue; 
     }
 

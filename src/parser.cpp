@@ -504,6 +504,7 @@ static std::unique_ptr<AstNode> mul(){
 }
 
 //unary = ("+" | "-" | "*" | "&")? unary
+//        | ("++" | "--") unary
 //        | "sizeof" unary
 //        | postfix
 static std::unique_ptr<AstNode> unary(){
@@ -525,6 +526,18 @@ static std::unique_ptr<AstNode> unary(){
     node_addr->lhs = unary();
     return node_addr;
   }
+  
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUSPLUS)){
+    auto node = new_node(AstKind::AST_PRE_INC);
+    node->lhs = unary();
+    return node;
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUSMINUS)){
+    auto node = new_node(AstKind::AST_PRE_DEC);
+    node->lhs = unary();
+    return node;
+  }
+  
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::SIZEOF)){
     auto node_unary = unary();
     add_type(node_unary);

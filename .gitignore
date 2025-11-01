@@ -6,3 +6,5 @@ ycc
 tmp
 #*
 *.s
+*.txt
+*.expected

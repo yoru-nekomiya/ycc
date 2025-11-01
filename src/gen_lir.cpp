@@ -66,7 +66,7 @@ load(const std::shared_ptr<LirNode>& dst,
      const std::shared_ptr<LirNode>& src,
      int type_size){
   auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
-  node->lvar = src->lvar;
+  //node->lvar = src->lvar;
   node->type_size = type_size;
   return node->d;
 }
@@ -162,6 +162,36 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_PTR_SUB, hirNode);
   case myHIR::HirKind::HIR_PTR_DIFF:
     return gen_binop_lir(LirKind::LIR_PTR_DIFF, hirNode);
+  case myHIR::HirKind::HIR_PRE_INC: {
+    //++i -> i=i+1
+    auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    hirAssign->lhs = myHIR::copy_var_node(hirNode->lhs);
+    auto num_node = myHIR::new_num(1);
+    hirAssign->rhs = myHIR::new_add(hirNode->lhs,
+				    num_node);
+    myHIR::add_type(hirAssign);
+    /*
+    auto reg = new_reg();
+    auto tmp = gen_expr_lir(hirAssign);
+    return load(reg, tmp, hirAssign->type->size);
+    */
+    return gen_expr_lir(hirAssign);
+  }
+  case myHIR::HirKind::HIR_PRE_DEC: {
+    //--i -> i=i-1
+    auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    hirAssign->lhs = myHIR::copy_var_node(hirNode->lhs);
+    auto num_node = myHIR::new_num(1);
+    hirAssign->rhs = myHIR::new_sub(hirNode->lhs,
+				    num_node);
+    myHIR::add_type(hirAssign);
+    /*
+    auto reg = new_reg();
+    auto tmp = gen_expr_lir(hirAssign);
+    return load(reg, tmp, hirAssign->type->size);
+    */
+    return gen_expr_lir(hirAssign);
+  }
   case myHIR::HirKind::HIR_VAR: {
     if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
       return gen_lval_lir(hirNode);
@@ -176,7 +206,9 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
     auto b = gen_expr_lir(hirNode->rhs);
     auto lirNode = emit_lir(LirKind::LIR_STORE, nullptr, a, b);
     lirNode->type_size = hirNode->type->size;
-    return std::move(a);
+    //return std::move(a);
+    auto reg = new_reg();
+    return load(reg, a, hirNode->type->size);
   }
   case myHIR::HirKind::HIR_RETURN: {
     auto a = gen_expr_lir(hirNode->lhs);

@@ -77,6 +77,8 @@ namespace myParser {
     case AstKind::AST_PTR_ADD:
     case AstKind::AST_PTR_SUB:
     case AstKind::AST_ASSIGN:
+    case AstKind::AST_PRE_INC:
+    case AstKind::AST_PRE_DEC:
       node->type = node->lhs->type;
       return;
     case AstKind::AST_VAR:
@@ -108,3 +110,75 @@ namespace myParser {
   } //add_type()
   
 } //namespace myParser
+
+namespace myHIR {
+  void add_type(std::unique_ptr<HirNode>& node){
+    if (!node || node->type){
+      return;
+    }
+    
+    add_type(node->lhs);
+    add_type(node->rhs);
+    add_type(node->cond);
+    add_type(node->then);
+    add_type(node->els);
+    add_type(node->init);
+    add_type(node->inc);
+    
+    for(auto& n: node->body){
+      add_type(n);
+    }
+    for(auto& n: node->args){
+      add_type(n);
+    }
+    
+    switch (node->kind) {
+    case HirKind::HIR_ADD:
+    case HirKind::HIR_SUB:
+    case HirKind::HIR_PTR_DIFF:
+    case HirKind::HIR_MUL:
+    case HirKind::HIR_DIV:
+    case HirKind::HIR_EQ:
+    case HirKind::HIR_NE:
+    case HirKind::HIR_LT:
+    case HirKind::HIR_LE:
+    case HirKind::HIR_FUNCALL:
+    case HirKind::HIR_IMM:
+      node->type = Lunaria::int_type;
+      return;
+    case HirKind::HIR_PTR_ADD:
+    case HirKind::HIR_PTR_SUB:
+    case HirKind::HIR_ASSIGN:
+    case HirKind::HIR_PRE_INC:
+    case HirKind::HIR_PRE_DEC:
+      node->type = node->lhs->type;
+      return;
+    case HirKind::HIR_VAR:
+      node->type = node->var->type;
+      return;
+    case HirKind::HIR_ADDR: //address &
+      //node->type = pointer_to(node->lhs->type);
+      if(node->lhs->type->kind == Lunaria::TypeKind::ARRAY){
+	node->type = pointer_to(node->lhs->type->base);
+      } else {
+	node->type = pointer_to(node->lhs->type);
+      }
+      return;
+    case HirKind::HIR_DEREF: //dereferrence *
+      if(!node->lhs->type->base){
+	std::cerr << "invalid pointer dereference" << std::endl;
+	exit(1);
+      } //if      
+      node->type = node->lhs->type->base;
+      return;
+    case HirKind::HIR_SUBSCRIPTED: //a[i]
+      if(!node->lhs->type->base){
+	std::cerr << "invalid array reference" << std::endl;
+	exit(1);
+      } //if
+      node->type = node->lhs->type->base;      
+      return;    
+    } //switch()
+  } //add_type()
+  
+} //namespace myHIR

@@ -29,6 +29,8 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     filename=$(basename "$file")
     asm="$TEST_DIR/out/$rel_dir/${base}.s"
     exe="$TEST_DIR/out/$rel_dir/${base}.out"
+    out_txt="$TEST_DIR/out/$rel_dir/${base}.out.txt"
+    expected="${file%.c}.expected"
 
     #echo "=== Testing $file ==="
 
@@ -51,12 +53,27 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     fi
 
     #run and test
-    "$exe"
+    if [ -f "$expected" ]; then
+	"$exe" > "$out_txt" 2>&1
+    else
+	"$exe" > /dev/null 2>&1
+    fi
     result=$?
 
     if [ "$result" -eq 0 ]; then
-	printf "[${GREEN}PASS${RESET}] %s\n" "$rel_path"
-	PASS=$((PASS+1))
+	if [ -f "$expected" ]; then
+	    if diff -q "$expected" "$out_txt" > /dev/null 2>&1; then
+		printf "[${GREEN}PASS${RESET}] %s (output matched)\n" "$rel_path"
+		PASS=$((PASS+1))
+	    else
+		printf "[${RED}FAIL${RESET}] %s (output mismatch)\n" "$rel_path"
+		FAIL=$((FAIL+1))
+		[ -z "$FAILED_TESTS" ] && FAILED_TESTS=" - $rel_path (output mismatch)" || FAILED_TESTS="$FAILED_TESTS\n - $rel_path (output mismatch)"
+	    fi
+	else 
+	    printf "[${GREEN}PASS${RESET}] %s\n" "$rel_path"
+	    PASS=$((PASS+1))
+	fi
     else
 	printf "[${RED}FAIL${RESET}] %s (runtime error)\n" "$rel_path"
 	FAIL=$((FAIL+1))

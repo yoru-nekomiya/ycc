@@ -7,5 +7,11 @@ int main(){
   int b;
   b = a;
   assert(5, b);
+
+  int c; int d;
+  d = c = a;
+  assert(5, c);
+  assert(5, d);
+  
   return 0;
 }

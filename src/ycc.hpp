@@ -95,6 +95,8 @@ enum class TokenType {
   LONG, //long
   SIZEOF, //sizeof
   STR, //string literal
+  PLUSPLUS, //++
+  MINUSMINUS, //--
   TK_EOF,
 };
 
@@ -148,6 +150,8 @@ enum class AstKind {
   AST_PTR_SUB,
   AST_PTR_DIFF,
   AST_SUBSCRIPTED, //a[i]
+  AST_PRE_INC, //++i
+  AST_PRE_DEC, //--i
   AST_NULL,
 };
 
@@ -216,6 +220,8 @@ enum class HirKind {
   HIR_PTR_SUB,
   HIR_PTR_DIFF,
   HIR_SUBSCRIPTED,
+  HIR_PRE_INC, //++i
+  HIR_PRE_DEC, //--i
   HIR_NULL,
 };
 
@@ -257,8 +263,15 @@ struct HirNode {
   std::unique_ptr<HirNode> new_binary(HirKind kind,
 				      std::unique_ptr<HirNode>& lhs,
 				      std::unique_ptr<HirNode>& rhs);
+  std::unique_ptr<HirNode> new_num(int i);
+  std::unique_ptr<HirNode> copy_var_node(const std::unique_ptr<HirNode>& lhs);
+  std::unique_ptr<HirNode> new_add(std::unique_ptr<HirNode>& lhs,
+				   std::unique_ptr<HirNode>& rhs);
+  std::unique_ptr<HirNode> new_sub(std::unique_ptr<HirNode>& lhs,
+				   std::unique_ptr<HirNode>& rhs);
 std::unique_ptr<Program>
   generateHirNode(const std::unique_ptr<myParser::Program>&);
+  void add_type(std::unique_ptr<HirNode>& node);
 } //namespace myHIR
 //---------------------------
 //LIR
