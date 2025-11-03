@@ -79,6 +79,8 @@ namespace myParser {
     case AstKind::AST_ASSIGN:
     case AstKind::AST_PRE_INC:
     case AstKind::AST_PRE_DEC:
+    case AstKind::AST_POST_INC:
+    case AstKind::AST_POST_DEC:
       node->type = node->lhs->type;
       return;
     case AstKind::AST_VAR:
@@ -112,7 +114,7 @@ namespace myParser {
 } //namespace myParser
 
 namespace myHIR {
-  void add_type(std::unique_ptr<HirNode>& node){
+  void add_type(std::shared_ptr<HirNode>& node){
     if (!node || node->type){
       return;
     }
@@ -151,6 +153,8 @@ namespace myHIR {
     case HirKind::HIR_ASSIGN:
     case HirKind::HIR_PRE_INC:
     case HirKind::HIR_PRE_DEC:
+    case HirKind::HIR_POST_INC:
+    case HirKind::HIR_POST_DEC:
       node->type = node->lhs->type;
       return;
     case HirKind::HIR_VAR:

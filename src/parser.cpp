@@ -503,6 +503,13 @@ static std::unique_ptr<AstNode> mul(){
   }
 }
 
+  static std::unique_ptr<AstNode>
+  new_unary(AstKind k, std::unique_ptr<AstNode>& lhs){
+    auto node = new_node(k);
+    node->lhs = std::move(lhs);
+    return node;
+  }
+
 //unary = ("+" | "-" | "*" | "&")? unary
 //        | ("++" | "--") unary
 //        | "sizeof" unary
@@ -546,11 +553,11 @@ static std::unique_ptr<AstNode> unary(){
   return postfix();
 }
 
-  //postfix = primary ("[" expr "]")*
+  //postfix = primary ("[" expr "]" | "++" | "--")*
   static std::unique_ptr<AstNode> postfix(){
     auto node = primary();
     while(true){
-      if(consume_symbol(myTokenizer::TokenType::BRACKET_L)){
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACKET_L)){
 	//a[b] => AST_SUBSCRIPTED, lhs=a, rhs=b
 	auto node_expr = expr();
 	//auto tmp = new_add(node, expr());
@@ -558,9 +565,20 @@ static std::unique_ptr<AstNode> unary(){
 	//node = new_unary(ND_DEREF, tmp);
 	node = new_binary(AstKind::AST_SUBSCRIPTED, node, node_expr);
 	continue;
-      } 
+      }
+
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUSPLUS)){
+	node = new_unary(AstKind::AST_POST_INC, node);
+	continue;
+      }
+
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUSMINUS)){
+	node = new_unary(AstKind::AST_POST_DEC, node);
+	continue;
+      }
+      
       break;
-    } 
+    } //while
     return node;
   }
 

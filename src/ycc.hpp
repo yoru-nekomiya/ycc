@@ -152,6 +152,8 @@ enum class AstKind {
   AST_SUBSCRIPTED, //a[i]
   AST_PRE_INC, //++i
   AST_PRE_DEC, //--i
+  AST_POST_INC, //i++
+  AST_POST_DEC, //i--
   AST_NULL,
 };
 
@@ -222,27 +224,29 @@ enum class HirKind {
   HIR_SUBSCRIPTED,
   HIR_PRE_INC, //++i
   HIR_PRE_DEC, //--i
+  HIR_POST_INC, //i++
+  HIR_POST_DEC, //i--
   HIR_NULL,
 };
 
 struct HirNode {
   HirKind kind;
-  std::unique_ptr<HirNode> lhs;
-  std::unique_ptr<HirNode> rhs;
+  std::shared_ptr<HirNode> lhs;
+  std::shared_ptr<HirNode> rhs;
   int val;
 
   std::shared_ptr<Lunaria::Var> var;
 
-  std::unique_ptr<HirNode> cond; //if,while,for
-  std::unique_ptr<HirNode> then; //if,while,for
-  std::unique_ptr<HirNode> els; //if
-  std::unique_ptr<HirNode> init; //for
-  std::unique_ptr<HirNode> inc; //for
+  std::shared_ptr<HirNode> cond; //if,while,for
+  std::shared_ptr<HirNode> then; //if,while,for
+  std::shared_ptr<HirNode> els; //if
+  std::shared_ptr<HirNode> init; //for
+  std::shared_ptr<HirNode> inc; //for
 
-  std::list<std::unique_ptr<HirNode>> body;
+  std::list<std::shared_ptr<HirNode>> body;
 
   std::string funcName; //function name
-  std::list<std::unique_ptr<HirNode>> args;
+  std::list<std::shared_ptr<HirNode>> args;
 
   std::shared_ptr<Lunaria::Type> type;
 };
@@ -250,7 +254,7 @@ struct HirNode {
   struct Function {
     std::string name;
     std::list<std::shared_ptr<Lunaria::Var>> params;
-    std::list<std::unique_ptr<HirNode>> body;
+    std::list<std::shared_ptr<HirNode>> body;
     std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
   };
 
@@ -259,19 +263,19 @@ struct HirNode {
     std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
   };
 
-  std::unique_ptr<HirNode> new_node(HirKind kind);
-  std::unique_ptr<HirNode> new_binary(HirKind kind,
-				      std::unique_ptr<HirNode>& lhs,
-				      std::unique_ptr<HirNode>& rhs);
-  std::unique_ptr<HirNode> new_num(int i);
-  std::unique_ptr<HirNode> copy_var_node(const std::unique_ptr<HirNode>& lhs);
-  std::unique_ptr<HirNode> new_add(std::unique_ptr<HirNode>& lhs,
-				   std::unique_ptr<HirNode>& rhs);
-  std::unique_ptr<HirNode> new_sub(std::unique_ptr<HirNode>& lhs,
-				   std::unique_ptr<HirNode>& rhs);
+  std::shared_ptr<HirNode> new_node(HirKind kind);
+  std::shared_ptr<HirNode> new_binary(HirKind kind,
+				      std::shared_ptr<HirNode>& lhs,
+				      std::shared_ptr<HirNode>& rhs);
+  std::shared_ptr<HirNode> new_num(int i);
+  std::shared_ptr<HirNode> new_var_node(const std::shared_ptr<Lunaria::Var>& var);
+  std::shared_ptr<HirNode> new_add(std::shared_ptr<HirNode>& lhs,
+				   std::shared_ptr<HirNode>& rhs);
+  std::shared_ptr<HirNode> new_sub(std::shared_ptr<HirNode>& lhs,
+				   std::shared_ptr<HirNode>& rhs);
 std::unique_ptr<Program>
   generateHirNode(const std::unique_ptr<myParser::Program>&);
-  void add_type(std::unique_ptr<HirNode>& node);
+  void add_type(std::shared_ptr<HirNode>& node);
 } //namespace myHIR
 //---------------------------
 //LIR

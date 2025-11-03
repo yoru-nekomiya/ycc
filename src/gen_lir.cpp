@@ -5,6 +5,7 @@ namespace myLIR {
   static std::shared_ptr<Function> func = nullptr;
   static std::shared_ptr<BasicBlock> outBB = nullptr;
   static int label = 0;
+  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
 
 static std::shared_ptr<LirNode>
 new_lir(LirKind opcode){
@@ -89,9 +90,9 @@ jmp(const std::shared_ptr<BasicBlock>& bb){
   return lirNode;
 }
 
-  std::shared_ptr<LirNode> gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode);
+  std::shared_ptr<LirNode> gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode);
 
-static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
+static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   if(hirNode->kind == myHIR::HirKind::HIR_DEREF){
     return gen_expr_lir(hirNode->lhs);
   }
@@ -111,7 +112,8 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
     auto d = new_reg(hirNode->var->name);
     lirNode->vn = d->vn;
     lirNode->d = std::move(d);
-    lirNode->lvar = std::move(hirNode->var);
+    //lirNode->lvar = std::move(hirNode->var);
+    lirNode->lvar = hirNode->var;
   } else {
     lirNode = new_lir(LirKind::LIR_LABEL_ADDR);
     auto d = new_reg(hirNode->var->name);
@@ -124,7 +126,7 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::unique_ptr<myHIR::HirNod
 
 static std::shared_ptr<LirNode>
 gen_binop_lir(LirKind opcode,
-	      const std::unique_ptr<myHIR::HirNode>& hirNode){
+	      const std::shared_ptr<myHIR::HirNode>& hirNode){
   auto d = new_reg();
   auto a = gen_expr_lir(hirNode->lhs);
   auto b = gen_expr_lir(hirNode->rhs);
@@ -133,8 +135,17 @@ gen_binop_lir(LirKind opcode,
   return lirNode->d;
 }
 
+  static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
+    auto var = std::make_shared<Lunaria::Var>();
+    var->name = name;
+    var->type = type;
+    var->isLocal = true;
+    localVars[var->name] = var;
+    return var;
+  }
+
 std::shared_ptr<LirNode>
-gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
+gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   switch(hirNode->kind){
   case myHIR::HirKind::HIR_IMM:
     return new_imm(hirNode->val);
@@ -165,32 +176,66 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
   case myHIR::HirKind::HIR_PRE_INC: {
     //++i -> i=i+1
     auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
-    hirAssign->lhs = myHIR::copy_var_node(hirNode->lhs);
+    hirAssign->lhs = hirNode->lhs;
     auto num_node = myHIR::new_num(1);
     hirAssign->rhs = myHIR::new_add(hirNode->lhs,
 				    num_node);
     myHIR::add_type(hirAssign);
-    /*
-    auto reg = new_reg();
-    auto tmp = gen_expr_lir(hirAssign);
-    return load(reg, tmp, hirAssign->type->size);
-    */
     return gen_expr_lir(hirAssign);
   }
   case myHIR::HirKind::HIR_PRE_DEC: {
     //--i -> i=i-1
     auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
-    hirAssign->lhs = myHIR::copy_var_node(hirNode->lhs);
+    hirAssign->lhs = hirNode->lhs;
     auto num_node = myHIR::new_num(1);
     hirAssign->rhs = myHIR::new_sub(hirNode->lhs,
 				    num_node);
     myHIR::add_type(hirAssign);
-    /*
-    auto reg = new_reg();
-    auto tmp = gen_expr_lir(hirAssign);
-    return load(reg, tmp, hirAssign->type->size);
-    */
     return gen_expr_lir(hirAssign);
+  }
+  case myHIR::HirKind::HIR_POST_INC: {
+    //i++ -> t=i; i=i+1; t;
+    //t=i
+    static int i = 0;
+    auto hirAssign_t = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    auto t = new_lvar("__tmp_var_postinc__" + std::to_string(i++), hirNode->lhs->type);
+    hirAssign_t->lhs = myHIR::new_var_node(t);
+    hirAssign_t->rhs = hirNode->lhs;
+    myHIR::add_type(hirAssign_t);
+    auto rlt = gen_expr_lir(hirAssign_t);
+
+    //i=i+1
+    auto hirAssign_i = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    hirAssign_i->lhs = hirNode->lhs;
+    auto num_node = myHIR::new_num(1);
+    hirAssign_i->rhs = myHIR::new_add(hirNode->lhs, num_node);
+    myHIR::add_type(hirAssign_i);
+    gen_expr_lir(hirAssign_i);
+
+    //t;
+    return rlt;
+  }
+  case myHIR::HirKind::HIR_POST_DEC: {
+    //i-- -> t=i; i=i-1; t;
+    //t=i
+    static int i = 0;
+    auto hirAssign_t = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    auto t = new_lvar("__tmp_var_postdec__" + std::to_string(i++), hirNode->lhs->type);
+    hirAssign_t->lhs = myHIR::new_var_node(t);
+    hirAssign_t->rhs = hirNode->lhs;
+    myHIR::add_type(hirAssign_t);
+    auto rlt = gen_expr_lir(hirAssign_t);
+
+    //i=i-1
+    auto hirAssign_i = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    hirAssign_i->lhs = hirNode->lhs;
+    auto num_node = myHIR::new_num(1);
+    hirAssign_i->rhs = myHIR::new_sub(hirNode->lhs, num_node);
+    myHIR::add_type(hirAssign_i);
+    gen_expr_lir(hirAssign_i);
+
+    //t;
+    return rlt;
   }
   case myHIR::HirKind::HIR_VAR: {
     if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
@@ -319,7 +364,8 @@ gen_expr_lir(const std::unique_ptr<myHIR::HirNode>& hirNode){
 			       hirNode->lhs, hirNode->rhs);
     hirPtrAdd->type = hirPtrAdd->lhs->type;
     auto hirDeref = myHIR::new_node(myHIR::HirKind::HIR_DEREF);
-    hirDeref->lhs = std::move(hirPtrAdd);
+    //hirDeref->lhs = std::move(hirPtrAdd);
+    hirDeref->lhs = hirPtrAdd;
     hirDeref->type = hirDeref->lhs->type->base;
     return gen_expr_lir(hirDeref);
   }
@@ -365,7 +411,8 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     auto fnLir = std::make_shared<Function>();
     fnLir->name = fn->name;
     fnLir->params = fn->params;
-    fnLir->localVars = fn->localVars;
+    //fnLir->localVars = fn->localVars;
+    localVars = fn->localVars;
     
     func = fnLir;
     outBB = new_bb();
@@ -378,6 +425,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     for(const auto& hirNode: fn->body){
       gen_expr_lir(hirNode);
     }
+    fnLir->localVars = localVars;
     progLir->fns.push_back(fnLir);
   }
   //dumpLIR(lirList);

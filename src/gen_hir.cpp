@@ -1,24 +1,28 @@
 #include "ycc.hpp"
 
 namespace myHIR {
-std::unique_ptr<HirNode>
+std::shared_ptr<HirNode>
 new_node(HirKind kind){
-  auto node = std::make_unique<HirNode>();
+  auto node = std::make_shared<HirNode>();
   node->kind = kind;
   return node;
 }
 
-std::unique_ptr<HirNode>
+std::shared_ptr<HirNode>
 new_binary(HirKind kind,
-	   std::unique_ptr<HirNode>& lhs,
-	   std::unique_ptr<HirNode>& rhs){
+	   std::shared_ptr<HirNode>& lhs,
+	   std::shared_ptr<HirNode>& rhs){
   auto hirNode = new_node(kind);
+  /*
   hirNode->lhs = std::move(lhs);
   hirNode->rhs = std::move(rhs);
+  */
+  hirNode->lhs = lhs;
+  hirNode->rhs = rhs;
   return hirNode;
 }
 
-static std::unique_ptr<HirNode>
+static std::shared_ptr<HirNode>
 new_num(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = astNode->val;
@@ -26,7 +30,7 @@ new_num(const std::unique_ptr<myParser::AstNode>& astNode){
   return hirNode;
 }
 
-std::unique_ptr<HirNode>
+std::shared_ptr<HirNode>
 new_num(int i){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = i;
@@ -34,7 +38,7 @@ new_num(int i){
   return hirNode;
 }
 
-static std::unique_ptr<HirNode>
+static std::shared_ptr<HirNode>
 new_var(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_VAR);
   hirNode->type = astNode->var->type;
@@ -42,17 +46,17 @@ new_var(const std::unique_ptr<myParser::AstNode>& astNode){
   return hirNode;
 }
 
-std::unique_ptr<HirNode>
-copy_var_node(const std::unique_ptr<HirNode>& lhs){
+std::shared_ptr<HirNode>
+new_var_node(const std::shared_ptr<Lunaria::Var>& var){
   auto hirNode = new_node(HirKind::HIR_VAR);
-  hirNode->type = lhs->type;
-  hirNode->var = lhs->var;
+  hirNode->type = var->type;
+  hirNode->var = var;
   return hirNode;
 }
 
-std::unique_ptr<HirNode>
-new_add(std::unique_ptr<HirNode>& lhs,
-	std::unique_ptr<HirNode>& rhs){
+std::shared_ptr<HirNode>
+new_add(std::shared_ptr<HirNode>& lhs,
+	std::shared_ptr<HirNode>& rhs){
   if(is_integer(lhs->type) && is_integer(rhs->type)){
       //lhs:int rhs:int
       return new_binary(HirKind::HIR_ADD, lhs, rhs);
@@ -69,9 +73,9 @@ new_add(std::unique_ptr<HirNode>& lhs,
     exit(1);
 }
 
-std::unique_ptr<HirNode>
-new_sub(std::unique_ptr<HirNode>& lhs,
-	std::unique_ptr<HirNode>& rhs){
+std::shared_ptr<HirNode>
+new_sub(std::shared_ptr<HirNode>& lhs,
+	std::shared_ptr<HirNode>& rhs){
   if(is_integer(lhs->type) && is_integer(rhs->type)){
       //lhs:int rhs:int
       return new_binary(HirKind::HIR_SUB, lhs, rhs);
@@ -88,7 +92,7 @@ new_sub(std::unique_ptr<HirNode>& lhs,
     exit(1);
 }
 
-std::unique_ptr<HirNode>
+std::shared_ptr<HirNode>
 program(const std::unique_ptr<myParser::AstNode>& astNode){
   if(astNode->kind == myParser::AstKind::AST_NUM){
     return new_num(astNode);
@@ -138,6 +142,20 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->type = hirNode->lhs->type;
     return hirNode;
   }
+  else if(astNode->kind == myParser::AstKind::AST_POST_INC){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_POST_INC);
+    hirNode->lhs = std::move(lhs);
+    hirNode->type = hirNode->lhs->type;
+    return hirNode;
+  }
+  else if(astNode->kind == myParser::AstKind::AST_POST_DEC){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_POST_DEC);
+    hirNode->lhs = std::move(lhs);
+    hirNode->type = hirNode->lhs->type;
+    return hirNode;
+  }
   else if(astNode->kind == myParser::AstKind::AST_BLOCK){
     auto hirNode = new_node(HirKind::HIR_BLOCK);
     for(const auto& n: astNode->body){
@@ -155,7 +173,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_IF);
     auto cond = program(astNode->cond);
     auto then = program(astNode->then);
-    std::unique_ptr<HirNode> els = nullptr;
+    std::shared_ptr<HirNode> els = nullptr;
     if(astNode->els){
       els = program(astNode->els);
     }
@@ -172,9 +190,9 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_FOR){
     auto hirNode = new_node(HirKind::HIR_FOR);
-    std::unique_ptr<HirNode> init = nullptr;
-    std::unique_ptr<HirNode> cond = nullptr;
-    std::unique_ptr<HirNode> inc = nullptr;
+    std::shared_ptr<HirNode> init = nullptr;
+    std::shared_ptr<HirNode> cond = nullptr;
+    std::shared_ptr<HirNode> inc = nullptr;
     if(astNode->init){
       init = program(astNode->init);
     }
