@@ -101,9 +101,13 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
   } else if(astNode->kind == myParser::AstKind::AST_VAR){
     return new_var(astNode);
   } else if(astNode->kind == myParser::AstKind::AST_RETURN){
-    auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_RETURN);
-    hirNode->lhs = std::move(lhs);
+    if(astNode->lhs){
+      auto lhs = program(astNode->lhs);
+      hirNode->lhs = std::move(lhs);
+      return hirNode;
+    }
+    hirNode->lhs = nullptr;
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_DEREF){

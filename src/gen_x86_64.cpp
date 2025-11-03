@@ -136,13 +136,12 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << std::endl;
     break;
   case myLIR::LirKind::LIR_RETURN:
-    std::cout << "  mov rax, " << regs[a] << std::endl;
+    //std::cout << "  mov rax, " << regs[a] << std::endl;
+    if(lirNode->a){
+      std::cout << "  mov rax, " << regs[a] << std::endl;
+    }
     std::cout << "  jmp .L.return." << funcname << std::endl;
-    /*
-      << "  mov rsp, rbp" << std::endl
-      << "  pop rbp" << std::endl
-      << "  ret" << std::endl;
-    */
+    
       break;
   case myLIR::LirKind::LIR_BR:
     std::cout << "  cmp " << regs[b] << ", 0" << std::endl;

@@ -20,6 +20,7 @@ namespace Lunaria {
     CHAR,
     SHORT,
     LONG,
+    VOID,
     PTR,
     ARRAY,
   };
@@ -42,6 +43,7 @@ namespace Lunaria {
   extern std::shared_ptr<Type> char_type;
   extern std::shared_ptr<Type> short_type;
   extern std::shared_ptr<Type> long_type;
+  extern std::shared_ptr<Type> void_type;
   bool is_integer(const std::shared_ptr<Type>& type);
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
   int align_to(int n, int align);
@@ -93,6 +95,7 @@ enum class TokenType {
   CHAR, //char
   SHORT, //short
   LONG, //long
+  VOID, //void
   SIZEOF, //sizeof
   STR, //string literal
   PLUSPLUS, //++

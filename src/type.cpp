@@ -5,6 +5,7 @@ namespace Lunaria {
   std::shared_ptr<Type> char_type = std::make_shared<Type>(TypeKind::CHAR, 1, 1);
   std::shared_ptr<Type> short_type = std::make_shared<Type>(TypeKind::SHORT, 2, 2);
   std::shared_ptr<Type> long_type = std::make_shared<Type>(TypeKind::LONG, 8, 8);
+  std::shared_ptr<Type> void_type = std::make_shared<Type>(TypeKind::VOID, 1, 1);
   
   bool is_integer(const std::shared_ptr<Type>& type){
     const auto k = type->kind;

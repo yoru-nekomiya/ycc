@@ -75,14 +75,17 @@ static std::unique_ptr<AstNode> new_num(int val){
       || look(myTokenizer::TokenType::CHAR)
       || look(myTokenizer::TokenType::SHORT)
       || look(myTokenizer::TokenType::LONG)
+      || look(myTokenizer::TokenType::VOID)
       ;
   }
 
-  static bool isNotBuildinType(myTokenizer::TokenType t){
+  static bool isNotBuiltinType(myTokenizer::TokenType t){
     if(t != myTokenizer::TokenType::INT
        && t != myTokenizer::TokenType::CHAR
        && t != myTokenizer::TokenType::SHORT
-       && t != myTokenizer::TokenType::LONG){
+       && t != myTokenizer::TokenType::LONG
+       && t != myTokenizer::TokenType::VOID
+       ){
       return true;
     }
     return false;
@@ -92,7 +95,7 @@ static std::unique_ptr<AstNode> new_num(int val){
     bool isFunc = false;
 
     //basetype()
-    if(isNotBuildinType(myTokenizer::tokens[0]->tokenType)){
+    if(isNotBuiltinType(myTokenizer::tokens[0]->tokenType)){
       std::cerr << "parse error in isFunction()" << std::endl;
       exit(1);
     }
@@ -136,6 +139,12 @@ static std::unique_ptr<AstNode> primary();
     auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
     expect(myTokenizer::TokenType::SEMICOLON);
+
+    if(type->kind == Lunaria::TypeKind::VOID){
+      std::cerr << "variable is declared void\n";
+      exit(1);
+    }
+    
     auto gvar = new_gvar(name, type, false, "");
     return;
   } //global_var()
@@ -163,7 +172,7 @@ std::unique_ptr<Program> program(){
 }
   
   //basetype = builtin-type "*"*
-  //builtin-type = "int" | "char" | "short" | "long"
+  //builtin-type = "int" | "char" | "short" | "long" | "void"
   static std::shared_ptr<Lunaria::Type> basetype(){
     //expect(myTokenizer::TokenType::INT);
     //auto type = Lunaria::int_type;
@@ -176,6 +185,8 @@ std::unique_ptr<Program> program(){
       type = Lunaria::short_type;
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::LONG)){
       type = Lunaria::long_type;
+    } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::VOID)){
+      type = Lunaria::void_type;
     }
     
     while(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
@@ -200,6 +211,12 @@ static std::list<std::shared_ptr<Lunaria::Var>> readFuncParams(){
     //no params
     return std::list<std::shared_ptr<Lunaria::Var>>();
   }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::VOID)
+     && myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
+    //param is void
+    return std::list<std::shared_ptr<Lunaria::Var>>();
+  }
+  
   std::list<std::shared_ptr<Lunaria::Var>> params;
   params.push_back(readFuncParam());
   while(!myTokenizer::consume_symbol(myTokenizer::TokenType::PAREN_R)){
@@ -240,6 +257,11 @@ static std::unique_ptr<Function> function(){
     type = type_suffix(type);
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
 
+    if(type->kind == Lunaria::TypeKind::VOID){
+      std::cerr << "variable is declared void\n";
+      exit(1);
+    }
+    
     auto lvar = new_lvar(name, type);
     return new_node(AstKind::AST_NULL);
   }
@@ -291,7 +313,7 @@ static std::unique_ptr<Function> function(){
   
 //stmt2 = expr ";"
 //       | "{" stmt* "}"
-//       | "return" expr ";"
+//       | "return" expr? ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
 //       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
@@ -299,9 +321,14 @@ static std::unique_ptr<Function> function(){
 static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
   
-  //"return" expr ";"
+  //"return" expr? ";"
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::RETURN)){
     node = new_node(AstKind::AST_RETURN);
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
+      //"return" ";"
+      node->lhs = nullptr;
+      return node;
+    }
     auto node_expr = expr();
     node->lhs = std::move(node_expr);
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);

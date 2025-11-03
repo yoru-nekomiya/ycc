@@ -256,7 +256,10 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return load(reg, a, hirNode->type->size);
   }
   case myHIR::HirKind::HIR_RETURN: {
-    auto a = gen_expr_lir(hirNode->lhs);
+    std::shared_ptr<LirNode> a = nullptr;
+    if(hirNode->lhs){
+      a = gen_expr_lir(hirNode->lhs);
+    }
     auto lirNode = new_lir(LirKind::LIR_RETURN);
     lirNode->a = a;
     outBB = new_bb();

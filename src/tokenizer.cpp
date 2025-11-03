@@ -114,6 +114,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::SHORT;
       case 9:
 	return TokenType::LONG;
+      case 10:
+	return TokenType::VOID;
       }
     }
     i++;
