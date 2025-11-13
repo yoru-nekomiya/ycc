@@ -25,16 +25,16 @@ void void_test2(){
 }
 
 int main(){
-  assert(10, return_10());
-  assert(5, add(2,3));
+  assert(10, return_10(), "return_10()");
+  assert(5, add(2,3), "add(2,3)");
   //assert(21, add_6(1,2,3,4,5,6));
 
   g=0;
-  assert(0, g);
+  assert(0, g, "before void_test()");
   void_test();
-  assert(1, g);
+  assert(1, g, "after void_test()");
   void_test2();
-  assert(2, g);
+  assert(2, g, "before void_test2()");
   
   return 0;
 }

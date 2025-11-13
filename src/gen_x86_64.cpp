@@ -136,7 +136,6 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << std::endl;
     break;
   case myLIR::LirKind::LIR_RETURN:
-    //std::cout << "  mov rax, " << regs[a] << std::endl;
     if(lirNode->a){
       std::cout << "  mov rax, " << regs[a] << std::endl;
     }
@@ -144,7 +143,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     
       break;
   case myLIR::LirKind::LIR_BR:
-    std::cout << "  cmp " << regs[b] << ", 0" << std::endl;
+    //std::cout << "  cmp " << regs[b] << ", 0" << std::endl;
+    std::cout << "  test " << regs[b] << ", " << regs[b] << std::endl;
     std::cout << "  jne .L" << lirNode->bb1->label << std::endl;
     std::cout << "  jmp .L" << lirNode->bb2->label << std::endl;
     break;
@@ -176,6 +176,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       std::cout << "  lea " << regs[d] << ", ["
 		<< regs[d] << "+" << regs[b] << "*" << size
 		<< "]" << std::endl;
+    } else {
+      std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+      std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
     }
     break;
   }
@@ -192,17 +195,32 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       std::cout << "  lea " << regs[d] << ", ["
 		<< regs[d] << "+" << regs[b] << "*" << size
 		<< "]" << std::endl;
+    } else {
+      std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+      std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
     }
     break;
   }
-  case myLIR::LirKind::LIR_PTR_DIFF:
+  case myLIR::LirKind::LIR_PTR_DIFF: {
+    const int size = lirNode->type_base_size;
     std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    if(size == 1){
+      ;
+    } else if(size == 2){
+      std::cout << "  sar " << regs[d] << ", 1\n";
+    } else if(size == 4){
+      std::cout << "  sar " << regs[d] << ", 2\n";
+    } else if(size == 8){
+      std::cout << "  sar " << regs[d] << ", 3\n";
+    } else {
     std::cout << "  mov rax, " << regs[d] << std::endl;
     std::cout << "  cqo" << std::endl;
     std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
     std::cout << "  idiv " << regs[b] << std::endl;
     std::cout << "  mov " << regs[d] << ", rax" << std::endl;
     break;
+    }
+  }
   } //switch
 }
 
@@ -240,7 +258,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << ".bss" << std::endl;
 
     for(const auto& [name, gvar]: prog->globalVars){
-      if(gvar->isLiteral){
+      if(gvar->isLiteral || !gvar->initializer.empty()){
 	continue;
       }
       std::cout << ".align " << gvar->type->align << std::endl;
@@ -255,7 +273,20 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << gvar->name << ":\n";
 	print_literal(gvar->literal);
       }
-    }
+
+      if(!gvar->initializer.empty()){
+	std::cout << ".align " << gvar->type->align << std::endl;
+	std::cout << gvar->name << ":\n";
+	for(const auto& init: gvar->initializer){
+	  if(init->size == 1){
+	    std::cout << "  .byte " << init->val << std::endl;	    
+	  } else {
+	    std::cout << "  ." << init->size << "byte "
+		      << init->val << std::endl;
+	  }
+	} //for init
+      } //if !gvar->initializer.empty()
+    } //for [name, gvar]
   }
   
 static void emit_text(const std::unique_ptr<myLIR::Program>& prog){

@@ -16,9 +16,9 @@ int fib(int a){
 }
 
 int main(){
-  assert(120, kaijo(5));
-  assert(5040, kaijo(7));
+  assert(120, kaijo(5), "kaijo(5)");
+  assert(5040, kaijo(7), "kaijo(7)");
 
-  assert(55, fib(10));
+  assert(55, fib(10), "fib(10)");
   return 0;
 }

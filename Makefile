@@ -17,6 +17,6 @@ test: $(TARGET)
 
 clean:
 	rm -rf build/
-	rm -rf tests/out/ 
+	rm -rf tests/out/ tests/*.s
 
 .PHONY: test clean

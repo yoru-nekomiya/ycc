@@ -1,12 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
 
-void assert(int expected, int actual/*, char* desc*/){
+void assert(long expected, long actual, char* desc){
   if(expected != actual){
-    //fprintf(stderr, "Test failed: %s\n", desc);
-    printf("-- Test failed: expected %d, but got %d\n", expected, actual);
+    printf("-- Test failed: %s (expected %ld, but got %ld)\n", desc, expected, actual);
     exit(1);
-  } /*else {
-    printf("Test passed: %s\n", desc);
-    }*/
+  } 
 }

@@ -2,7 +2,7 @@
 
 YCC=./build/ycc
 TEST_DIR=./tests
-LIB="$TEST_DIR"/testlib.c
+LIB="$TEST_DIR"/testlib.s
 PASS=0
 FAIL=0
 
@@ -15,6 +15,8 @@ GREEN="\033[1;32m"
 RED="\033[1;31m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
+
+$YCC "$TEST_DIR"/testlib.c > $LIB
 
 for file in $(find "$TEST_DIR" -name "*.c"); do
     #skip testlib.c
@@ -56,7 +58,7 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     if [ -f "$expected" ]; then
 	"$exe" > "$out_txt" 2>&1
     else
-	"$exe" > /dev/null 2>&1
+	"$exe" >/dev/null 2>&1
     fi
     result=$?
 

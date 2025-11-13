@@ -44,7 +44,7 @@ new_reg(const std::string& varName = ""){
 }
 
 static std::shared_ptr<LirNode>
-new_imm(int imm){
+new_imm(long long imm){
   auto d = new_reg();
   auto lirNode = new_lir(LirKind::LIR_IMM);
   lirNode->vn = d->vn;

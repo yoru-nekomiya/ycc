@@ -8,6 +8,6 @@ int main(){
     x = x+i;
     i = i+1;
   }
-  assert(10, x);
+  assert(10, x, "while test");
   return 0;
 }

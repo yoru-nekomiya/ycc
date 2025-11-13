@@ -6,6 +6,6 @@ int main(){
   for(i = 0; i < 10; i = i+1){
     x = x+1;
   }
-  assert(10, x);
+  assert(10, x, "for test");
   return 0;
 }

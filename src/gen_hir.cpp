@@ -31,7 +31,7 @@ new_num(const std::unique_ptr<myParser::AstNode>& astNode){
 }
 
 std::shared_ptr<HirNode>
-new_num(int i){
+new_num(long long i){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = i;
   hirNode->type = Lunaria::int_type;

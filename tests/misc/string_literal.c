@@ -1,12 +1,12 @@
 
 int main(){
   char* s; s = "Hello";
-  assert('H', s[0]);
-  assert('e', s[1]);
-  assert('l', s[2]);
-  assert('l', s[3]);
-  assert('o', s[4]);
-  assert('\0', s[5]);
+  assert('H', s[0], "\'H\'");
+  assert('e', s[1], "\'e\'");
+  assert('l', s[2], "\'l\'");
+  assert('l', s[3], "\'l\'");
+  assert('o', s[4], "\'o\'");
+  assert('\0', s[5], "\'\\0\'");
 
   s = "Hello,\tWorld!\n";
   printf("%s", s);

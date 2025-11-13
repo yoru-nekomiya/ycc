@@ -9,16 +9,16 @@ int main(){
   a = 100;
   int* b;
   b = &a;
-  assert(100, *b);
+  assert(100, *b, "*b");
 
   int** c;
   c = &b;
-  assert(100, **c);
+  assert(100, **c, "**c");
 
   inc(&a);
-  assert(101, a);
+  assert(101, a, "inc(&a)");
   inc(b);
-  assert(102, *b);
+  assert(102, *b, "inc(b)");
   
   return 0;
 }

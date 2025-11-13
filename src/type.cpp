@@ -101,6 +101,10 @@ namespace myParser {
 	exit(1);
       } //if      
       node->type = node->lhs->type->base;
+      if(node->type->kind == Lunaria::TypeKind::VOID){
+	std::cerr << "dereference void pointer\n";
+	exit(1);
+      }
       return;
     case AstKind::AST_SUBSCRIPTED: //a[i]
       if(!node->lhs->type->base){
@@ -175,6 +179,10 @@ namespace myHIR {
 	exit(1);
       } //if      
       node->type = node->lhs->type->base;
+      if(node->type->kind == Lunaria::TypeKind::VOID){
+	std::cerr << "dereference void pointer\n";
+	exit(1);
+      }
       return;
     case HirKind::HIR_SUBSCRIPTED: //a[i]
       if(!node->lhs->type->base){

@@ -64,7 +64,7 @@ new_binary(AstKind kind,
   return node;
 }
 
-static std::unique_ptr<AstNode> new_num(int val){
+static std::unique_ptr<AstNode> new_num(long long val){
   auto node = new_node(AstKind::AST_NUM);
   node->val = val;
   return node;
@@ -119,26 +119,145 @@ static std::unique_ptr<AstNode> new_num(int val){
   }
 
   static std::unique_ptr<Function> function();
-static std::unique_ptr<AstNode> stmt();
-static std::unique_ptr<AstNode> stmt2();
-static std::unique_ptr<AstNode> expr();
-static std::unique_ptr<AstNode> assign();
-static std::unique_ptr<AstNode> equality();
-static std::unique_ptr<AstNode> relational();
-static std::unique_ptr<AstNode> add();
-static std::unique_ptr<AstNode> mul();
-static std::unique_ptr<AstNode> unary();
-static std::unique_ptr<AstNode> postfix();
-static std::unique_ptr<AstNode> primary();
+  static std::unique_ptr<AstNode> stmt();
+  static std::unique_ptr<AstNode> stmt2();
+  static std::unique_ptr<AstNode> expr();
+  static std::unique_ptr<AstNode> assign();
+  static std::unique_ptr<AstNode> equality();
+  static std::unique_ptr<AstNode> relational();
+  static std::unique_ptr<AstNode> add();
+  static std::unique_ptr<AstNode> mul();
+  static std::unique_ptr<AstNode> unary();
+  static std::unique_ptr<AstNode> postfix();
+  static std::unique_ptr<AstNode> primary();
   static std::shared_ptr<Lunaria::Type> basetype();
   static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
+  static int const_expr();
+  static int eval(const std::unique_ptr<AstNode>&);
+  
+  static void
+  new_init_val(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
+	       int sz, int val){
+    cur.push_back(std::make_unique<Lunaria::Initializer>(sz, val));
+  }
 
-  //global_var = basetype ident type_suffix ";"
+  static void
+  new_init_zero(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
+		int nbytes){
+    //assign zero, nbytes
+    for(int i = 0; i < nbytes; i++){
+      new_init_val(cur, 1, 0);
+    }
+  }
+
+  static void skip_excess_elements2(){
+    while(1){
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
+	skip_excess_elements2();
+      } else {
+	assign();
+      }
+
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+	return;
+      }
+      myTokenizer::expect(myTokenizer::TokenType::COMMA);
+    } //while
+  }
+  
+  static void skip_excess_elements(){
+    myTokenizer::expect(myTokenizer::TokenType::COMMA);
+    skip_excess_elements2();
+  }
+
+  //gvar_initializer2 = assign
+  //                    | "{" (gvar_initializer2 ("," gvar_initializer2)* )? "}" 
+  static void
+  gvar_initializer2(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur, std::shared_ptr<Lunaria::Type>& type){
+    auto& tok = myTokenizer::tokens.front();
+
+    if(type->kind == Lunaria::TypeKind::ARRAY
+       && type->base->kind == Lunaria::TypeKind::CHAR
+       && tok->tokenType == myTokenizer::TokenType::STR){
+      //char a[]="hoge"
+
+      if(type->is_incomplete){
+	//when the number of elements is omitted
+	type->size = tok->literal.size();
+	type->array_size = tok->literal.size();
+	type->is_incomplete = false;
+      }
+
+      //compare array_size with string_length
+      const int len = (type->array_size < tok->literal.size())
+	? type->array_size : tok->literal.size();
+      for(int i = 0; i < len; i++){
+	new_init_val(cur, 1, tok->literal[i]);
+      }
+      //when type->array_size >= tok->str_len, fill the difference with 0
+      new_init_zero(cur, type->array_size - len);
+      myTokenizer::tokens.pop_front();
+      return;
+    } //if ARRAY && CHAR && STR
+
+    if(type->kind == Lunaria::TypeKind::ARRAY){
+      //T a[] = {1, 2}
+      const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+      //if the number of elements is omitted, any number of elements is allowed.
+      const int limit = type->is_incomplete ? INT_MAX : type->array_size;
+      int i = 0;
+      if(!myTokenizer::look(myTokenizer::TokenType::BRACE_R)){
+	do{
+	  gvar_initializer2(cur, type->base);
+	  i++;
+	}while(i < limit && !myTokenizer::look(myTokenizer::TokenType::BRACE_R) && myTokenizer::consume_symbol(myTokenizer::TokenType::COMMA));
+      }
+
+      if(open && !myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+	//The number of elements is exceeded
+	//T a[1] = {1,2}
+	skip_excess_elements();
+      }
+
+      //set array elements which is not initialized to zero
+      //T a[3] = {1}
+      new_init_zero(cur, type->base->size * (type->array_size-i));
+
+      if(type->is_incomplete){
+	//the number of elements is omitted
+	type->size = type->base->size * i;
+	type->array_size = i;
+	type->is_incomplete = false;
+      }
+      return;
+    } //if ARRAY
+
+    //if(type->kind == STRUCT)
+    //TODO:
+
+    const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+    auto expression = expr();
+    if(open){
+      myTokenizer::expect(myTokenizer::TokenType::BRACE_R);
+    }
+
+    const int constant = eval(expression);
+    new_init_val(cur, type->size, constant);
+  }
+  
+  std::vector<std::unique_ptr<Lunaria::Initializer>>
+  gvar_initializer(std::shared_ptr<Lunaria::Type>& type){
+    std::vector<std::unique_ptr<Lunaria::Initializer>> vec;
+    gvar_initializer2(vec, type);
+    return vec;
+  }
+  
+  //global_var = basetype ident type_suffix ("=" gvar_initializer)? ";"
   void global_var(){
     auto type = basetype();
     auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
-    expect(myTokenizer::TokenType::SEMICOLON);
+    //expect(myTokenizer::TokenType::SEMICOLON);
 
     if(type->kind == Lunaria::TypeKind::VOID){
       std::cerr << "variable is declared void\n";
@@ -146,6 +265,18 @@ static std::unique_ptr<AstNode> primary();
     }
     
     auto gvar = new_gvar(name, type, false, "");
+
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::ASSIGN)){
+      gvar->initializer = gvar_initializer(type);
+      expect(myTokenizer::TokenType::SEMICOLON);
+      return;
+    }
+
+    if(type->is_incomplete){
+      std::cerr << "gvar type is incomplete\n";
+      exit(1);
+    }
+    expect(myTokenizer::TokenType::SEMICOLON);
     return;
   } //global_var()
   
@@ -247,9 +378,6 @@ static std::unique_ptr<Function> function(){
   return fn;
 }
 
-  static int const_expr();
-  static int eval(const std::unique_ptr<AstNode>&);
-
 //declaration = basetype ident type_suffix ";"
   static std::unique_ptr<AstNode> declaration(){
     auto type = basetype();
@@ -273,13 +401,20 @@ static std::unique_ptr<Function> function(){
     }
     
     int size = 0;
+    bool is_incomplete = true;
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACKET_R)){
       size = const_expr();
+      is_incomplete = false;
       myTokenizer::expect(myTokenizer::TokenType::BRACKET_R);
     } //if
     
     type = type_suffix(type);
+    if(type->is_incomplete){
+      std::cerr << "incomplete type\n";
+      exit(1);
+    }
     type = Lunaria::array_of(type, size);
+    type->is_incomplete = is_incomplete;
     return type;
   }
 

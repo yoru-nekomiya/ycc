@@ -11,6 +11,7 @@
 #include <list>
 #include <unordered_map>
 #include <vector>
+#include <climits>
 
 //---------------------------
 //Lunaria Utility
@@ -31,12 +32,15 @@ namespace Lunaria {
     int size;
     int align;
     int array_size;
+    bool is_incomplete; //whether index is omitted
     
     Type(){}
     Type(TypeKind k, int sz, int al)
-      : kind(k), base(nullptr), size(sz), align(al){}
+      : kind(k), base(nullptr), size(sz), align(al),
+	array_size(0), is_incomplete(false){}
     Type(TypeKind k, const std::shared_ptr<Type>& bs, int sz, int al)
-      : kind(k), base(bs), size(sz), align(al){}
+      : kind(k), base(bs), size(sz), align(al),
+	array_size(0), is_incomplete(false){}
   };
 
   extern std::shared_ptr<Type> int_type;
@@ -48,6 +52,14 @@ namespace Lunaria {
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
   int align_to(int n, int align);
   std::shared_ptr<Type> array_of(const std::shared_ptr<Type>&, int size);
+
+  struct Initializer {
+    int size;
+    int val;
+
+    Initializer(int sz, int v)
+      : size(sz), val(v){}
+  };
   
   struct Var {
     std::string name;
@@ -56,6 +68,7 @@ namespace Lunaria {
     bool isLocal;
     bool isLiteral;
     std::string literal; //for global variable
+    std::vector<std::unique_ptr<Initializer>> initializer;
   };
 } //namespace Lunaria
 
@@ -164,7 +177,7 @@ struct AstNode {
   AstKind kind;
   std::unique_ptr<AstNode> lhs;
   std::unique_ptr<AstNode> rhs;
-  int val;
+  long long val;
 
   std::shared_ptr<Lunaria::Var> var;
 
@@ -236,7 +249,7 @@ struct HirNode {
   HirKind kind;
   std::shared_ptr<HirNode> lhs;
   std::shared_ptr<HirNode> rhs;
-  int val;
+  long long val;
 
   std::shared_ptr<Lunaria::Var> var;
 
@@ -270,7 +283,7 @@ struct HirNode {
   std::shared_ptr<HirNode> new_binary(HirKind kind,
 				      std::shared_ptr<HirNode>& lhs,
 				      std::shared_ptr<HirNode>& rhs);
-  std::shared_ptr<HirNode> new_num(int i);
+  std::shared_ptr<HirNode> new_num(long long i);
   std::shared_ptr<HirNode> new_var_node(const std::shared_ptr<Lunaria::Var>& var);
   std::shared_ptr<HirNode> new_add(std::shared_ptr<HirNode>& lhs,
 				   std::shared_ptr<HirNode>& rhs);
@@ -323,7 +336,7 @@ struct LirNode {
   std::shared_ptr<LirNode> d; //destination operand
   std::shared_ptr<LirNode> a; //left source operand
   std::shared_ptr<LirNode> b; //right source operand
-  int imm;
+  long long imm;
 
   int vn; //virtual register number
   int rn; //real register number
