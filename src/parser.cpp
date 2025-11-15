@@ -134,6 +134,8 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
   static int const_expr();
   static int eval(const std::unique_ptr<AstNode>&);
+  static std::unique_ptr<AstNode> new_add(std::unique_ptr<AstNode>& lhs, std::unique_ptr<AstNode>& rhs);
+  static std::unique_ptr<AstNode> new_unary(AstKind k, std::unique_ptr<AstNode>& lhs);
   
   static void
   new_init_val(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
@@ -378,12 +380,135 @@ static std::unique_ptr<Function> function(){
   return fn;
 }
 
-//declaration = basetype ident type_suffix ";"
+  static std::unique_ptr<AstNode> new_desg_node2(const std::shared_ptr<Lunaria::Var>& lvar, std::list<std::unique_ptr<Designator>>& desg, std::list<std::unique_ptr<Designator>>::reverse_iterator iter){
+    if(iter == desg.rend()){
+      return new_var_node(lvar);
+    }
+    const int index = (*iter)->index;
+    auto node = new_desg_node2(lvar, desg, ++iter);
+    auto num = new_num(index);
+    node = new_add(node, num);
+    return new_unary(AstKind::AST_DEREF, node);
+  }
+  
+  static std::unique_ptr<AstNode> new_desg_node(const std::shared_ptr<Lunaria::Var>& lvar, std::list<std::unique_ptr<Designator>>& desg, std::unique_ptr<AstNode>& rhs){
+    auto lhs = new_desg_node2(lvar, desg, desg.rbegin());
+    auto node = new_binary(AstKind::AST_ASSIGN, lhs, rhs);
+    myParser::add_type(node);
+    return node;
+  }
+
+  static void lvar_init_zero(std::list<std::unique_ptr<AstNode>>& cur, const std::shared_ptr<Lunaria::Var>& lvar, const std::shared_ptr<Lunaria::Type>& type, std::list<std::unique_ptr<Designator>>& desg){
+    if(type->kind == Lunaria::TypeKind::ARRAY){
+      for(int i = 0; i < type->array_size; i++){
+	desg.push_back(std::make_unique<Designator>(i));
+	lvar_init_zero(cur, lvar, type->base, desg);
+	desg.pop_back();
+      }
+      return;
+    } //if ARRAY
+
+    auto num = new_num(0);
+    cur.push_back(new_desg_node(lvar, desg, num));
+    return;
+  }
+
+  static void lvar_initializer2(std::list<std::unique_ptr<AstNode>>& cur, const std::shared_ptr<Lunaria::Var>& lvar, const std::shared_ptr<Lunaria::Type>& type, std::list<std::unique_ptr<Designator>>& desg){
+    auto& tok = myTokenizer::tokens.front();
+
+    if(type->kind == Lunaria::TypeKind::ARRAY
+       && type->base->kind == Lunaria::TypeKind::CHAR
+       && tok->tokenType == myTokenizer::TokenType::STR){
+      //char a[]="hoge"
+
+      if(type->is_incomplete){
+	//when the number of elements is omitted
+	type->size = tok->literal.size();
+	type->array_size = tok->literal.size();
+	type->is_incomplete = false;
+      }
+
+      //compare array_size with string_length
+      const int len = (type->array_size < tok->literal.size())
+	? type->array_size : tok->literal.size();
+      for(int i = 0; i < len; i++){
+	desg.push_back(std::make_unique<Designator>(i));
+	auto rhs = new_num(tok->literal[i]);
+	cur.push_back(new_desg_node(lvar, desg, rhs));
+	desg.pop_back();
+      }
+
+      //when type->array_size >= tok->str_len, fill the difference with 0
+      for(int i = len; i < type->array_size; i++){
+	desg.push_back(std::make_unique<Designator>(i));
+	lvar_init_zero(cur, lvar, type->base, desg);
+	desg.pop_back();
+      }
+      myTokenizer::tokens.pop_front();
+      return;
+    } //if ARRAY && CHAR && STR
+
+    if(type->kind == Lunaria::TypeKind::ARRAY){
+      //T a[] = {1, 2}
+      const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+      //if the number of elements is omitted, any number of elements is allowed.
+      const int limit = type->is_incomplete ? INT_MAX : type->array_size;
+      int i = 0;
+      if(!myTokenizer::look(myTokenizer::TokenType::BRACE_R)){
+	do{
+	  desg.push_back(std::make_unique<Designator>(i++));
+	  lvar_initializer2(cur, lvar, type->base, desg);
+	  desg.pop_back();
+	}while(i < limit && !myTokenizer::look(myTokenizer::TokenType::BRACE_R) && myTokenizer::consume_symbol(myTokenizer::TokenType::COMMA));
+      }
+
+      if(open && !myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+	//The number of elements is exceeded
+	//T a[1] = {1,2}
+	skip_excess_elements();
+      }
+
+      //set array elements which is not initialized to zero
+      //T a[3] = {1}
+      while (i < type->array_size){
+	desg.push_back(std::make_unique<Designator>(i++));
+	lvar_init_zero(cur, lvar, type->base, desg);
+	desg.pop_back();
+      }
+
+      if(type->is_incomplete){
+	//the number of elements is omitted
+	type->size = type->base->size * i;
+	type->array_size = i;
+	type->is_incomplete = false;
+      }
+      return;
+    } //if ARRAY
+
+    const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+    auto assign_node = assign();
+    cur.push_back(new_desg_node(lvar, desg, assign_node));
+    if(open){
+      myTokenizer::expect(myTokenizer::TokenType::BRACE_R);
+    }
+    return;
+  }
+  
+  static std::unique_ptr<AstNode> lvar_initializer(const std::shared_ptr<Lunaria::Var>& lvar){
+    std::list<std::unique_ptr<AstNode>> body;
+    std::list<std::unique_ptr<Designator>> desg = {};
+    lvar_initializer2(body, lvar, lvar->type, desg);
+    auto node = new_node(AstKind::AST_BLOCK);
+    node->body = std::move(body);
+    return node;
+  }
+
+//declaration = basetype ident type_suffix ("=" lvar_initializer)? ";"
   static std::unique_ptr<AstNode> declaration(){
     auto type = basetype();
     const auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
-    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+    //myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
 
     if(type->kind == Lunaria::TypeKind::VOID){
       std::cerr << "variable is declared void\n";
@@ -391,7 +516,18 @@ static std::unique_ptr<Function> function(){
     }
     
     auto lvar = new_lvar(name, type);
-    return new_node(AstKind::AST_NULL);
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
+      if(type->is_incomplete){
+	std::cerr << "incomplete type\n";
+	exit(1);
+      }
+      return new_node(AstKind::AST_NULL);
+    } //if ;
+    
+    myTokenizer::expect(myTokenizer::TokenType::ASSIGN);
+    auto node = lvar_initializer(lvar);
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+    return node;
   }
 
   //type_suffix = ("[" const_expr "]" type_suffix)?

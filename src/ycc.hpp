@@ -207,6 +207,11 @@ struct Program {
   std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
 };
 
+  struct Designator{
+    int index; //for array
+    Designator(int i): index(i){}
+  };
+
   std::unique_ptr<Program> program();
   void add_type(std::unique_ptr<AstNode>& node);
 } //namespace myParser
