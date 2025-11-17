@@ -149,6 +149,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  jmp .L" << lirNode->bb2->label << std::endl;
     break;
   case myLIR::LirKind::LIR_JMP:
+    if(lirNode->bbarg){
+      std::cout << "  mov " << regs[lirNode->bb1->param->rn]
+		<< ", " << regs[lirNode->bbarg->rn]
+		<< std::endl;
+    }
     std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
     break;
   case myLIR::LirKind::LIR_FUNCALL:

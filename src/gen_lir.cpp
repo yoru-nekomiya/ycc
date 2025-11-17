@@ -90,6 +90,15 @@ jmp(const std::shared_ptr<BasicBlock>& bb){
   return lirNode;
 }
 
+  static std::shared_ptr<LirNode>
+  jmp_arg(const std::shared_ptr<BasicBlock>& bb,
+	  const std::shared_ptr<LirNode>& reg){
+    auto lirNode = new_lir(LirKind::LIR_JMP);
+    lirNode->bb1 = bb;
+    lirNode->bbarg = reg;
+    return lirNode;
+  }
+
   std::shared_ptr<LirNode> gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode);
 
 static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
@@ -266,15 +275,19 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return std::move(a);
   }
   case myHIR::HirKind::HIR_IF: {
+    /*
     std::shared_ptr<BasicBlock> then = new_bb();
     std::shared_ptr<BasicBlock> els = new_bb();
     std::shared_ptr<BasicBlock> last = new_bb();
-
-    auto node_cond = gen_expr_lir(hirNode->cond);    
+    */
+    auto node_cond = gen_expr_lir(hirNode->cond);
+    std::shared_ptr<BasicBlock> then = new_bb();
+    std::shared_ptr<BasicBlock> els = new_bb();
     br(node_cond, then, els);
 
     outBB = then;
     gen_expr_lir(hirNode->then);
+    std::shared_ptr<BasicBlock> last = new_bb();
     jmp(last);
 
     outBB = els;
@@ -287,12 +300,16 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return nullptr;
   }
   case myHIR::HirKind::HIR_WHILE: {
+    /*
     std::shared_ptr<BasicBlock> cond = new_bb();
     std::shared_ptr<BasicBlock> body = new_bb();
     std::shared_ptr<BasicBlock> _break = new_bb();
-
+    */
+    std::shared_ptr<BasicBlock> cond = new_bb();
     outBB = cond;
     auto node_cond = gen_expr_lir(hirNode->cond);
+    std::shared_ptr<BasicBlock> body = new_bb();
+    std::shared_ptr<BasicBlock> _break = new_bb();
     br(node_cond, body, _break);
 
     outBB = body;
@@ -303,16 +320,20 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return nullptr;
   }
   case myHIR::HirKind::HIR_FOR: {
+    /*
     std::shared_ptr<BasicBlock> cond = new_bb();
     std::shared_ptr<BasicBlock> body = new_bb();
     std::shared_ptr<BasicBlock> _break = new_bb();
-
+    */
     if(hirNode->init){
       gen_expr_lir(hirNode->init);
     }
+    std::shared_ptr<BasicBlock> cond = new_bb();
     jmp(cond);
 
     outBB = cond;
+    std::shared_ptr<BasicBlock> body = new_bb();
+    std::shared_ptr<BasicBlock> _break = new_bb();
     if(hirNode->cond){
       auto node_cond = gen_expr_lir(hirNode->cond);
       br(node_cond, body, _break);
@@ -371,6 +392,54 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     hirDeref->lhs = hirPtrAdd;
     hirDeref->type = hirDeref->lhs->type->base;
     return gen_expr_lir(hirDeref);
+  }
+  case myHIR::HirKind::HIR_LOGOR: {
+    const auto r1 = gen_expr_lir(hirNode->lhs);
+    std::shared_ptr<BasicBlock> bb = new_bb();
+    std::shared_ptr<BasicBlock> set1 = new_bb();
+    br(r1, set1, bb);
+
+    outBB = bb;
+    const auto r2 = gen_expr_lir(hirNode->rhs);
+    std::shared_ptr<BasicBlock> set0 = new_bb();
+    br(r2, set1, set0);
+
+    outBB = set0;
+    const auto zero = new_imm(0);
+    std::shared_ptr<BasicBlock> last = new_bb();
+    jmp_arg(last, zero);
+
+    outBB = set1;
+    const auto one = new_imm(1);
+    jmp_arg(last, one);
+
+    outBB = last;
+    outBB->param = new_reg();
+    return outBB->param;
+  }
+  case myHIR::HirKind::HIR_LOGAND: {
+    const auto r1 = gen_expr_lir(hirNode->lhs);
+    std::shared_ptr<BasicBlock> bb = new_bb();
+    std::shared_ptr<BasicBlock> set0 = new_bb();
+    br(r1, bb, set0);
+
+    outBB = bb;
+    const auto r2 = gen_expr_lir(hirNode->rhs);
+    std::shared_ptr<BasicBlock> set1 = new_bb();
+    br(r2, set1, set0);
+
+    outBB = set0;
+    const auto zero = new_imm(0);
+    std::shared_ptr<BasicBlock> last = new_bb();
+    jmp_arg(last, zero);
+
+    outBB = set1;
+    const auto one = new_imm(1);
+    jmp_arg(last, one);
+
+    outBB = last;
+    outBB->param = new_reg();
+    return outBB->param;
   }
   } //switch
   return nullptr;

@@ -283,6 +283,16 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       node->type = node->lhs->type->base;
       return node;
     }
+    case myParser::AstKind::AST_LOGOR: {
+      auto node = new_binary(HirKind::HIR_LOGOR, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_LOGAND: {
+      auto node = new_binary(HirKind::HIR_LOGAND, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
     } //switch
   }
   return nullptr;

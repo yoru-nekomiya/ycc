@@ -1,5 +1,10 @@
 
+int func(){
+  return 1 || 0;
+}
+
 int main(){
+  
   assert(0, 0, "0");
   assert(42, 42, "42");
   assert(-42, -42, "-42");
@@ -10,6 +15,30 @@ int main(){
   assert(15, 3*5, "3*5");
   assert(5, 10/2, "10/2");
   assert(3, (1+2) * (8/4) / (3-1), "(1+2) * (8/4) / (3-1)");
+
+  assert(1, 1||2, "1||2");
+  assert(1, 1||0, "1||0");
+  assert(0, 0||0, "0||0");
+  assert(1, -3||0, "-3||0");
+  int x = 0;
+  1 || (x = 1);
+  assert(0, x, "x (LOGOR short-circuit test)");
+  assert(1, 1 || (0 && (x = 1)), "deep short-circuit OR");
+
+  
+  assert(1, 1&&2, "1&&2");
+  assert(0, 1&&0, "1&&0");
+  assert(0, 0&&0, "0&&0");
+  assert(1, -3&&5, "-3&&5");
+  0 && (x = 1);
+  assert(0, x, "x (LOGAND short-circuit test)");
+
+  assert(1, (1||0)&&(0||1), "(1||0)&&(0||1)");
+  assert(0, (1&&0)||(0&&1), "(1&&0)||(0&&1)");
+  assert(1, 1 || 0 && 0, "1 || 0 && 0");
+  assert(0, (1 || 0) && 0, "(1 || 0) && 0");
+
+  assert(1, func(), "return with ||");
   
   return 0;
 }

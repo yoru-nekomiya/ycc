@@ -289,7 +289,22 @@ void tokenize(const std::string& input){
     }
 
     if(c == '&'){
-      new_token(TokenType::AND);
+      if(input[end] == '&'){
+	end++;
+	new_token(TokenType::ANDAND);
+      } else {
+	new_token(TokenType::AND);
+      }
+      continue; 
+    }
+
+    if(c == '|'){
+      if(input[end] == '|'){
+	end++;
+	new_token(TokenType::OROR);
+      } else {
+	new_token(TokenType::OR);
+      }
       continue; 
     }
 

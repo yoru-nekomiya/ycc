@@ -104,6 +104,9 @@ enum class TokenType {
   FOR, //for
   COMMA, //,
   AND, //&
+  ANDAND, //&&
+  OR, //|
+  OROR, //||
   INT, //int
   CHAR, //char
   SHORT, //short
@@ -170,6 +173,8 @@ enum class AstKind {
   AST_PRE_DEC, //--i
   AST_POST_INC, //i++
   AST_POST_DEC, //i--
+  AST_LOGOR, //||
+  AST_LOGAND, //&&
   AST_NULL,
 };
 
@@ -247,6 +252,8 @@ enum class HirKind {
   HIR_PRE_DEC, //--i
   HIR_POST_INC, //i++
   HIR_POST_DEC, //i--
+  HIR_LOGOR, //||
+  HIR_LOGAND, //&&
   HIR_NULL,
 };
 
@@ -334,6 +341,7 @@ struct BasicBlock {
   std::list<std::shared_ptr<LirNode>> insts;
   std::list<std::shared_ptr<BasicBlock>> pred;
   std::list<std::shared_ptr<BasicBlock>> succ;
+  std::shared_ptr<LirNode> param;
 };
 
 struct LirNode {
@@ -353,6 +361,7 @@ struct LirNode {
 
   std::shared_ptr<BasicBlock> bb1;
   std::shared_ptr<BasicBlock> bb2;
+  std::shared_ptr<LirNode> bbarg;
 
   std::string funcName;
   std::vector<std::shared_ptr<LirNode>> args;
@@ -363,8 +372,8 @@ struct LirNode {
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1),
 	     vn(-1), rn(-1), def(0), lastUse(0),
-	     lvar(nullptr),
-	     bb1(nullptr), bb2(nullptr),
+	     lvar(nullptr), name(""),
+	     bb1(nullptr), bb2(nullptr), bbarg(nullptr),
 	     funcName(""), args({}),
 	     type_size(0), type_base_size(0)
   {}

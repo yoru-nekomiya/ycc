@@ -38,6 +38,11 @@ collectReg(std::unique_ptr<myLIR::Program>& prog){
   int instCount = 1;
   for(auto& fn: prog->fns){
     for(auto& bb: fn->bbs){
+      if(bb->param){
+	bb->param->def = instCount;
+	listReg.push_back(bb->param);
+	instCount++;
+      }
       for(auto& lirNode: bb->insts){
 	if(lirNode->d && !lirNode->d->def){
 	  lirNode->d->def = instCount;
@@ -45,6 +50,7 @@ collectReg(std::unique_ptr<myLIR::Program>& prog){
 	}
 	setLastUse(lirNode->a, instCount);
 	setLastUse(lirNode->b, instCount);
+	setLastUse(lirNode->bbarg, instCount);
 	
 	if(lirNode->opcode == myLIR::LirKind::LIR_FUNCALL){
 	  for(auto& n: lirNode->args){

@@ -71,6 +71,8 @@ namespace myParser {
     case AstKind::AST_NE:
     case AstKind::AST_LT:
     case AstKind::AST_LE:
+    case AstKind::AST_LOGOR:
+    case AstKind::AST_LOGAND:
     case AstKind::AST_FUNCALL:
     case AstKind::AST_NUM:
       node->type = Lunaria::int_type;
@@ -149,6 +151,8 @@ namespace myHIR {
     case HirKind::HIR_NE:
     case HirKind::HIR_LT:
     case HirKind::HIR_LE:
+    case HirKind::HIR_LOGOR:
+    case HirKind::HIR_LOGAND:
     case HirKind::HIR_FUNCALL:
     case HirKind::HIR_IMM:
       node->type = Lunaria::int_type;

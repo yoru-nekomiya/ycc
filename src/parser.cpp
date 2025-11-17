@@ -123,6 +123,8 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> stmt2();
   static std::unique_ptr<AstNode> expr();
   static std::unique_ptr<AstNode> assign();
+  static std::unique_ptr<AstNode> logor();
+  static std::unique_ptr<AstNode> logand();
   static std::unique_ptr<AstNode> equality();
   static std::unique_ptr<AstNode> relational();
   static std::unique_ptr<AstNode> add();
@@ -677,15 +679,35 @@ static std::unique_ptr<AstNode> expr(){
   return assign();
 }
 
-//assign = equality ("=" assign)?
+//assign = logor ("=" assign)?
 static std::unique_ptr<AstNode> assign(){
-  auto node = equality();
+  auto node = logor();
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::ASSIGN)){
     auto node_assign = assign();
     node = new_binary(AstKind::AST_ASSIGN, node, node_assign);
   }
   return node;
 }
+  
+  //logor = logand ("||" logand)*
+  static std::unique_ptr<AstNode> logor(){
+    auto node = logand();
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::OROR)){
+      auto node_logand = logand();
+      node = new_binary(AstKind::AST_LOGOR, node, node_logand);
+    }
+    return node;
+  }
+
+  //logand = equality ("&&" equality)*
+  static std::unique_ptr<AstNode> logand(){
+    auto node = equality();
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::ANDAND)){
+      auto node_equ = equality();
+      node = new_binary(AstKind::AST_LOGAND, node, node_equ);
+    }
+    return node;
+  }
 
 //equality = relational ("==" relational | "!=" relational)*
 static std::unique_ptr<AstNode> equality(){
