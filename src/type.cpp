@@ -84,6 +84,8 @@ namespace myParser {
     case AstKind::AST_PRE_DEC:
     case AstKind::AST_POST_INC:
     case AstKind::AST_POST_DEC:
+    case AstKind::AST_SHL:
+    case AstKind::AST_SHR:
       node->type = node->lhs->type;
       return;
     case AstKind::AST_VAR:
@@ -164,6 +166,8 @@ namespace myHIR {
     case HirKind::HIR_PRE_DEC:
     case HirKind::HIR_POST_INC:
     case HirKind::HIR_POST_DEC:
+    case HirKind::HIR_SHL:
+    case HirKind::HIR_SHR:
       node->type = node->lhs->type;
       return;
     case HirKind::HIR_VAR:

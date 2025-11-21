@@ -182,6 +182,10 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_PTR_SUB, hirNode);
   case myHIR::HirKind::HIR_PTR_DIFF:
     return gen_binop_lir(LirKind::LIR_PTR_DIFF, hirNode);
+  case myHIR::HirKind::HIR_SHL:
+    return gen_binop_lir(LirKind::LIR_SHL, hirNode);
+  case myHIR::HirKind::HIR_SAR:
+    return gen_binop_lir(LirKind::LIR_SAR, hirNode);
   case myHIR::HirKind::HIR_PRE_INC: {
     //++i -> i=i+1
     auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);

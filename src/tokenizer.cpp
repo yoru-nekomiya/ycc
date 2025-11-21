@@ -242,6 +242,9 @@ void tokenize(const std::string& input){
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::LE);
+      } else if(input[end] == '<'){
+	end++;
+	new_token(TokenType::SHL);
       } else {
 	new_token(TokenType::LT);
       }
@@ -252,6 +255,9 @@ void tokenize(const std::string& input){
       if(input[end] == '='){
 	end++;
 	new_token(TokenType::GE);
+      } else if(input[end] == '>'){
+	end++;
+	new_token(TokenType::SHR);
       } else {
 	new_token(TokenType::GT);
       }

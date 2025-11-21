@@ -116,6 +116,14 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_NE:
     print_cmp("setne", lirNode);
     break;
+  case myLIR::LirKind::LIR_SHL:
+    std::cout << "  mov cl, " << regs8[b] << std::endl;
+    std::cout << "  shl " << regs[d] << ", cl\n";
+    break;
+  case myLIR::LirKind::LIR_SAR:
+    std::cout << "  mov cl, " << regs8[b] << std::endl;
+    std::cout << "  sar " << regs[d] << ", cl\n";
+    break;
   case myLIR::LirKind::LIR_LVAR:
     std::cout << "  lea " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]" << std::endl;
     break;

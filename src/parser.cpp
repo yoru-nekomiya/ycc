@@ -127,6 +127,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> logand();
   static std::unique_ptr<AstNode> equality();
   static std::unique_ptr<AstNode> relational();
+  static std::unique_ptr<AstNode> shift();
   static std::unique_ptr<AstNode> add();
   static std::unique_ptr<AstNode> mul();
   static std::unique_ptr<AstNode> unary();
@@ -725,28 +726,45 @@ static std::unique_ptr<AstNode> equality(){
   }
 }
 
-//relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+//relational = shift ("<" shift | "<=" shift | ">" shift | ">=" shift)*
 static std::unique_ptr<AstNode> relational(){
-  auto node = add();
+  auto node = shift();
   while(1){
     if(myTokenizer::consume_symbol(myTokenizer::TokenType::LT)){
-      auto node_add = add();
-      node = new_binary(AstKind::AST_LT, node, node_add);
+      auto node_sht = shift();
+      node = new_binary(AstKind::AST_LT, node, node_sht);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::LE)){
-      auto node_add = add();
-      node = new_binary(AstKind::AST_LE, node, node_add);
+      auto node_sht = shift();
+      node = new_binary(AstKind::AST_LE, node, node_sht);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::GT)){
-      auto node_add = add();
-      node = new_binary(AstKind::AST_LT, node_add, node);
+      auto node_sht = shift();
+      node = new_binary(AstKind::AST_LT, node_sht, node);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::GE)){
-      auto node_add = add();
-      node = new_binary(AstKind::AST_LE, node_add, node);
+      auto node_sht = shift();
+      node = new_binary(AstKind::AST_LE, node_sht, node);
     } else {
       return node;
     }
   }
 }
-
+  //shift = add ("<<" add || ">>" add)*
+  static std::unique_ptr<AstNode> shift(){
+    auto node = add();
+    while(1){
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::SHL)){
+	auto node_add = add();
+	node = new_binary(AstKind::AST_SHL, node, node_add);
+      } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::SHR)){
+	auto node_add = add();
+	//TODO: now, node is absolutely signed,
+	//so that the kind is AST_SAR 
+	node = new_binary(AstKind::AST_SAR, node, node_add);
+      } else {
+	return node;
+      }
+    }
+  }
+  
   static std::unique_ptr<AstNode> new_add(std::unique_ptr<AstNode>& lhs, std::unique_ptr<AstNode>& rhs){
     add_type(lhs);
     add_type(rhs);

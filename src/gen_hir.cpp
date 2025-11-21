@@ -214,6 +214,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->then = std::move(then);
     return hirNode;
   } else {
+    //binary
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);
     switch(astNode->kind){
@@ -291,6 +292,16 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     case myParser::AstKind::AST_LOGAND: {
       auto node = new_binary(HirKind::HIR_LOGAND, lhs, rhs);
       node->type = Lunaria::int_type;
+      return node;
+    }
+    case myParser::AstKind::AST_SHL: {
+      auto node = new_binary(HirKind::HIR_SHL, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_SAR: {
+      auto node = new_binary(HirKind::HIR_SAR, lhs, rhs);
+      node->type = node->lhs->type;
       return node;
     }
     } //switch
