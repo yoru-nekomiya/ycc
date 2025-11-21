@@ -590,7 +590,7 @@ static std::unique_ptr<Function> function(){
 //       | "return" expr? ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
-//       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+//       | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //       | declaration
 static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
@@ -632,14 +632,18 @@ static std::unique_ptr<AstNode> stmt2(){
     return node;
   }
 
-  //"for" "(" expr? ";" expr? ";" expr? ")" stmt
+  //"for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::FOR)){
     node = new_node(AstKind::AST_FOR);
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);    
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
       //first expr
-      node->init = expr();
-      myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+      if(isTypeName()){
+	node->init = declaration();
+      } else {
+	node->init = expr();
+	myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+      }
     }
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
       //second expr
