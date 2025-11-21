@@ -86,6 +86,11 @@ namespace myParser {
     case AstKind::AST_POST_DEC:
     case AstKind::AST_SHL:
     case AstKind::AST_SHR:
+    case AstKind::AST_SAR:
+    case AstKind::AST_ADD_ASSIGN:
+    case AstKind::AST_SUB_ASSIGN:
+    case AstKind::AST_MUL_ASSIGN:
+    case AstKind::AST_DIV_ASSIGN:
       node->type = node->lhs->type;
       return;
     case AstKind::AST_VAR:
@@ -168,6 +173,11 @@ namespace myHIR {
     case HirKind::HIR_POST_DEC:
     case HirKind::HIR_SHL:
     case HirKind::HIR_SHR:
+    case HirKind::HIR_SAR:
+    case HirKind::HIR_ADD_ASSIGN:
+    case HirKind::HIR_SUB_ASSIGN:
+    case HirKind::HIR_MUL_ASSIGN:
+    case HirKind::HIR_DIV_ASSIGN:
       node->type = node->lhs->type;
       return;
     case HirKind::HIR_VAR:

@@ -55,6 +55,42 @@ int main(){
   int k = 3;
   assert(8, 1 << k, "1<<k");
   assert(2, 8 >> (k=2), "8>>(k=2)");
+
+  int a = 3; a += 5; assert(8, a, "a+=5");
+  int b = 10; b -= 4; assert(6, b, "b-=4");
+  int c = 6; c *= 7; assert(42, c, "c*=7");
+  int d = 20; d /= 5; assert(4, d, "d/=5");
+
+  int e = -3; e += 10; assert(7, e, "e+=10");
+  int f = 5; f -= 12; assert(-7, f, "f-=12");
+  int g = -4; g *= 3; assert(-12, g, "g*=3");
+  int h = -20; h /= 4; assert(-5, h, "h/=4");
+
+  b = (a += 4);
+  assert(12, a, "a+=4");
+  assert(12, b, "b=(a+=4)");
+
+  a += 3 * 5;
+  assert(27, a, "a+=3*5");
+
+  int arr[3] = {1,2,3}; int* p = arr; int i = 0;
+  p += 1; assert(2, *p, "p+=1");
+  p -= 1; assert(1, *p, "p-=1");
+  *(p+=1) += 10; assert(12, arr[1], "*(p+=1)+=10");
+  arr[1] = 2;
+  
+  arr[i++] += 3;
+  assert(1, i, "i, post-increment once");
+  assert(4, arr[0], "arr[i++]+=3");
+  i = 0; arr[++i] += 3;
+  assert(1, i, "i, pre-increment once");
+  assert(5, arr[1], "arr[++i]+=3");
+  arr[1] += 5; assert(10, arr[1], "arr[1]+=5");
+  arr[2] *= -2; assert(-6, arr[2], "arr[2]*=-2");
+
+  int j = 10; int* pj = &j;
+  *pj += 3; assert(13, j, "*pj+=3");
+  *pj -= 10; assert(3, j, "*pj-=10");
   
   return 0;
 }

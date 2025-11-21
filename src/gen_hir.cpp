@@ -263,6 +263,26 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       node->type = node->lhs->type;
       return node;
     }
+    case myParser::AstKind::AST_ADD_ASSIGN: {
+      auto node = new_binary(HirKind::HIR_ADD_ASSIGN, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_SUB_ASSIGN: {
+      auto node = new_binary(HirKind::HIR_SUB_ASSIGN, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_MUL_ASSIGN: {
+      auto node = new_binary(HirKind::HIR_MUL_ASSIGN, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_DIV_ASSIGN: {
+      auto node = new_binary(HirKind::HIR_DIV_ASSIGN, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
     case myParser::AstKind::AST_PTR_ADD: {
       auto node = new_binary(HirKind::HIR_PTR_ADD, lhs, rhs);
       node->type = node->lhs->type;

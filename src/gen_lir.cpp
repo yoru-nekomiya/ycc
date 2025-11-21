@@ -57,7 +57,6 @@ static std::shared_ptr<BasicBlock>
 new_bb(){
   auto bb = std::make_shared<BasicBlock>();
   bb->label = label++;
-  //BBList.push_back(bb);
   func->bbs.push_back(bb);
   return bb;
 }
@@ -67,7 +66,6 @@ load(const std::shared_ptr<LirNode>& dst,
      const std::shared_ptr<LirNode>& src,
      int type_size){
   auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
-  //node->lvar = src->lvar;
   node->type_size = type_size;
   return node->d;
 }
@@ -110,7 +108,6 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<myHIR::HirNod
     auto hirPtrAdd = myHIR::new_binary(myHIR::HirKind::HIR_PTR_ADD,
 			       hirNode->lhs, hirNode->rhs);
     hirPtrAdd->type = hirPtrAdd->lhs->type;
-    //hirPtrAdd->type->base = hirPtrAdd->lhs->type->base;
     return gen_expr_lir(hirPtrAdd);
   }
 
@@ -121,7 +118,6 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<myHIR::HirNod
     auto d = new_reg(hirNode->var->name);
     lirNode->vn = d->vn;
     lirNode->d = std::move(d);
-    //lirNode->lvar = std::move(hirNode->var);
     lirNode->lvar = hirNode->var;
   } else {
     lirNode = new_lir(LirKind::LIR_LABEL_ADDR);
@@ -153,6 +149,38 @@ gen_binop_lir(LirKind opcode,
     return var;
   }
 
+  static std::shared_ptr<LirNode>
+  gen_op_assign(myHIR::HirKind k,
+		const std::shared_ptr<myHIR::HirNode>& hirNode){
+    //a op= b --> T* t = &a; *t = *t op b;
+    //T* t = &a;
+    static int i = 0;
+    auto hirAssign_t = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    auto t = new_lvar("__tmp_var_opassign__" + std::to_string(i++), pointer_to(hirNode->lhs->type));
+    hirAssign_t->lhs = myHIR::new_var_node(t);
+    auto rhs_t = myHIR::new_node(myHIR::HirKind::HIR_ADDR);
+    rhs_t->lhs = hirNode->lhs;
+    hirAssign_t->rhs = rhs_t;
+    myHIR::add_type(hirAssign_t);
+    gen_expr_lir(hirAssign_t);
+    
+    //*t = *t op b;
+    auto hirAssign_op = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
+    auto lhs_op = myHIR::new_node(myHIR::HirKind::HIR_DEREF);
+    lhs_op->lhs = myHIR::new_var_node(t);
+    hirAssign_op->lhs = lhs_op;
+    
+    auto op_node = myHIR::new_node(k);
+    auto lhs_op_node = myHIR::new_node(myHIR::HirKind::HIR_DEREF);
+    lhs_op_node->lhs = myHIR::new_var_node(t);
+    op_node->lhs = lhs_op_node;
+    op_node->rhs = hirNode->rhs;
+    hirAssign_op->rhs = op_node;
+    myHIR::add_type(hirAssign_op);
+    auto rlt = gen_expr_lir(hirAssign_op);
+    return rlt;
+  }
+  
 std::shared_ptr<LirNode>
 gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   switch(hirNode->kind){
@@ -264,9 +292,22 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     auto b = gen_expr_lir(hirNode->rhs);
     auto lirNode = emit_lir(LirKind::LIR_STORE, nullptr, a, b);
     lirNode->type_size = hirNode->type->size;
-    //return std::move(a);
     auto reg = new_reg();
     return load(reg, a, hirNode->type->size);
+  }
+  case myHIR::HirKind::HIR_ADD_ASSIGN: {
+    const myHIR::HirKind kind = hirNode->lhs->type->base ? myHIR::HirKind::HIR_PTR_ADD : myHIR::HirKind::HIR_ADD;
+    return gen_op_assign(kind, hirNode);
+  }
+  case myHIR::HirKind::HIR_SUB_ASSIGN: {
+    const myHIR::HirKind kind = hirNode->lhs->type->base ? myHIR::HirKind::HIR_PTR_SUB : myHIR::HirKind::HIR_SUB;
+    return gen_op_assign(kind, hirNode);
+  }
+  case myHIR::HirKind::HIR_MUL_ASSIGN: {
+    return gen_op_assign(myHIR::HirKind::HIR_MUL, hirNode);
+  }
+  case myHIR::HirKind::HIR_DIV_ASSIGN: {
+    return gen_op_assign(myHIR::HirKind::HIR_DIV, hirNode);
   }
   case myHIR::HirKind::HIR_RETURN: {
     std::shared_ptr<LirNode> a = nullptr;

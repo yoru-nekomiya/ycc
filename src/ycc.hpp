@@ -118,6 +118,10 @@ enum class TokenType {
   STR, //string literal
   PLUSPLUS, //++
   MINUSMINUS, //--
+  PLUS_ASSIGN, //+=
+  MINUS_ASSIGN, //-=
+  STAR_ASSIGN, //*=
+  SLASH_ASSIGN, // /=
   TK_EOF,
 };
 
@@ -180,6 +184,10 @@ enum class AstKind {
   AST_SHL, //<< logical
   AST_SHR, //>> logical
   AST_SAR, //>> arith
+  AST_ADD_ASSIGN, //+=
+  AST_SUB_ASSIGN, //-=
+  AST_MUL_ASSIGN, //*=
+  AST_DIV_ASSIGN, // /=
   AST_NULL,
 };
 
@@ -262,6 +270,10 @@ enum class HirKind {
   HIR_SHL, //<< logical
   HIR_SHR, //>> logical
   HIR_SAR, //>> arith
+  HIR_ADD_ASSIGN, //+=
+  HIR_SUB_ASSIGN, //-=
+  HIR_MUL_ASSIGN, //*=
+  HIR_DIV_ASSIGN, // /=
   HIR_NULL,
 };
 

@@ -163,6 +163,9 @@ void tokenize(const std::string& input){
       if(input[end] == '+'){
 	end++;
 	new_token(TokenType::PLUSPLUS);
+      } else if(input[end] == '='){
+	end++;
+	new_token(TokenType::PLUS_ASSIGN);
       } else {
 	new_token(TokenType::PLUS);
       }
@@ -173,14 +176,22 @@ void tokenize(const std::string& input){
       if(input[end] == '-'){
 	end++;
 	new_token(TokenType::MINUSMINUS);
+      } else if(input[end] == '='){
+	end++;
+	new_token(TokenType::MINUS_ASSIGN);
       } else {
 	new_token(TokenType::MINUS);
       }
       continue; 
     }
 
-    if(c == '*'){                                         
-      new_token(TokenType::STAR);
+    if(c == '*'){
+      if(input[end] == '='){
+	end++;
+	new_token(TokenType::STAR_ASSIGN);
+      } else {
+	new_token(TokenType::STAR);
+      }
       continue;           
     }
     
@@ -201,6 +212,10 @@ void tokenize(const std::string& input){
 	  }
 	  ++end;
 	}
+      }
+      else if(input[end] == '='){
+	end++;
+	new_token(TokenType::SLASH_ASSIGN);
       }
       else {
 	new_token(TokenType::SLASH);

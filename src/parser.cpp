@@ -680,13 +680,63 @@ static std::unique_ptr<AstNode> expr(){
   return assign();
 }
 
-//assign = logor ("=" assign)?
+  //a op= b --> {T* t = &a; *t = *t op b;}
+  /*
+  static std::unique_ptr<AstNode>
+  new_assign_eq(AstKind k,
+		const std::unique_ptr<AstNode>& lhs,
+		const std::unique_ptr<AstNode>& rhs){
+    add_type(lhs);
+    add_type(rhs);
+    auto tmp = new_var_node();
+  }
+  */
+  
+//assign = logor (assign-op assign)?
+//assign-op = "=" | "+=" | "-=" | "*=" | "/="
 static std::unique_ptr<AstNode> assign(){
   auto node = logor();
+  add_type(node);
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::ASSIGN)){
     auto node_assign = assign();
-    node = new_binary(AstKind::AST_ASSIGN, node, node_assign);
+    return new_binary(AstKind::AST_ASSIGN, node, node_assign);
   }
+
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS_ASSIGN)){
+    auto node_assign = assign();
+    return new_binary(AstKind::AST_ADD_ASSIGN, node, node_assign);
+    /*
+    if(node->type->base){      
+      return new_assign_eq(AST_PTR_ADD, node, node_assign);
+    } else {
+      return new_assign_eq(AST_ADD, node, node_assign);
+    }
+    */
+  } //if +=
+
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUS_ASSIGN)){
+    auto node_assign = assign();
+    return new_binary(AstKind::AST_SUB_ASSIGN, node, node_assign);
+    /*
+    if(node->type->base){      
+      return new_assign_eq(AST_PTR_SUB, node, node_assign);
+    } else {
+      return new_assign_eq(AST_SUB, node, node_assign);
+    }
+    */
+  } //if -=
+
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR_ASSIGN)){
+    auto node_assign = assign();
+    return new_binary(AstKind::AST_MUL_ASSIGN, node, node_assign);
+    //return new_assign_eq(AST_MUL, node, node_assign);
+  } //if *=
+
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::SLASH_ASSIGN)){
+    auto node_assign = assign();
+    return new_binary(AstKind::AST_DIV_ASSIGN, node, node_assign);
+    //return new_assign_eq(AST_DIV, node, node_assign);
+  } //if /=
   return node;
 }
   
