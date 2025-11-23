@@ -683,18 +683,6 @@ static std::unique_ptr<AstNode> stmt2(){
 static std::unique_ptr<AstNode> expr(){
   return assign();
 }
-
-  //a op= b --> {T* t = &a; *t = *t op b;}
-  /*
-  static std::unique_ptr<AstNode>
-  new_assign_eq(AstKind k,
-		const std::unique_ptr<AstNode>& lhs,
-		const std::unique_ptr<AstNode>& rhs){
-    add_type(lhs);
-    add_type(rhs);
-    auto tmp = new_var_node();
-  }
-  */
   
 //assign = logor (assign-op assign)?
 //assign-op = "=" | "+=" | "-=" | "*=" | "/="
@@ -709,37 +697,21 @@ static std::unique_ptr<AstNode> assign(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS_ASSIGN)){
     auto node_assign = assign();
     return new_binary(AstKind::AST_ADD_ASSIGN, node, node_assign);
-    /*
-    if(node->type->base){      
-      return new_assign_eq(AST_PTR_ADD, node, node_assign);
-    } else {
-      return new_assign_eq(AST_ADD, node, node_assign);
-    }
-    */
   } //if +=
 
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUS_ASSIGN)){
     auto node_assign = assign();
     return new_binary(AstKind::AST_SUB_ASSIGN, node, node_assign);
-    /*
-    if(node->type->base){      
-      return new_assign_eq(AST_PTR_SUB, node, node_assign);
-    } else {
-      return new_assign_eq(AST_SUB, node, node_assign);
-    }
-    */
   } //if -=
 
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR_ASSIGN)){
     auto node_assign = assign();
     return new_binary(AstKind::AST_MUL_ASSIGN, node, node_assign);
-    //return new_assign_eq(AST_MUL, node, node_assign);
   } //if *=
 
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::SLASH_ASSIGN)){
     auto node_assign = assign();
     return new_binary(AstKind::AST_DIV_ASSIGN, node, node_assign);
-    //return new_assign_eq(AST_DIV, node, node_assign);
   } //if /=
   return node;
 }
@@ -866,11 +838,9 @@ static std::unique_ptr<AstNode> add(){
   while(1){
     if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
       auto node_mul = mul();
-      //node = new_binary(AstKind::AST_ADD, node, node_mul);
       node = new_add(node, node_mul);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUS)){
       auto node_mul = mul();
-      //node = new_binary(AstKind::AST_SUB, node, node_mul);
       node = new_sub(node, node_mul);
     } else {
       return node;
@@ -902,7 +872,7 @@ static std::unique_ptr<AstNode> mul(){
     return node;
   }
 
-//unary = ("+" | "-" | "*" | "&")? unary
+//unary = ("+" | "-" | "*" | "&" | "!")? unary
 //        | ("++" | "--") unary
 //        | "sizeof" unary
 //        | postfix
@@ -924,6 +894,11 @@ static std::unique_ptr<AstNode> unary(){
     auto node_addr = new_node(AstKind::AST_ADDR);
     node_addr->lhs = unary();
     return node_addr;
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::NOT)){
+    auto node_not = new_node(AstKind::AST_NOT);
+    node_not->lhs = unary();
+    return node_not;
   }
   
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUSPLUS)){

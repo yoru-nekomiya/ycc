@@ -132,6 +132,12 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->lhs = std::move(lhs);
     return hirNode;
   }
+  else if(astNode->kind == myParser::AstKind::AST_NOT){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_NOT);
+    hirNode->lhs = std::move(lhs);
+    return hirNode;
+  }
   else if(astNode->kind == myParser::AstKind::AST_PRE_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_INC);

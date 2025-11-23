@@ -181,6 +181,7 @@ enum class AstKind {
   AST_POST_DEC, //i--
   AST_LOGOR, //||
   AST_LOGAND, //&&
+  AST_NOT, //!
   AST_SHL, //<< logical
   AST_SHR, //>> logical
   AST_SAR, //>> arith
@@ -267,6 +268,7 @@ enum class HirKind {
   HIR_POST_DEC, //i--
   HIR_LOGOR, //||
   HIR_LOGAND, //&&
+  HIR_NOT, //!
   HIR_SHL, //<< logical
   HIR_SHR, //>> logical
   HIR_SAR, //>> arith

@@ -486,6 +486,13 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     outBB->param = new_reg();
     return outBB->param;
   }
+  case myHIR::HirKind::HIR_NOT: {
+    auto d = new_reg();
+    auto a = gen_expr_lir(hirNode->lhs);
+    auto zero = new_imm(0);
+    emit_lir(LirKind::LIR_EQ, d, a, zero);
+    return d;
+  }
   } //switch
   return nullptr;
 }
