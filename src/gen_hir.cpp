@@ -204,6 +204,13 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->cond = std::move(cond);
     hirNode->then = std::move(then);
     return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_DO_WHILE){
+    auto hirNode = new_node(HirKind::HIR_DO_WHILE);
+    auto then = program(astNode->then);
+    auto cond = program(astNode->cond);
+    hirNode->then = std::move(then);
+    hirNode->cond = std::move(cond);
+    return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_FOR){
     auto hirNode = new_node(HirKind::HIR_FOR);
     std::shared_ptr<HirNode> init = nullptr;

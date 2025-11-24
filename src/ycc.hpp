@@ -104,6 +104,7 @@ enum class TokenType {
   IF, //if
   ELSE, //else
   WHILE, //while
+  DO, //do
   FOR, //for
   COMMA, //,
   AND, //&
@@ -170,6 +171,7 @@ enum class AstKind {
   AST_RETURN, //return
   AST_IF, //if
   AST_WHILE, //while
+  AST_DO_WHILE, //do-while
   AST_FOR, //for
   AST_BLOCK, //{}
   AST_FUNCALL, //function call
@@ -262,6 +264,7 @@ enum class HirKind {
   HIR_RETURN,
   HIR_IF, //if
   HIR_WHILE, //while
+  HIR_DO_WHILE, //do-while
   HIR_FOR, //for
   HIR_BLOCK, //{}
   HIR_FUNCALL, //function call

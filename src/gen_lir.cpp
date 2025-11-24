@@ -372,6 +372,25 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     outBB = _break;
     return nullptr;
   }
+  case myHIR::HirKind::HIR_DO_WHILE: {
+    std::shared_ptr<BasicBlock> body = new_bb();
+    jmp(body);
+
+    outBB = body;
+    gen_expr_lir(hirNode->then);
+    //hirNode->_continue = new_bb();
+    auto _continue = new_bb();
+    jmp(/*hirNode->*/_continue);
+
+    outBB = /*hirNode->*/_continue;
+    auto r = gen_expr_lir(hirNode->cond);
+    //hirNode->_break = new_bb();
+    auto _break = new_bb();
+    br(r, body, /*hirNode->*/_break);
+
+    outBB = /*hirNode->*/_break;
+    return nullptr;
+  }
   case myHIR::HirKind::HIR_FOR: {
     /*
     std::shared_ptr<BasicBlock> cond = new_bb();

@@ -595,6 +595,7 @@ static std::unique_ptr<Function> function(){
 //       | "return" expr? ";"
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "while" "(" expr ")" stmt
+//       | "do" stmt "while" "(" expr ")" ";"
 //       | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //       | declaration
 static std::unique_ptr<AstNode> stmt2(){
@@ -634,6 +635,18 @@ static std::unique_ptr<AstNode> stmt2(){
     node->cond = expr();
     myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
     node->then = stmt();
+    return node;
+  }
+
+  //"do" stmt "while" "(" expr ")" ";"
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::DO)){
+    node = new_node(AstKind::AST_DO_WHILE);
+    node->then = stmt();
+    myTokenizer::expect(myTokenizer::TokenType::WHILE);
+    myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
+    node->cond = expr();
+    myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
     return node;
   }
 

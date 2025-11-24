@@ -88,8 +88,8 @@ static TokenType starts_keyword(const std::string& str){
   const std::vector<std::string> keyword =
     {"return","if","else","while","for",
      "int","sizeof","char","short","long",
-     "void","break","continue","switch","case",
-     "goto","default","do"};  
+     "void","do","break","continue","switch",
+     "case","default","goto"};  
   int i = 0;
   for(const auto& kw: keyword){
     if(str == kw){
@@ -116,6 +116,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::LONG;
       case 10:
 	return TokenType::VOID;
+      case 11:
+	return TokenType::DO;
       }
     }
     i++;
