@@ -81,6 +81,7 @@ enum class TokenType {
   MINUS, //-
   STAR, //*
   SLASH, // /
+  PERCENT, //%
   LT, //<
   LE, //<=
   SHL, //<<
@@ -159,6 +160,7 @@ enum class AstKind {
   AST_SUB,
   AST_MUL,
   AST_DIV,
+  AST_REM,
   AST_LT, //<
   AST_LE, //<=
   AST_EQ, //==
@@ -250,6 +252,7 @@ enum class HirKind {
   HIR_SUB,
   HIR_MUL,
   HIR_DIV,
+  HIR_REM,
   HIR_LT, //<
   HIR_LE, //<=
   HIR_EQ, //==
@@ -348,6 +351,7 @@ enum class LirKind {
   LIR_SUB,
   LIR_MUL,
   LIR_DIV,
+  LIR_REM,
   LIR_LT, //<
   LIR_LE, //<=
   LIR_EQ, //==

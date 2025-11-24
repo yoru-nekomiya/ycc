@@ -104,6 +104,12 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  idiv " << regs[b] << std::endl;
     std::cout << "  mov " << regs[d] << ", rax" << std::endl;
     break;
+  case myLIR::LirKind::LIR_REM:
+    std::cout << "  mov rax, " << regs[d] << std::endl;
+    std::cout << "  cqo" << std::endl;
+    std::cout << "  idiv " << regs[b] << std::endl;
+    std::cout << "  mov " << regs[d] << ", rdx\n";
+    break;
   case myLIR::LirKind::LIR_LT:
     print_cmp("setl", lirNode);
     break;

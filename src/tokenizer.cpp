@@ -223,6 +223,11 @@ void tokenize(const std::string& input){
       continue; 
     }
 
+    if(c == '%'){             
+      new_token(TokenType::PERCENT);
+      continue; 
+    }
+    
     if(c == '('){             
       new_token(TokenType::PAREN_L);
       continue; 

@@ -574,6 +574,8 @@ static std::unique_ptr<Function> function(){
       return eval(node->lhs) * eval(node->rhs);
     case AstKind::AST_DIV:
       return eval(node->lhs) / eval(node->rhs);
+    case AstKind::AST_REM:
+      return eval(node->lhs) % eval(node->rhs);
     case AstKind::AST_NUM:
       return node->val;   
     } 
@@ -881,7 +883,7 @@ static std::unique_ptr<AstNode> add(){
   }
 }
 
-//mul = unary ("*" unary | "/" unary)*
+//mul = unary ("*" unary | "/" unary | "%" unary)*
 static std::unique_ptr<AstNode> mul(){
   auto node = unary();
 
@@ -892,6 +894,9 @@ static std::unique_ptr<AstNode> mul(){
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::SLASH)){
       auto node_unary = unary();
       node = new_binary(AstKind::AST_DIV, node, node_unary);
+    } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::PERCENT)){
+      auto node_unary = unary();
+      node = new_binary(AstKind::AST_REM, node, node_unary);
     } else {
       return node;
     }

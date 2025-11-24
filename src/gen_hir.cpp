@@ -250,6 +250,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       node->type = Lunaria::int_type;
       return node;
     }
+    case myParser::AstKind::AST_REM: {
+      auto node = new_binary(HirKind::HIR_REM, lhs, rhs);
+      node->type = Lunaria::int_type;
+      return node;
+    }
     case myParser::AstKind::AST_LT: {
       auto node = new_binary(HirKind::HIR_LT, lhs, rhs);
       node->type = Lunaria::int_type;

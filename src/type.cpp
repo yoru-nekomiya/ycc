@@ -67,6 +67,7 @@ namespace myParser {
     case AstKind::AST_PTR_DIFF:
     case AstKind::AST_MUL:
     case AstKind::AST_DIV:
+    case AstKind::AST_REM:
     case AstKind::AST_EQ:
     case AstKind::AST_NE:
     case AstKind::AST_LT:
@@ -159,6 +160,7 @@ namespace myHIR {
     case HirKind::HIR_PTR_DIFF:
     case HirKind::HIR_MUL:
     case HirKind::HIR_DIV:
+    case HirKind::HIR_REM:
     case HirKind::HIR_EQ:
     case HirKind::HIR_NE:
     case HirKind::HIR_LT:

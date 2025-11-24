@@ -196,6 +196,8 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_MUL, hirNode);
   case myHIR::HirKind::HIR_DIV:
     return gen_binop_lir(LirKind::LIR_DIV, hirNode);
+  case myHIR::HirKind::HIR_REM:
+    return gen_binop_lir(LirKind::LIR_REM, hirNode);
   case myHIR::HirKind::HIR_LT:
     return gen_binop_lir(LirKind::LIR_LT, hirNode);
   case myHIR::HirKind::HIR_LE:
