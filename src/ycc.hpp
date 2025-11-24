@@ -122,6 +122,8 @@ enum class TokenType {
   MINUS_ASSIGN, //-=
   STAR_ASSIGN, //*=
   SLASH_ASSIGN, // /=
+  CARET, //^
+  TILDA, //~
   TK_EOF,
 };
 
@@ -189,6 +191,10 @@ enum class AstKind {
   AST_SUB_ASSIGN, //-=
   AST_MUL_ASSIGN, //*=
   AST_DIV_ASSIGN, // /=
+  AST_BITOR, //|
+  AST_BITXOR, //^
+  AST_BITAND, //&
+  AST_BITNOT, //~
   AST_NULL,
 };
 
@@ -276,6 +282,10 @@ enum class HirKind {
   HIR_SUB_ASSIGN, //-=
   HIR_MUL_ASSIGN, //*=
   HIR_DIV_ASSIGN, // /=
+  HIR_BITOR, //|
+  HIR_BITXOR, //^
+  HIR_BITAND, //&
+  HIR_BITNOT, //~
   HIR_NULL,
 };
 
@@ -357,6 +367,9 @@ enum class LirKind {
   LIR_SHL, //<< logical
   LIR_SHR, //>> logical
   LIR_SAR, //>> arith
+  LIR_BITOR, //|
+  LIR_BITXOR, //^
+  LIR_BITAND, //&
   LIR_NULL,
 };
 

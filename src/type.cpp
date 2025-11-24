@@ -73,8 +73,12 @@ namespace myParser {
     case AstKind::AST_LE:
     case AstKind::AST_LOGOR:
     case AstKind::AST_LOGAND:
+    case AstKind::AST_NOT:
     case AstKind::AST_FUNCALL:
     case AstKind::AST_NUM:
+    case AstKind::AST_BITOR:
+    case AstKind::AST_BITXOR:
+    case AstKind::AST_BITAND:
       node->type = Lunaria::int_type;
       return;
     case AstKind::AST_PTR_ADD:
@@ -87,6 +91,7 @@ namespace myParser {
     case AstKind::AST_SHL:
     case AstKind::AST_SHR:
     case AstKind::AST_SAR:
+    case AstKind::AST_BITNOT:
     case AstKind::AST_ADD_ASSIGN:
     case AstKind::AST_SUB_ASSIGN:
     case AstKind::AST_MUL_ASSIGN:
@@ -160,8 +165,12 @@ namespace myHIR {
     case HirKind::HIR_LE:
     case HirKind::HIR_LOGOR:
     case HirKind::HIR_LOGAND:
+    case HirKind::HIR_NOT:
     case HirKind::HIR_FUNCALL:
     case HirKind::HIR_IMM:
+    case HirKind::HIR_BITOR:
+    case HirKind::HIR_BITXOR:
+    case HirKind::HIR_BITAND:
       node->type = Lunaria::int_type;
       return;
     case HirKind::HIR_PTR_ADD:
@@ -174,6 +183,7 @@ namespace myHIR {
     case HirKind::HIR_SHL:
     case HirKind::HIR_SHR:
     case HirKind::HIR_SAR:
+    case HirKind::HIR_BITNOT:
     case HirKind::HIR_ADD_ASSIGN:
     case HirKind::HIR_SUB_ASSIGN:
     case HirKind::HIR_MUL_ASSIGN:

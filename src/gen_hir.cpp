@@ -138,6 +138,12 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->lhs = std::move(lhs);
     return hirNode;
   }
+  else if(astNode->kind == myParser::AstKind::AST_BITNOT){
+    auto lhs = program(astNode->lhs);
+    auto hirNode = new_node(HirKind::HIR_BITNOT);
+    hirNode->lhs = std::move(lhs);
+    return hirNode;
+  }
   else if(astNode->kind == myParser::AstKind::AST_PRE_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_INC);
@@ -327,6 +333,21 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     }
     case myParser::AstKind::AST_SAR: {
       auto node = new_binary(HirKind::HIR_SAR, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_BITOR: {
+      auto node = new_binary(HirKind::HIR_BITOR, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_BITXOR: {
+      auto node = new_binary(HirKind::HIR_BITXOR, lhs, rhs);
+      node->type = node->lhs->type;
+      return node;
+    }
+    case myParser::AstKind::AST_BITAND: {
+      auto node = new_binary(HirKind::HIR_BITAND, lhs, rhs);
       node->type = node->lhs->type;
       return node;
     }

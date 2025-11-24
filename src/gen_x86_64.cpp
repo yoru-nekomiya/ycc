@@ -226,14 +226,26 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     } else if(size == 8){
       std::cout << "  sar " << regs[d] << ", 3\n";
     } else {
-    std::cout << "  mov rax, " << regs[d] << std::endl;
-    std::cout << "  cqo" << std::endl;
-    std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-    std::cout << "  idiv " << regs[b] << std::endl;
-    std::cout << "  mov " << regs[d] << ", rax" << std::endl;
-    break;
+      std::cout << "  mov rax, " << regs[d] << std::endl;
+      std::cout << "  cqo" << std::endl;
+      std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
+      std::cout << "  idiv " << regs[b] << std::endl;
+      std::cout << "  mov " << regs[d] << ", rax" << std::endl;
     }
+    break;
   }
+  case myLIR::LirKind::LIR_BITOR: {
+    std::cout << "  or " << regs[d] << ", " << regs[b] << std::endl;
+    break;
+  }
+  case myLIR::LirKind::LIR_BITXOR: {
+    std::cout << "  xor " << regs[d] << ", " << regs[b] << std::endl;
+    break;
+  }
+  case myLIR::LirKind::LIR_BITAND: {
+    std::cout << "  and " << regs[d] << ", " << regs[b] << std::endl;
+    break;
+  } 
   } //switch
 }
 

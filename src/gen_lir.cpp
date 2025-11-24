@@ -214,6 +214,12 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return gen_binop_lir(LirKind::LIR_SHL, hirNode);
   case myHIR::HirKind::HIR_SAR:
     return gen_binop_lir(LirKind::LIR_SAR, hirNode);
+  case myHIR::HirKind::HIR_BITOR:
+    return gen_binop_lir(LirKind::LIR_BITOR, hirNode);
+  case myHIR::HirKind::HIR_BITXOR:
+    return gen_binop_lir(LirKind::LIR_BITXOR, hirNode);
+  case myHIR::HirKind::HIR_BITAND:
+    return gen_binop_lir(LirKind::LIR_BITAND, hirNode);
   case myHIR::HirKind::HIR_PRE_INC: {
     //++i -> i=i+1
     auto hirAssign = myHIR::new_node(myHIR::HirKind::HIR_ASSIGN);
@@ -491,6 +497,13 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     auto a = gen_expr_lir(hirNode->lhs);
     auto zero = new_imm(0);
     emit_lir(LirKind::LIR_EQ, d, a, zero);
+    return d;
+  }
+  case myHIR::HirKind::HIR_BITNOT: {
+    auto d = new_reg();
+    auto a = gen_expr_lir(hirNode->lhs);
+    auto num = new_imm(-1);
+    emit_lir(LirKind::LIR_BITXOR, d, a, num);
     return d;
   }
   } //switch

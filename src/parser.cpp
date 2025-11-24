@@ -125,6 +125,9 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> assign();
   static std::unique_ptr<AstNode> logor();
   static std::unique_ptr<AstNode> logand();
+  static std::unique_ptr<AstNode> _bit_or();
+  static std::unique_ptr<AstNode> _bit_xor();
+  static std::unique_ptr<AstNode> _bit_and();
   static std::unique_ptr<AstNode> equality();
   static std::unique_ptr<AstNode> relational();
   static std::unique_ptr<AstNode> shift();
@@ -726,12 +729,42 @@ static std::unique_ptr<AstNode> assign(){
     return node;
   }
 
-  //logand = equality ("&&" equality)*
+  //logand = bitor ("&&" bitor)*
   static std::unique_ptr<AstNode> logand(){
-    auto node = equality();
+    auto node = _bit_or();
     while(myTokenizer::consume_symbol(myTokenizer::TokenType::ANDAND)){
-      auto node_equ = equality();
-      node = new_binary(AstKind::AST_LOGAND, node, node_equ);
+      auto node_or = _bit_or();
+      node = new_binary(AstKind::AST_LOGAND, node, node_or);
+    }
+    return node;
+  }
+
+  //bitor = birxor ("|" bitxor)*
+  static std::unique_ptr<AstNode> _bit_or(){
+    auto node = _bit_xor();
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::OR)){
+      auto tmp = _bit_xor();
+      node = new_binary(AstKind::AST_BITOR, node, tmp);
+    }
+    return node;
+  }
+
+  //bitxor = bitand ("^" bitand)*
+  static std::unique_ptr<AstNode> _bit_xor(){
+    auto node = _bit_and();
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::CARET)){
+      auto tmp = _bit_and();
+      node = new_binary(AstKind::AST_BITXOR, node, tmp);
+    }
+    return node;
+  }
+
+  //bitand = equality ("&" equality)*
+  static std::unique_ptr<AstNode> _bit_and(){
+    auto node = equality();
+    while(myTokenizer::consume_symbol(myTokenizer::TokenType::AND)){
+      auto tmp = equality();
+      node = new_binary(AstKind::AST_BITAND, node, tmp);
     }
     return node;
   }
@@ -872,7 +905,7 @@ static std::unique_ptr<AstNode> mul(){
     return node;
   }
 
-//unary = ("+" | "-" | "*" | "&" | "!")? unary
+//unary = ("+" | "-" | "*" | "&" | "!" | "~")? unary
 //        | ("++" | "--") unary
 //        | "sizeof" unary
 //        | postfix
@@ -899,6 +932,11 @@ static std::unique_ptr<AstNode> unary(){
     auto node_not = new_node(AstKind::AST_NOT);
     node_not->lhs = unary();
     return node_not;
+  }
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::TILDA)){
+    auto node = new_node(AstKind::AST_BITNOT);
+    node->lhs = unary();
+    return node;
   }
   
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUSPLUS)){

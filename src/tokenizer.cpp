@@ -329,6 +329,16 @@ void tokenize(const std::string& input){
       continue; 
     }
 
+    if(c == '^'){             
+      new_token(TokenType::CARET);
+      continue; 
+    }
+
+    if(c == '~'){             
+      new_token(TokenType::TILDA);
+      continue; 
+    }
+
     if(c == '\''){
       char c = 0;
       if(input[end] == '\\'){
