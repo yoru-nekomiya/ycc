@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 #include <climits>
+#include <stack>
 
 //---------------------------
 //Lunaria Utility
@@ -106,6 +107,7 @@ enum class TokenType {
   WHILE, //while
   DO, //do
   FOR, //for
+  BREAK, //break
   COMMA, //,
   AND, //&
   ANDAND, //&&
@@ -173,6 +175,7 @@ enum class AstKind {
   AST_WHILE, //while
   AST_DO_WHILE, //do-while
   AST_FOR, //for
+  AST_BREAK, //break
   AST_BLOCK, //{}
   AST_FUNCALL, //function call
   AST_DEREF, //*
@@ -203,6 +206,7 @@ enum class AstKind {
 };
 
 struct AstNode {
+  int id;
   AstKind kind;
   std::unique_ptr<AstNode> lhs;
   std::unique_ptr<AstNode> rhs;
@@ -215,6 +219,8 @@ struct AstNode {
   std::unique_ptr<AstNode> els; //if
   std::unique_ptr<AstNode> init; //for
   std::unique_ptr<AstNode> inc; //for
+
+  int target; //break
 
   std::list<std::unique_ptr<AstNode>> body;
 
@@ -247,6 +253,10 @@ struct Program {
 
 //---------------------------
 //HIR
+namespace myLIR {
+    struct BasicBlock;
+  }
+
 namespace myHIR {
 enum class HirKind {
   HIR_IMM,
@@ -266,6 +276,7 @@ enum class HirKind {
   HIR_WHILE, //while
   HIR_DO_WHILE, //do-while
   HIR_FOR, //for
+  HIR_BREAK, //break
   HIR_BLOCK, //{}
   HIR_FUNCALL, //function call
   HIR_DEREF, //*
@@ -294,7 +305,7 @@ enum class HirKind {
   HIR_BITNOT, //~
   HIR_NULL,
 };
-
+  
 struct HirNode {
   HirKind kind;
   std::shared_ptr<HirNode> lhs;
@@ -308,6 +319,10 @@ struct HirNode {
   std::shared_ptr<HirNode> els; //if
   std::shared_ptr<HirNode> init; //for
   std::shared_ptr<HirNode> inc; //for
+
+  //break
+  std::shared_ptr<HirNode> target; 
+  std::shared_ptr<myLIR::BasicBlock> _break;
 
   std::list<std::shared_ptr<HirNode>> body;
 
@@ -329,7 +344,7 @@ struct HirNode {
     std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
   };
 
-  std::shared_ptr<HirNode> new_node(HirKind kind);
+  std::shared_ptr<HirNode> new_node(HirKind kind, int ast_id = -1);
   std::shared_ptr<HirNode> new_binary(HirKind kind,
 				      std::shared_ptr<HirNode>& lhs,
 				      std::shared_ptr<HirNode>& rhs);

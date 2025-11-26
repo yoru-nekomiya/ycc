@@ -1,10 +1,15 @@
 #include "ycc.hpp"
 
 namespace myHIR {
+  static std::unordered_map<int, std::shared_ptr<HirNode>> map_astID2hirNode = {};
+  
 std::shared_ptr<HirNode>
-new_node(HirKind kind){
+new_node(HirKind kind, int ast_id){
   auto node = std::make_shared<HirNode>();
   node->kind = kind;
+  if(ast_id != -1){
+    map_astID2hirNode[ast_id] = node;
+  }
   return node;
 }
 
@@ -198,21 +203,21 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->els = std::move(els);
     return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_WHILE){
-    auto hirNode = new_node(HirKind::HIR_WHILE);
+    auto hirNode = new_node(HirKind::HIR_WHILE, astNode->id);
     auto cond = program(astNode->cond);
     auto then = program(astNode->then);
     hirNode->cond = std::move(cond);
     hirNode->then = std::move(then);
     return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_DO_WHILE){
-    auto hirNode = new_node(HirKind::HIR_DO_WHILE);
+    auto hirNode = new_node(HirKind::HIR_DO_WHILE, astNode->id);
     auto then = program(astNode->then);
     auto cond = program(astNode->cond);
     hirNode->then = std::move(then);
     hirNode->cond = std::move(cond);
     return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_FOR){
-    auto hirNode = new_node(HirKind::HIR_FOR);
+    auto hirNode = new_node(HirKind::HIR_FOR, astNode->id);
     std::shared_ptr<HirNode> init = nullptr;
     std::shared_ptr<HirNode> cond = nullptr;
     std::shared_ptr<HirNode> inc = nullptr;
@@ -231,6 +236,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->cond = std::move(cond);
     hirNode->inc = std::move(inc);
     hirNode->then = std::move(then);
+    return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_BREAK){
+    auto hirNode = new_node(HirKind::HIR_BREAK);
+    assert(map_astID2hirNode.contains(astNode->target));
+    hirNode->target = map_astID2hirNode[astNode->target];
     return hirNode;
   } else {
     //binary

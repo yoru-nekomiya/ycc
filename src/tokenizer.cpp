@@ -118,6 +118,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::VOID;
       case 11:
 	return TokenType::DO;
+      case 12:
+	return TokenType::BREAK;
       }
     }
     i++;

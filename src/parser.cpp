@@ -3,6 +3,7 @@
 namespace myParser {
   static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
   static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  static std::stack<int> breaks = {};
   
   static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
     std::shared_ptr<Lunaria::Var> lvar = nullptr;
@@ -43,7 +44,9 @@ namespace myParser {
   }
 
 static std::unique_ptr<AstNode> new_node(AstKind kind){
+  static int id = 0;
   auto astNode = std::make_unique<AstNode>();
+  astNode->id = id++;
   astNode->kind = kind;
   return astNode;
 }
@@ -597,6 +600,7 @@ static std::unique_ptr<Function> function(){
 //       | "while" "(" expr ")" stmt
 //       | "do" stmt "while" "(" expr ")" ";"
 //       | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
+//       | "break" ";"
 //       | declaration
 static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
@@ -631,28 +635,38 @@ static std::unique_ptr<AstNode> stmt2(){
   //"while" "(" expr ")" stmt
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::WHILE)){
     node = new_node(AstKind::AST_WHILE);
+    breaks.push(node->id);
+    
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
     node->cond = expr();
     myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
     node->then = stmt();
+
+    breaks.pop();
     return node;
   }
 
   //"do" stmt "while" "(" expr ")" ";"
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::DO)){
     node = new_node(AstKind::AST_DO_WHILE);
+    breaks.push(node->id);
+    
     node->then = stmt();
     myTokenizer::expect(myTokenizer::TokenType::WHILE);
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
     node->cond = expr();
     myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+
+    breaks.pop();
     return node;
   }
 
   //"for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::FOR)){
     node = new_node(AstKind::AST_FOR);
+    breaks.push(node->id);
+    
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);    
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
       //first expr
@@ -674,6 +688,8 @@ static std::unique_ptr<AstNode> stmt2(){
       myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
     }
     node->then = stmt();
+
+    breaks.pop();
     return node;
   }
 
@@ -683,6 +699,18 @@ static std::unique_ptr<AstNode> stmt2(){
     while(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
       node->body.push_back(stmt());
     }
+    return node;
+  }
+
+  //"break" ";"
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::BREAK)){
+    if(breaks.empty()){
+      std::cerr << "invalid break statement\n";
+      exit(1);
+    }
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+    node = new_node(AstKind::AST_BREAK);
+    node->target = breaks.top();
     return node;
   }
 
