@@ -242,6 +242,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     assert(map_astID2hirNode.contains(astNode->target));
     hirNode->target = map_astID2hirNode[astNode->target];
     return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_CONTINUE){
+    auto hirNode = new_node(HirKind::HIR_CONTINUE);
+    assert(map_astID2hirNode.contains(astNode->target));
+    hirNode->target = map_astID2hirNode[astNode->target];
+    return hirNode;
   } else {
     //binary
     auto lhs = program(astNode->lhs);

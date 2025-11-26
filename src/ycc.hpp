@@ -108,6 +108,7 @@ enum class TokenType {
   DO, //do
   FOR, //for
   BREAK, //break
+  CONTINUE, //continue
   COMMA, //,
   AND, //&
   ANDAND, //&&
@@ -176,6 +177,7 @@ enum class AstKind {
   AST_DO_WHILE, //do-while
   AST_FOR, //for
   AST_BREAK, //break
+  AST_CONTINUE, //continue
   AST_BLOCK, //{}
   AST_FUNCALL, //function call
   AST_DEREF, //*
@@ -277,6 +279,7 @@ enum class HirKind {
   HIR_DO_WHILE, //do-while
   HIR_FOR, //for
   HIR_BREAK, //break
+  HIR_CONTINUE, //continue
   HIR_BLOCK, //{}
   HIR_FUNCALL, //function call
   HIR_DEREF, //*
@@ -320,9 +323,10 @@ struct HirNode {
   std::shared_ptr<HirNode> init; //for
   std::shared_ptr<HirNode> inc; //for
 
-  //break
+  //break and continue
   std::shared_ptr<HirNode> target; 
   std::shared_ptr<myLIR::BasicBlock> _break;
+  std::shared_ptr<myLIR::BasicBlock> _continue;
 
   std::list<std::shared_ptr<HirNode>> body;
 

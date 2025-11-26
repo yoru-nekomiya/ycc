@@ -29,8 +29,26 @@ int main(){
     } while(1);
     j++;
   } while (i < 5);
-  assert(5, i, "i, break in do-while loop 2");
-  assert(5, j, "j, break in do-while loop 2");
+  assert(5, i, "i, break in nested do-while loop");
+  assert(5, j, "j, break in nested do-while loop");
+
+  i = 0; j = 0;
+  do {
+    i++;
+    continue;
+    j++;
+  } while (i < 3);
+  assert(3, i, "i, continue in do-while loop");
+  assert(0, j, "j, continue in do-while loop");
+
+  i = 0; j = 0;
+  do {
+    i++;
+    if(i == 2) continue;
+    j++;
+  } while (i < 3);
+  assert(3, i, "i, continue in do-while loop 2");
+  assert(2, j, "j, continue in do-while loop 2");
   
   return 0;
 }

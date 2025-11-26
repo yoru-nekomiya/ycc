@@ -4,6 +4,7 @@ namespace myParser {
   static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
   static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
   static std::stack<int> breaks = {};
+  static std::stack<int> continues = {};
   
   static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
     std::shared_ptr<Lunaria::Var> lvar = nullptr;
@@ -601,6 +602,7 @@ static std::unique_ptr<Function> function(){
 //       | "do" stmt "while" "(" expr ")" ";"
 //       | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //       | "break" ";"
+//       | "continue" ";"
 //       | declaration
 static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
@@ -636,6 +638,7 @@ static std::unique_ptr<AstNode> stmt2(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::WHILE)){
     node = new_node(AstKind::AST_WHILE);
     breaks.push(node->id);
+    continues.push(node->id);
     
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
     node->cond = expr();
@@ -643,6 +646,7 @@ static std::unique_ptr<AstNode> stmt2(){
     node->then = stmt();
 
     breaks.pop();
+    continues.pop();
     return node;
   }
 
@@ -650,6 +654,7 @@ static std::unique_ptr<AstNode> stmt2(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::DO)){
     node = new_node(AstKind::AST_DO_WHILE);
     breaks.push(node->id);
+    continues.push(node->id);
     
     node->then = stmt();
     myTokenizer::expect(myTokenizer::TokenType::WHILE);
@@ -659,6 +664,7 @@ static std::unique_ptr<AstNode> stmt2(){
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
 
     breaks.pop();
+    continues.pop();
     return node;
   }
 
@@ -666,6 +672,7 @@ static std::unique_ptr<AstNode> stmt2(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::FOR)){
     node = new_node(AstKind::AST_FOR);
     breaks.push(node->id);
+    continues.push(node->id);
     
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);    
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
@@ -690,6 +697,7 @@ static std::unique_ptr<AstNode> stmt2(){
     node->then = stmt();
 
     breaks.pop();
+    continues.pop();
     return node;
   }
 
@@ -711,6 +719,18 @@ static std::unique_ptr<AstNode> stmt2(){
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
     node = new_node(AstKind::AST_BREAK);
     node->target = breaks.top();
+    return node;
+  }
+
+  //"continue" ";"
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::CONTINUE)){
+    if(continues.empty()){
+      std::cerr << "invalid continue statement\n";
+      exit(1);
+    }
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+    node = new_node(AstKind::AST_CONTINUE);
+    node->target = continues.top();
     return node;
   }
 

@@ -353,11 +353,13 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return nullptr;
   }
   case myHIR::HirKind::HIR_WHILE: {
-    
     auto cond = new_bb();
-    hirNode->_break = new_bb();
     auto body = new_bb();
-    
+    hirNode->_break = new_bb();
+    hirNode->_continue = cond;
+    //auto body = new_bb();
+
+    jmp(cond);
     outBB = cond;
     auto node_cond = gen_expr_lir(hirNode->cond);
     br(node_cond, body, hirNode->_break);
@@ -374,16 +376,17 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   }
   case myHIR::HirKind::HIR_DO_WHILE: {
     std::shared_ptr<BasicBlock> body = new_bb();
-    //hirNode->_continue = new_bb();
-    auto _continue = new_bb();
+    hirNode->_continue = new_bb();
+    //auto _continue = new_bb();
     hirNode->_break = new_bb();
+
     jmp(body);
 
     outBB = body;
     gen_expr_lir(hirNode->then);
-    jmp(/*hirNode->*/_continue);
+    jmp(hirNode->_continue);
 
-    outBB = /*hirNode->*/_continue;
+    outBB = hirNode->_continue;
     auto r = gen_expr_lir(hirNode->cond);
     br(r, body, hirNode->_break);
 
@@ -394,10 +397,9 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     return nullptr;
   }
   case myHIR::HirKind::HIR_FOR: {
-    
     auto cond = new_bb();
     auto body = new_bb();
-    //std::shared_ptr<BasicBlock> _break = new_bb();
+    hirNode->_continue = new_bb();
     hirNode->_break = new_bb();
     
     if(hirNode->init){
@@ -415,7 +417,9 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
 
     outBB = body;
     gen_expr_lir(hirNode->then);
+    jmp(hirNode->_continue);
 
+    outBB = hirNode->_continue;
     if(hirNode->inc){
       gen_expr_lir(hirNode->inc);
     }
@@ -431,6 +435,13 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     assert(hirNode->target != nullptr);
     assert(hirNode->target->_break != nullptr);
     jmp(hirNode->target->_break);
+    outBB = new_bb();
+    return nullptr;
+  }
+  case myHIR::HirKind::HIR_CONTINUE: {
+    assert(hirNode->target != nullptr);
+    assert(hirNode->target->_break != nullptr);
+    jmp(hirNode->target->_continue);
     outBB = new_bb();
     return nullptr;
   }
