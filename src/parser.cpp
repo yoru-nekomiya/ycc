@@ -5,6 +5,7 @@ namespace myParser {
   static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
   static std::stack<int> breaks = {};
   static std::stack<int> continues = {};
+  static std::stack<int> switches = {};
   
   static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
     std::shared_ptr<Lunaria::Var> lvar = nullptr;
@@ -603,6 +604,9 @@ static std::unique_ptr<Function> function(){
 //       | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //       | "break" ";"
 //       | "continue" ";"
+//       | "switch" "(" expr ")" stmt
+//       | "case" const-expr ":" stmt
+//       | "default" ":" stmt
 //       | declaration
 static std::unique_ptr<AstNode> stmt2(){
   std::unique_ptr<AstNode> node;
@@ -734,6 +738,56 @@ static std::unique_ptr<AstNode> stmt2(){
     return node;
   }
 
+  //"switch" "(" expr ")" stmt
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::SWITCH)){
+    node = new_node(AstKind::AST_SWITCH);
+    //node->cases = {};
+
+    myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
+    node->cond = expr();
+    myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
+
+    breaks.push(node->id);
+    switches.push(node->id);
+    
+    node->body.push_back(stmt());
+
+    breaks.pop();
+    switches.pop();
+    return node;
+  }
+  
+  //"case" const-expr ":" stmt
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::CASE)){
+    if(switches.empty()){
+      std::cerr << "invalid case statement\n";
+      exit(1);
+    }
+    node = new_node(AstKind::AST_CASE);
+    const long long val = const_expr();
+    myTokenizer::expect(myTokenizer::TokenType::COLON);
+
+    node->body.push_back(stmt());
+    node->val = val;
+
+    node->_switch = switches.top();
+    return node;
+  }
+  
+  //"default" ":" stmt
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::DEFAULT)){
+    if(switches.empty()){
+      std::cerr << "invalid case statement\n";
+      exit(1);
+    }
+    myTokenizer::expect(myTokenizer::TokenType::COLON);
+    node = new_node(AstKind::AST_DEFAULT);
+    node->body.push_back(stmt());
+
+    node->_switch = switches.top();
+    return node;
+  }
+  
   //declaration
   if(isTypeName()){
     return declaration();

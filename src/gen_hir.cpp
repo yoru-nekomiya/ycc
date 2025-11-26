@@ -247,7 +247,32 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     assert(map_astID2hirNode.contains(astNode->target));
     hirNode->target = map_astID2hirNode[astNode->target];
     return hirNode;
-  } else {
+  } else if(astNode->kind == myParser::AstKind::AST_SWITCH){
+    auto hirNode = new_node(HirKind::HIR_SWITCH, astNode->id);
+    hirNode->cond = program(astNode->cond);
+    for(const auto& n: astNode->body){
+      hirNode->body.push_back(program(n));
+    }
+    return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_CASE){
+    auto hirNode = new_node(HirKind::HIR_CASE);
+    for(const auto& n: astNode->body){
+      hirNode->body.push_back(program(n));
+    }
+    hirNode->val = astNode->val;
+    assert(map_astID2hirNode.contains(astNode->_switch));
+    map_astID2hirNode[astNode->_switch]->cases.push_back(hirNode);
+    return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_DEFAULT){
+    auto hirNode = new_node(HirKind::HIR_DEFAULT);
+    for(const auto& n: astNode->body){
+      hirNode->body.push_back(program(n));
+    }
+    assert(map_astID2hirNode.contains(astNode->_switch));
+    map_astID2hirNode[astNode->_switch]->_default = hirNode;
+    return hirNode;
+  }
+  else {
     //binary
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);

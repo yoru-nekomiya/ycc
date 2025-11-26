@@ -99,6 +99,7 @@ enum class TokenType {
   BRACE_R, //}
   BRACKET_L, //[
   BRACKET_R, //]
+  COLON, //:
   SEMICOLON, //;
   IDENT, //identifier
   RETURN, //return
@@ -109,6 +110,9 @@ enum class TokenType {
   FOR, //for
   BREAK, //break
   CONTINUE, //continue
+  SWITCH, //switch
+  CASE, //case
+  DEFAULT, //default
   COMMA, //,
   AND, //&
   ANDAND, //&&
@@ -178,6 +182,9 @@ enum class AstKind {
   AST_FOR, //for
   AST_BREAK, //break
   AST_CONTINUE, //continue
+  AST_SWITCH, //switch
+  AST_CASE, //case
+  AST_DEFAULT, //default
   AST_BLOCK, //{}
   AST_FUNCALL, //function call
   AST_DEREF, //*
@@ -222,8 +229,12 @@ struct AstNode {
   std::unique_ptr<AstNode> init; //for
   std::unique_ptr<AstNode> inc; //for
 
-  int target; //break
+  int target; //break, continue
 
+  //switch, case, default
+  //std::vector<int> cases;
+  int _switch;
+  
   std::list<std::unique_ptr<AstNode>> body;
 
   std::string funcName; //function name
@@ -280,6 +291,9 @@ enum class HirKind {
   HIR_FOR, //for
   HIR_BREAK, //break
   HIR_CONTINUE, //continue
+  HIR_SWITCH, //switch
+  HIR_CASE, //case
+  HIR_DEFAULT, //default
   HIR_BLOCK, //{}
   HIR_FUNCALL, //function call
   HIR_DEREF, //*
@@ -327,6 +341,10 @@ struct HirNode {
   std::shared_ptr<HirNode> target; 
   std::shared_ptr<myLIR::BasicBlock> _break;
   std::shared_ptr<myLIR::BasicBlock> _continue;
+
+  std::vector<std::shared_ptr<HirNode>> cases;
+  std::shared_ptr<HirNode> _default;
+  std::shared_ptr<myLIR::BasicBlock> _case_bb;
 
   std::list<std::shared_ptr<HirNode>> body;
 

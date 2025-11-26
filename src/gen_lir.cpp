@@ -357,7 +357,6 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     auto body = new_bb();
     hirNode->_break = new_bb();
     hirNode->_continue = cond;
-    //auto body = new_bb();
 
     jmp(cond);
     outBB = cond;
@@ -377,7 +376,6 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   case myHIR::HirKind::HIR_DO_WHILE: {
     std::shared_ptr<BasicBlock> body = new_bb();
     hirNode->_continue = new_bb();
-    //auto _continue = new_bb();
     hirNode->_break = new_bb();
 
     jmp(body);
@@ -443,6 +441,46 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     assert(hirNode->target->_break != nullptr);
     jmp(hirNode->target->_continue);
     outBB = new_bb();
+    return nullptr;
+  }
+  case myHIR::HirKind::HIR_SWITCH: {
+    hirNode->_break = new_bb();
+    hirNode->_continue = new_bb();
+
+    auto cond = gen_expr_lir(hirNode->cond);
+    for(auto& _case: hirNode->cases){
+      _case->_case_bb = new_bb();
+      auto next = new_bb();
+      auto reg = new_reg();
+      const auto imm = new_imm(_case->val);
+      emit_lir(myLIR::LirKind::LIR_EQ, reg, cond, imm);
+      br(reg, _case->_case_bb, next);
+      outBB = next;
+    }
+
+    if(hirNode->_default){
+      auto bb_default = new_bb();
+      hirNode->_default->_case_bb = bb_default;
+      jmp(bb_default);
+    } else {
+      jmp(hirNode->_break);
+    }
+
+    for(const auto& n: hirNode->body){
+      gen_expr_lir(n);
+    }
+    jmp(hirNode->_break);
+
+    outBB = hirNode->_break;
+    return nullptr;
+  }
+  case myHIR::HirKind::HIR_CASE:
+  case myHIR::HirKind::HIR_DEFAULT: {
+    jmp(hirNode->_case_bb);
+    outBB = hirNode->_case_bb;
+    for(const auto& n: hirNode->body){
+      gen_expr_lir(n);
+    }
     return nullptr;
   }
   case myHIR::HirKind::HIR_BLOCK: {

@@ -122,6 +122,12 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::BREAK;
       case 13:
 	return TokenType::CONTINUE;
+      case 14:
+	return TokenType::SWITCH;
+      case 15:
+	return TokenType::CASE;
+      case 16:
+	return TokenType::DEFAULT;
       }
     }
     i++;
@@ -312,6 +318,11 @@ void tokenize(const std::string& input){
 
     if(c == ';'){
       new_token(TokenType::SEMICOLON);
+      continue; 
+    }
+
+    if(c == ':'){
+      new_token(TokenType::COLON);
       continue; 
     }
 
