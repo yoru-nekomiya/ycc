@@ -142,11 +142,8 @@ gen_binop_lir(LirKind opcode,
 }
 
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
-    auto var = std::make_shared<Lunaria::Var>();
-    var->name = name;
-    var->type = type;
-    var->isLocal = true;
-    //localVars[var->name] = var;
+    static int id = localVars.size();
+    auto var = std::make_shared<Lunaria::Var>(id, name, type, true);
     localVars.insert(var);
     return var;
   }

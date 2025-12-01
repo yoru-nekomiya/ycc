@@ -1,8 +1,6 @@
 #include "ycc.hpp"
 
 namespace myParser {
-  //static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
-  //static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
   static std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
   static std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   static std::stack<int> breaks = {};
@@ -67,36 +65,15 @@ namespace myParser {
     scope.back()->vars.insert(pair);
     return vsc;
   }
-  /*
-  static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
-    std::shared_ptr<Lunaria::Var> lvar = nullptr;
-    if(localVars.contains(token->str)){
-      lvar = localVars[token->str];
-    }
-    return lvar;
-  }
   
-  static std::shared_ptr<Lunaria::Var> findGvar(const std::unique_ptr<myTokenizer::Token>& token){
-    std::shared_ptr<Lunaria::Var> gvar = nullptr;
-    if(globalVars.contains(token->str)){
-      gvar = globalVars[token->str];
-    }
-    return gvar;
-  }
-  */
   static std::shared_ptr<Lunaria::Var> new_var(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLocal){
     static int id = 0;
-    auto var = std::make_shared<Lunaria::Var>();
-    var->id = id++;
-    var->name = name;
-    var->type = type;
-    var->isLocal = isLocal;
+    auto var = std::make_shared<Lunaria::Var>(id++, name, type, isLocal);    
     return var;
   }
   
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
     auto lvar = new_var(name, type, true);
-    //localVars[lvar->name] = lvar;
     localVars.insert(lvar);
     auto vsc = push_to_current_scope(name);
     vsc->var = lvar;
@@ -107,7 +84,6 @@ namespace myParser {
     auto gvar = new_var(name, type, false);
     gvar->isLiteral = isLiteral;
     gvar->literal = literal;
-    //globalVars[gvar->name] = gvar;
     globalVars.insert(gvar);
     auto vsc = push_to_current_scope(name);
     vsc->var = gvar;

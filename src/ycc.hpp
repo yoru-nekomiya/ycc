@@ -72,6 +72,11 @@ namespace Lunaria {
     bool isLiteral;
     std::string literal; //for global variable
     std::vector<std::unique_ptr<Initializer>> initializer;
+    Var(int _id, const std::string& _name, const std::shared_ptr<Lunaria::Type>& _type, bool _isLocal)
+      : id(_id), name(_name), offset(0),
+	type(_type), isLocal(_isLocal), isLiteral(false),
+	literal(""), initializer()
+    {}
   };
 
   struct VarSharedPtrHash {

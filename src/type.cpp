@@ -27,6 +27,7 @@ namespace Lunaria {
   }
 
   int align_to(int n, int align){
+    //round n up to the next multiple of align
     return (n+align-1) & ~(align-1);
   }
 
