@@ -288,7 +288,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   static void emit_data(const std::unique_ptr<myLIR::Program>& prog){
     std::cout << ".bss" << std::endl;
 
-    for(const auto& [name, gvar]: prog->globalVars){
+    for(const auto& gvar: prog->globalVars){
       if(gvar->isLiteral || !gvar->initializer.empty()){
 	continue;
       }
@@ -298,7 +298,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     }
 
     std::cout << ".data\n";
-    for(const auto& [name, gvar]: prog->globalVars){
+    for(const auto& gvar: prog->globalVars){
       if(gvar->isLiteral){
 	std::cout << ".align " << gvar->type->align << std::endl;
 	std::cout << gvar->name << ":\n";
@@ -330,7 +330,7 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
 
     //calculate stack size
     int offset = 0;
-    for(const auto& [name, lvar]: fn->localVars){
+    for(const auto& lvar: fn->localVars){
       offset = Lunaria::align_to(offset, lvar->type->align);
       offset += lvar->type->size;
       lvar->offset = offset;

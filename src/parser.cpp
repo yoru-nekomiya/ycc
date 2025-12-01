@@ -1,12 +1,73 @@
 #include "ycc.hpp"
 
 namespace myParser {
-  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
-  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  //static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+  //static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  static std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
+  static std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   static std::stack<int> breaks = {};
   static std::stack<int> continues = {};
   static std::stack<int> switches = {};
-  
+
+  struct VarScope{
+    std::string name;
+    int depth;
+    
+    std::shared_ptr<Lunaria::Var> var;
+  };
+
+  struct Scope{
+    std::unordered_map<std::string, std::shared_ptr<VarScope>> vars;
+  };
+
+  static std::vector<std::shared_ptr<Scope>> scope = {};
+  static int scope_depth = 0;
+
+  static std::shared_ptr<Scope> enter_scope(){
+    auto sc = std::make_shared<Scope>();
+    scope_depth++;
+    scope.push_back(sc);
+    return sc;
+  }
+
+  static void leave_scope(){
+    scope_depth--;
+    scope.pop_back();
+    return;
+  }
+
+  static std::shared_ptr<VarScope> find_var_scope(const std::unique_ptr<myTokenizer::Token>& token){
+    for(auto iter = scope.rbegin(); iter != scope.rend(); iter++){
+      auto vars = (*iter)->vars;
+      auto it_v = vars.find(token->str);
+      if(it_v != vars.end()){
+	return it_v->second;
+      }
+    }
+    return nullptr;
+  }
+
+  static std::shared_ptr<VarScope> find_var_current_scope(const std::string& name){
+    auto it_v = scope.back()->vars.find(name);
+    if(it_v != scope.back()->vars.end()){
+      return it_v->second;
+    }
+    return nullptr;
+  }
+
+  static std::shared_ptr<VarScope> push_to_current_scope(const std::string& name){
+    auto vsc = std::make_shared<VarScope>();
+    vsc->name = name;
+    vsc->depth = scope_depth;
+    const auto pair = std::make_pair(name, vsc);
+    if(find_var_current_scope(name) != nullptr){
+      //redeclaration
+      std::cerr << "redeclaration of variable\n";
+    }
+    scope.back()->vars.insert(pair);
+    return vsc;
+  }
+  /*
   static std::shared_ptr<Lunaria::Var> findLvar(const std::unique_ptr<myTokenizer::Token>& token){
     std::shared_ptr<Lunaria::Var> lvar = nullptr;
     if(localVars.contains(token->str)){
@@ -14,7 +75,7 @@ namespace myParser {
     }
     return lvar;
   }
-
+  
   static std::shared_ptr<Lunaria::Var> findGvar(const std::unique_ptr<myTokenizer::Token>& token){
     std::shared_ptr<Lunaria::Var> gvar = nullptr;
     if(globalVars.contains(token->str)){
@@ -22,9 +83,11 @@ namespace myParser {
     }
     return gvar;
   }
-
+  */
   static std::shared_ptr<Lunaria::Var> new_var(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLocal){
+    static int id = 0;
     auto var = std::make_shared<Lunaria::Var>();
+    var->id = id++;
     var->name = name;
     var->type = type;
     var->isLocal = isLocal;
@@ -33,7 +96,10 @@ namespace myParser {
   
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
     auto lvar = new_var(name, type, true);
-    localVars[lvar->name] = lvar;
+    //localVars[lvar->name] = lvar;
+    localVars.insert(lvar);
+    auto vsc = push_to_current_scope(name);
+    vsc->var = lvar;
     return lvar;
   }
 
@@ -41,7 +107,10 @@ namespace myParser {
     auto gvar = new_var(name, type, false);
     gvar->isLiteral = isLiteral;
     gvar->literal = literal;
-    globalVars[gvar->name] = gvar;
+    //globalVars[gvar->name] = gvar;
+    globalVars.insert(gvar);
+    auto vsc = push_to_current_scope(name);
+    vsc->var = gvar;
     return gvar;
   }
 
@@ -296,6 +365,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
 //program = (global_var | function)*
 std::unique_ptr<Program> program(){
   globalVars.clear();
+  scope.push_back(std::make_shared<Scope>());
   std::list<std::unique_ptr<Function>> fns;
   while(!myTokenizer::at_eof()){
     if(isFunction()){
@@ -312,6 +382,7 @@ std::unique_ptr<Program> program(){
   auto prog = std::make_unique<Program>();
   prog->fns = std::move(fns);
   prog->globalVars = globalVars;
+  scope.pop_back();
   return prog;
 }
   
@@ -370,7 +441,7 @@ static std::list<std::shared_ptr<Lunaria::Var>> readFuncParams(){
   return params;
 }
 
-//function = basetype ident "(" params? ")" "{" stmt* "}"
+//function = basetype ident "(" params? ")" ("{" stmt* "}" | ";")
 //params = param ("," param)*
 //param = basetype ident
 static std::unique_ptr<Function> function(){
@@ -380,13 +451,24 @@ static std::unique_ptr<Function> function(){
   const auto funcName = myTokenizer::expect_ident();
   auto fn = std::make_unique<Function>();
   fn->name = funcName;
+
+  //TODO: add function name to the current scope
+  //new_gvar(funcName);
+  
   myTokenizer::expect(myTokenizer::TokenType::PAREN_L);
+  auto sc = enter_scope();
   fn->params = readFuncParams();
 
+  if(myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
+    leave_scope();
+    return nullptr;
+  }
+  
   myTokenizer::expect(myTokenizer::TokenType::BRACE_L);
   while(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
     fn->body.push_back(stmt());
   }
+  leave_scope();
   fn->localVars = localVars;
   return fn;
 }
@@ -677,6 +759,7 @@ static std::unique_ptr<AstNode> stmt2(){
     node = new_node(AstKind::AST_FOR);
     breaks.push(node->id);
     continues.push(node->id);
+    auto sc = enter_scope();
     
     myTokenizer::expect(myTokenizer::TokenType::PAREN_L);    
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
@@ -702,15 +785,18 @@ static std::unique_ptr<AstNode> stmt2(){
 
     breaks.pop();
     continues.pop();
+    leave_scope();
     return node;
   }
 
   //"{" stmt* "}"
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
     node = new_node(AstKind::AST_BLOCK);
+    auto sc = enter_scope();
     while(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
       node->body.push_back(stmt());
     }
+    leave_scope();
     return node;
   }
 
@@ -1148,10 +1234,12 @@ static std::unique_ptr<AstNode> primary(){
       auto node = new_node(AstKind::AST_FUNCALL);
       node->funcName = token->str;
       node->args = funcArgs();
+      add_type(node);
       return node;
     }
 
     //variable
+    /*
     auto node = new_node(AstKind::AST_VAR);
     auto lvar = findLvar(token);
     auto gvar = findGvar(token);
@@ -1163,7 +1251,16 @@ static std::unique_ptr<AstNode> primary(){
       std::cerr << "undefined variable" << std::endl;
       exit(1);
     }
-    return node;
+    */
+    auto vsc = find_var_scope(token);
+    if(vsc){
+      if(vsc->var){
+	return new_var_node(vsc->var);
+      }
+    }
+    std::cerr << "undefined variable\n";
+    exit(1);
+    //return node;
   } //if(token)
 
   auto tok_str = myTokenizer::consume_str();

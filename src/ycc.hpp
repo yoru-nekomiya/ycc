@@ -10,6 +10,7 @@
 #include <cassert>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <climits>
 #include <stack>
@@ -63,6 +64,7 @@ namespace Lunaria {
   };
   
   struct Var {
+    int id;
     std::string name;
     int offset; //for local variable
     std::shared_ptr<Type> type;
@@ -70,6 +72,21 @@ namespace Lunaria {
     bool isLiteral;
     std::string literal; //for global variable
     std::vector<std::unique_ptr<Initializer>> initializer;
+  };
+
+  struct VarSharedPtrHash {
+    size_t operator()(const std::shared_ptr<Var>& p) const {
+        if (!p) return 0; 
+        return std::hash<int>{}(p->id);
+    }
+};
+  
+  struct VarSharedPtrEqual {
+    bool operator()(const std::shared_ptr<Var>& a, const std::shared_ptr<Var>& b) const {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        return a->id == b->id;
+    }
   };
 } //namespace Lunaria
 
@@ -247,12 +264,14 @@ struct Function {
   std::string name;
   std::list<std::shared_ptr<Lunaria::Var>> params;
   std::list<std::unique_ptr<AstNode>> body;
-  std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+  //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+  std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
 };
 
 struct Program {
   std::list<std::unique_ptr<Function>> fns;
-  std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+  std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
 };
 
   struct Designator{
@@ -358,12 +377,14 @@ struct HirNode {
     std::string name;
     std::list<std::shared_ptr<Lunaria::Var>> params;
     std::list<std::shared_ptr<HirNode>> body;
-    std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+    std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
   };
 
   struct Program {
     std::list<std::unique_ptr<Function>> fns;
-    std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+    std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   };
 
   std::shared_ptr<HirNode> new_node(HirKind kind, int ast_id = -1);
@@ -464,14 +485,16 @@ struct LirNode {
   struct Function {
     std::string name;
     std::list<std::shared_ptr<Lunaria::Var>> params;
-    std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
+    std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
     int stackSize;
     std::list<std::shared_ptr<BasicBlock>> bbs;
   };
 
   struct Program {
     std::list<std::shared_ptr<Function>> fns;
-    std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
+    std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   };
 
 std::unique_ptr<Program>
