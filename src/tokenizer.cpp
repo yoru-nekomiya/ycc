@@ -361,6 +361,11 @@ void tokenize(const std::string& input){
       continue; 
     }
 
+    if(c == '?'){             
+      new_token(TokenType::QUESTION);
+      continue; 
+    }
+
     if(c == '\''){
       char c = 0;
       if(input[end] == '\\'){

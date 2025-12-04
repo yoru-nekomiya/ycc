@@ -173,6 +173,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> stmt2();
   static std::unique_ptr<AstNode> expr();
   static std::unique_ptr<AstNode> assign();
+  static std::unique_ptr<AstNode> conditional();
   static std::unique_ptr<AstNode> logor();
   static std::unique_ptr<AstNode> logand();
   static std::unique_ptr<AstNode> _bit_or();
@@ -294,7 +295,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
     //TODO:
 
     const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
-    auto expression = expr();
+    auto expression = conditional();
     if(open){
       myTokenizer::expect(myTokenizer::TokenType::BRACE_R);
     }
@@ -624,7 +625,7 @@ static std::unique_ptr<Function> function(){
   }
 
   static int const_expr(){
-    return eval(add());
+    return eval(conditional());
   }
 
   static int eval(const std::unique_ptr<AstNode>& node){
@@ -866,10 +867,10 @@ static std::unique_ptr<AstNode> expr(){
   return assign();
 }
   
-//assign = logor (assign-op assign)?
+//assign = conditional (assign-op assign)?
 //assign-op = "=" | "+=" | "-=" | "*=" | "/="
 static std::unique_ptr<AstNode> assign(){
-  auto node = logor();
+  auto node = conditional();
   add_type(node);
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::ASSIGN)){
     auto node_assign = assign();
@@ -897,6 +898,20 @@ static std::unique_ptr<AstNode> assign(){
   } //if /=
   return node;
 }
+
+  //conditional = logor ("?" expr ":" conditional)?
+  static std::unique_ptr<AstNode> conditional(){
+    auto node = logor();
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::QUESTION)){
+      auto node_cond = new_node(AstKind::AST_CONDITIONAL);
+      node_cond->cond = std::move(node);
+      node_cond->then = expr();
+      expect(myTokenizer::TokenType::COLON);
+      node_cond->els = conditional();
+      return node_cond;
+    }
+    return node;
+  }
   
   //logor = logand ("||" logand)*
   static std::unique_ptr<AstNode> logor(){
@@ -1147,9 +1162,7 @@ static std::unique_ptr<AstNode> unary(){
       if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACKET_L)){
 	//a[b] => AST_SUBSCRIPTED, lhs=a, rhs=b
 	auto node_expr = expr();
-	//auto tmp = new_add(node, expr());
 	expect(myTokenizer::TokenType::BRACKET_R);
-	//node = new_unary(ND_DEREF, tmp);
 	node = new_binary(AstKind::AST_SUBSCRIPTED, node, node_expr);
 	continue;
       }

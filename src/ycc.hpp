@@ -155,6 +155,7 @@ enum class TokenType {
   SLASH_ASSIGN, // /=
   CARET, //^
   TILDA, //~
+  QUESTION, //?
   TK_EOF,
 };
 
@@ -233,6 +234,7 @@ enum class AstKind {
   AST_BITXOR, //^
   AST_BITAND, //&
   AST_BITNOT, //~
+  AST_CONDITIONAL, //? :
   AST_NULL,
 };
 
@@ -344,6 +346,7 @@ enum class HirKind {
   HIR_BITXOR, //^
   HIR_BITAND, //&
   HIR_BITNOT, //~
+  HIR_CONDITIONAL, //? :
   HIR_NULL,
 };
   

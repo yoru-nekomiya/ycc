@@ -271,6 +271,12 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     assert(map_astID2hirNode.contains(astNode->_switch));
     map_astID2hirNode[astNode->_switch]->_default = hirNode;
     return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_CONDITIONAL){
+    auto hirNode = new_node(HirKind::HIR_CONDITIONAL);
+    hirNode->cond = program(astNode->cond);
+    hirNode->then = program(astNode->then);
+    hirNode->els = program(astNode->els);
+    return hirNode;
   }
   else {
     //binary

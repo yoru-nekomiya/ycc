@@ -143,7 +143,7 @@ gen_binop_lir(LirKind opcode,
 
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
     static int id = localVars.size();
-    auto var = std::make_shared<Lunaria::Var>(id, name, type, true);
+    auto var = std::make_shared<Lunaria::Var>(id++, name, type, true);
     localVars.insert(var);
     return var;
   }
@@ -584,6 +584,26 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     auto num = new_imm(-1);
     emit_lir(LirKind::LIR_BITXOR, d, a, num);
     return d;
+  }
+  case myHIR::HirKind::HIR_CONDITIONAL: {
+    auto then = new_bb();
+    auto els = new_bb();
+
+    const auto cond = gen_expr_lir(hirNode->cond);
+    br(cond, then, els);
+
+    outBB = then;
+    const auto lir_then = gen_expr_lir(hirNode->then);
+    auto last = new_bb();
+    jmp_arg(last, lir_then);
+
+    outBB = els;
+    const auto lir_els = gen_expr_lir(hirNode->els);
+    jmp_arg(last, lir_els);
+
+    outBB = last;
+    outBB->param = new_reg();
+    return outBB->param;
   }
   } //switch
   return nullptr;
