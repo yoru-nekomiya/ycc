@@ -67,13 +67,14 @@ namespace myParser {
   }
   
   static std::shared_ptr<Lunaria::Var> new_var(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLocal){
-    static int id = 0;
-    auto var = std::make_shared<Lunaria::Var>(id++, name, type, isLocal);    
+    auto var = std::make_shared<Lunaria::Var>(name, type, isLocal);    
     return var;
   }
-  
+
+  static int id_local_var = 0;
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
     auto lvar = new_var(name, type, true);
+    lvar->id = id_local_var++;
     localVars.insert(lvar);
     auto vsc = push_to_current_scope(name);
     vsc->var = lvar;
@@ -81,7 +82,9 @@ namespace myParser {
   }
 
   static std::shared_ptr<Lunaria::Var> new_gvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLiteral, const std::string& literal){
+    static int id = 0;
     auto gvar = new_var(name, type, false);
+    gvar->id = id++;
     gvar->isLiteral = isLiteral;
     gvar->literal = literal;
     globalVars.insert(gvar);
@@ -423,6 +426,7 @@ static std::list<std::shared_ptr<Lunaria::Var>> readFuncParams(){
 //param = basetype ident
 static std::unique_ptr<Function> function(){
   localVars.clear();
+  id_local_var = 0;
 
   const auto type = basetype();
   const auto funcName = myTokenizer::expect_ident();

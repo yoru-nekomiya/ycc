@@ -15,8 +15,12 @@ build/%.o: src/%.cpp
 test: $(TARGET)
 	sh run_tests.sh
 
+bench: $(TARGET)
+	sh run_bench.sh
+
 clean:
 	rm -rf build/
 	rm -rf tests/out/ tests/*.s
+	rm -rf bench/out/
 
-.PHONY: test clean
+.PHONY: test bench clean

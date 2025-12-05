@@ -366,8 +366,9 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
 	      << "  pop r13" << std::endl
 	      << "  pop r12" << std::endl;
     std::cout << "  mov rsp, rbp" << std::endl
-	      << "  pop rbp" << std::endl
-	      << "  ret" << std::endl;
+    //std::cout << "  add rsp, " << fn->stackSize << std::endl
+	      << "  pop rbp\n"
+	      << "  ret\n";
   } //for fn
 }
 

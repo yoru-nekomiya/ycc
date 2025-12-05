@@ -141,10 +141,12 @@ gen_binop_lir(LirKind opcode,
   return lirNode->d;
 }
 
+  static int id_local_var = 0;
   static std::shared_ptr<Lunaria::Var> new_lvar(const std::string& name, const std::shared_ptr<Lunaria::Type>& type){
-    static int id = localVars.size();
-    auto var = std::make_shared<Lunaria::Var>(id++, name, type, true);
-    localVars.insert(var);
+    auto var = std::make_shared<Lunaria::Var>(name, type, true);
+    var->id = id_local_var++;
+    auto p = localVars.insert(var);
+    assert(p.second && "local var is not inserted to localVars");
     return var;
   }
 
@@ -647,8 +649,8 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     auto fnLir = std::make_shared<Function>();
     fnLir->name = fn->name;
     fnLir->params = fn->params;
-    //fnLir->localVars = fn->localVars;
     localVars = fn->localVars;
+    id_local_var = localVars.size();
     
     func = fnLir;
     outBB = new_bb();
@@ -662,7 +664,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       gen_expr_lir(hirNode);
     }
     fnLir->localVars = localVars;
-    progLir->fns.push_back(fnLir);
+    progLir->fns.push_back(fnLir);    
   }
   //dumpLIR(lirList);
   return progLir;
