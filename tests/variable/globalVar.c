@@ -3,7 +3,7 @@ int x;
 int y;
 int z = 3;
 int w = -42;
-//int* p = &x; 
+int* p = &x; 
 int garr[3] = {1,2,3};
 int garr2[5] = {4,5,6};
 int garr3[2] = {7,8,9};
@@ -20,11 +20,14 @@ char garr10[4] = "Hi";
 char garr11[] = {'H','e','l','l','o'};
 int garr12[2][2] = {1,2,3,4};
 int garr13[2][3] = { {1}, 2, 3 };
+char* str = "Hello";
+int* garr14 = garr + 1;
 
 int main(){
   assert(0, x, "x");
   x = 10;
   assert(10, x, "x");
+  assert(10, *p, "int* p = &x");
 
   int x;
   x = 1;
@@ -37,7 +40,6 @@ int main(){
 
   assert(3, z, "int z = 3");
   assert(-42, w, "int w = -42");
-  //assert(1, *p, "int* p = &x");
   
   assert(1, garr[0], "garr[0]");
   assert(2, garr[1], "garr[1]");
@@ -114,6 +116,14 @@ int main(){
   assert(2, garr13[1][0], "garr13[1][0]");
   assert(3, garr13[1][1], "garr13[1][1]");
   assert(0, garr13[1][2], "garr13[1][2]");
+
+  assert('H', str[0], "str[0]");
+  assert('e', str[1], "str[1]");
+  assert('l', str[2], "str[2]");
+  assert('l', str[3], "str[3]");
+  assert('o', str[4], "str[4]");
+
+  assert(2, garr14[0], "garr14[0]");
   
   return 0;
 }

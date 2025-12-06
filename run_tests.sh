@@ -5,6 +5,7 @@ TEST_DIR=./tests
 LIB="$TEST_DIR"/testlib.s
 PASS=0
 FAIL=0
+LINK_OPT="-z noexecstack -fno-pie -no-pie -g"
 
 FAILED_TESTS=""
 
@@ -46,7 +47,7 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     fi
 
     #assemble and link
-    gcc -z noexecstack -fno-pie -no-pie -o "$exe" "$asm" "$LIB"
+    gcc $LINK_OPT -o "$exe" "$asm" "$LIB"
     if [ $? -ne 0 ]; then
 	printf "[${RED}FAIL${RESET}] %s (asm or link error)\n" "$rel_path"
 	FAIL=$((FAIL+1))

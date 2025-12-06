@@ -309,7 +309,10 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << ".align " << gvar->type->align << std::endl;
 	std::cout << gvar->name << ":\n";
 	for(const auto& init: gvar->initializer){
-	  if(init->size == 1){
+	  if(!init->label.empty()){
+	    std::cout << std::format("  .quad {}{:+}\n", init->label, init->addend);
+	  }
+	  else if(init->size == 1){
 	    std::cout << "  .byte " << init->val << std::endl;	    
 	  } else {
 	    std::cout << "  ." << init->size << "byte "

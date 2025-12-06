@@ -42,9 +42,6 @@ for src in "$BENCH_DIR"/*.c; do
 
     echo "Running benchmark: $name"
 
-    #ycc_time=$( ( /usr/bin/time -p "$exe" ) 2>&1 | awk '/real/ {print $2}' )
-    #gcc_time=$( ( /usr/bin/time -p "$exe_gcc" ) 2>&1 | awk '/real/ {print $2}' )
-    #clang_time=$( ( /usr/bin/time -p "$exe_clang" ) 2>&1 | awk '/real/ {print $2}' )
     echo -n "YCC: "
     ycc_time=$( { /usr/bin/time -p "$exe" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
 

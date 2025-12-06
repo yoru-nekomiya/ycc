@@ -14,6 +14,7 @@
 #include <vector>
 #include <climits>
 #include <stack>
+#include <format>
 
 //---------------------------
 //Lunaria Utility
@@ -59,8 +60,16 @@ namespace Lunaria {
     int size;
     int val;
 
+    //reference to other global variable
+    std::string label;
+    long addend;
+
     Initializer(int sz, int v)
-      : size(sz), val(v){}
+      : size(sz), val(v), label(""), addend(0)
+    {}
+    Initializer(const std::string& _label, long _addend)
+      : size(0), val(0), label(_label), addend(_addend)
+    {}
   };
   
   struct Var {

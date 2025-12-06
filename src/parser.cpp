@@ -192,8 +192,9 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> primary();
   static std::shared_ptr<Lunaria::Type> basetype();
   static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
-  static int const_expr();
-  static int eval(const std::unique_ptr<AstNode>&);
+  static long const_expr();
+  static long eval(const std::unique_ptr<AstNode>&);
+  static long eval2(const std::unique_ptr<AstNode>& node, std::shared_ptr<std::shared_ptr<Lunaria::Var>>& v);
   static std::unique_ptr<AstNode> new_add(std::unique_ptr<AstNode>& lhs, std::unique_ptr<AstNode>& rhs);
   static std::unique_ptr<AstNode> new_unary(AstKind k, std::unique_ptr<AstNode>& lhs);
   
@@ -210,6 +211,13 @@ static std::unique_ptr<AstNode> new_num(long long val){
     for(int i = 0; i < nbytes; i++){
       new_init_val(cur, 1, 0);
     }
+  }
+
+  static void
+  new_init_label(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
+		 const std::string& label,
+		 long addend){
+    cur.push_back(std::make_unique<Lunaria::Initializer>(label, addend));
   }
 
   static void skip_excess_elements2(){
@@ -303,8 +311,17 @@ static std::unique_ptr<AstNode> new_num(long long val){
       myTokenizer::expect(myTokenizer::TokenType::BRACE_R);
     }
 
-    const int constant = eval(expression);
+    std::shared_ptr<Lunaria::Var> v = nullptr;
+    std::shared_ptr<std::shared_ptr<Lunaria::Var>> vv = std::make_shared<std::shared_ptr<Lunaria::Var>>(v);
+    const int constant = eval2(expression, vv);
+    if(*vv){
+      const int scale = ((*vv)->type->kind == Lunaria::TypeKind::ARRAY)
+	? (*vv)->type->base->size : (*vv)->type->size;
+      new_init_label(cur, (*vv)->name, constant*scale);
+      return;
+    }
     new_init_val(cur, type->size, constant);
+    return;
   }
   
   std::vector<std::unique_ptr<Lunaria::Initializer>>
@@ -628,25 +645,80 @@ static std::unique_ptr<Function> function(){
     return type;
   }
 
-  static int const_expr(){
+  static long const_expr(){
     return eval(conditional());
   }
 
-  static int eval(const std::unique_ptr<AstNode>& node){
+  static long eval(const std::unique_ptr<AstNode>& node){
+    std::shared_ptr<Lunaria::Var> v = nullptr;
+    std::shared_ptr<std::shared_ptr<Lunaria::Var>> vv = std::make_shared<std::shared_ptr<Lunaria::Var>>(v);
+    return eval2(node, vv);
+  }
+  
+  static long eval2(const std::unique_ptr<AstNode>& node,
+		    std::shared_ptr<std::shared_ptr<Lunaria::Var>>& v){
     switch(node->kind){
     case AstKind::AST_ADD:
       return eval(node->lhs) + eval(node->rhs);
+    case AstKind::AST_PTR_ADD:
+      return eval2(node->lhs, v) + eval(node->rhs);
     case AstKind::AST_SUB:
       return eval(node->lhs) - eval(node->rhs);
+    case AstKind::AST_PTR_SUB:
+      return eval2(node->lhs, v) - eval(node->rhs);
+    case AstKind::AST_PTR_DIFF:
+      return eval2(node->lhs, v) - eval2(node->rhs, v);
     case AstKind::AST_MUL:
       return eval(node->lhs) * eval(node->rhs);
     case AstKind::AST_DIV:
       return eval(node->lhs) / eval(node->rhs);
     case AstKind::AST_REM:
       return eval(node->lhs) % eval(node->rhs);
+    case AstKind::AST_BITOR:
+      return eval(node->lhs) | eval(node->rhs);
+    case AstKind::AST_BITXOR:
+      return eval(node->lhs) ^ eval(node->rhs);
+    case AstKind::AST_BITAND:
+      return eval(node->lhs) & eval(node->rhs);
+    case AstKind::AST_BITNOT:
+      return ~eval(node->lhs);
+    case AstKind::AST_SHL:
+      return eval(node->lhs) << eval(node->rhs);
+    case AstKind::AST_SHR:
+      return eval(node->lhs) >> eval(node->rhs);
+    case AstKind::AST_SAR:
+      return eval(node->lhs) >> eval(node->rhs);
+    case AstKind::AST_EQ:
+      return eval(node->lhs) == eval(node->rhs);
+    case AstKind::AST_NE:
+      return eval(node->lhs) != eval(node->rhs);
+    case AstKind::AST_LT:
+      return eval(node->lhs) < eval(node->rhs);
+    case AstKind::AST_LE:
+      return eval(node->lhs) <= eval(node->rhs);
+    case AstKind::AST_NOT:
+      return !eval(node->lhs);
+    case AstKind::AST_LOGOR:
+      return eval(node->lhs) || eval(node->rhs);
+    case AstKind::AST_LOGAND:
+      return eval(node->lhs) && eval(node->rhs);
     case AstKind::AST_NUM:
-      return node->val;   
-    } 
+      return node->val;
+    case AstKind::AST_ADDR:
+      if(!v || *v || node->lhs->kind != AstKind::AST_VAR || node->lhs->var->isLocal){
+	std::cerr << "invalid initializer\n";
+	exit(1);
+      }
+      *v = node->lhs->var;
+      return 0;
+    case AstKind::AST_VAR:
+      if(!v || *v || node->var->type->kind != Lunaria::TypeKind::ARRAY){
+	std::cerr << "invalid initializer\n";
+	exit(1);
+      }
+      *v = node->var;
+      return 0;
+    }
     std::cerr << "not a constant expression" << std::endl;
     exit(1);
   }
