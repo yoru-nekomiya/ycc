@@ -7,6 +7,7 @@ namespace myParser {
   static std::stack<int> continues = {};
   static std::stack<int> switches = {};
 
+  //scope for local/global variable
   struct VarScope{
     std::string name;
     int depth;
@@ -14,8 +15,16 @@ namespace myParser {
     std::shared_ptr<Lunaria::Var> var;
   };
 
+  //scope for struct tags
+  struct TagScope{
+    std::string name;
+    int depth;
+    std::shared_ptr<Lunaria::Type> type;
+  };
+
   struct Scope{
     std::unordered_map<std::string, std::shared_ptr<VarScope>> vars;
+    std::unordered_map<std::string, std::shared_ptr<TagScope>> tags;
   };
 
   static std::vector<std::shared_ptr<Scope>> scope = {};
@@ -53,6 +62,17 @@ namespace myParser {
     return nullptr;
   }
 
+  static std::shared_ptr<TagScope> find_tag_scope(const std::unique_ptr<myTokenizer::Token>& token){
+    for(auto iter = scope.rbegin(); iter != scope.rend(); iter++){
+      auto tags = (*iter)->tags;
+      auto it_t = tags.find(token->str);
+      if(it_t != tags.end()){
+	return it_t->second;
+      }
+    }
+    return nullptr;
+  }
+
   static std::shared_ptr<VarScope> push_to_current_scope(const std::string& name){
     auto vsc = std::make_shared<VarScope>();
     vsc->name = name;
@@ -64,6 +84,18 @@ namespace myParser {
     }
     scope.back()->vars.insert(pair);
     return vsc;
+  }
+
+  static std::shared_ptr<TagScope>
+  push_to_current_tagscope(const std::string& name,
+			   const std::shared_ptr<Lunaria::Type>& type){
+    auto tsc = std::make_shared<TagScope>();
+    tsc->name = name;
+    tsc->depth = scope_depth;
+    tsc->type = type;
+    const auto pair = std::make_pair(name, tsc);
+    scope.back()->tags.insert(pair);
+    return tsc;
   }
   
   static std::shared_ptr<Lunaria::Var> new_var(const std::string& name, const std::shared_ptr<Lunaria::Type>& type, bool isLocal){
@@ -751,17 +783,53 @@ static std::unique_ptr<Function> function(){
     myTokenizer::expect(myTokenizer::TokenType::STRUCT);
     const auto tok = myTokenizer::consume_ident();
 
-    //TODO: process tag
+    if(tok && !myTokenizer::look(myTokenizer::TokenType::BRACE_L)){
+      auto tsc = find_tag_scope(tok);
+      if(!tsc){
+	auto type = Lunaria::struct_type();
+	push_to_current_tagscope(tok->str, type);
+	return type;
+      }
+
+      if(tsc->type->kind != Lunaria::TypeKind::STRUCT){
+	std::cerr << "not a struct tag\n";
+	exit(1);
+      }
+      return tsc->type;
+    } //if tok && !"{"
 
     if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
       return Lunaria::struct_type();
     }
 
+    std::shared_ptr<Lunaria::Type> type = nullptr;
+    std::shared_ptr<TagScope> tsc = nullptr;
+    if(tok){
+      tsc = find_tag_scope(tok);
+    }
+
+    if(tsc && tsc->depth == scope_depth){
+      //If the same tag exists in the same scope,
+      //this is a redefinition
+      if(tsc->type->kind != Lunaria::TypeKind::STRUCT){
+	std::cerr << "not a struct tag\n";
+	exit(1);
+      }
+      type = tsc->type;
+    } else {
+      //register the struct tag
+      type = Lunaria::struct_type();
+      if(tok){
+	push_to_current_tagscope(tok->str, type);
+      }
+    }
+    
+    
     std::list<std::shared_ptr<Lunaria::Member>> lst = {};
     while(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
       lst.push_back(struct_member());
     }
-    auto type = Lunaria::struct_type();
+    //auto type = Lunaria::struct_type();
     type->member = lst;
 
     //assign offset into the struct menbers

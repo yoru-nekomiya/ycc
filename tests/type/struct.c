@@ -24,12 +24,14 @@ struct TEST_G4 {
   int c;
 } tg4 = {1,2,3,4};
 
+struct TEST_SC{int x;} tsc = {0};
 
 struct Tree_G{
   int val;
-  struct Tree_G* lest;
+  struct Tree_G* left;
   struct Tree_G* right;
 };
+struct Tree_G tree_g = {0,0,0};
 
 int main(){
   struct TEST_L {
@@ -72,9 +74,13 @@ int main(){
 
   struct Tree_L{
     int val;
-    struct Tree_L* lest;
+    struct Tree_L* left;
     struct Tree_L* right;
   };
+  struct Tree_L tree_l = {1, &tree_g, 0};
+  assert(0, tree_g.val, "tree_g.val");
+  assert(1, tree_l.val, "tree_l.val");
+  assert(0, tree_l.left->val, "tree_l.left->val");
 
   struct TEST_L2 {
     int x;
@@ -102,6 +108,15 @@ int main(){
   assert(1, tl4.x, "tl4.x");
   assert(2, tl4.y, "tl4.y");
   assert(3, tl4.z, "tl4.z");
-  
+
+  {
+    struct TEST_SC{int x;} tsc = {1};
+    {
+      struct TEST_SC{int x;} tsc = {2};
+      assert(2, tsc.x, "tsc.x, 2");
+    }
+    assert(1, tsc.x, "tsc.x, 1");
+  }
+  assert(0, tsc.x, "tsc.x, 0");
   return 0;
 }
