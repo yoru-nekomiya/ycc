@@ -525,7 +525,14 @@ static std::unique_ptr<Function> function(){
       return new_var_node(lvar);
     }
     const int index = (*iter)->index;
-    auto node = new_desg_node2(lvar, desg, ++iter);
+    auto node = new_desg_node2(lvar, desg, /*++iter*/std::next(iter));
+
+    if((*iter)->member){
+      node = new_unary(AstKind::AST_MEMBER, node);
+      node->member = (*iter)->member;
+      return node;
+    }
+    
     auto num = new_num(index);
     node = new_add(node, num);
     return new_unary(AstKind::AST_DEREF, node);
@@ -533,6 +540,7 @@ static std::unique_ptr<Function> function(){
   
   static std::unique_ptr<AstNode> new_desg_node(const std::shared_ptr<Lunaria::Var>& lvar, std::list<std::unique_ptr<Designator>>& desg, std::unique_ptr<AstNode>& rhs){
     auto lhs = new_desg_node2(lvar, desg, desg.rbegin());
+    myParser::add_type(lhs);
     auto node = new_binary(AstKind::AST_ASSIGN, lhs, rhs);
     myParser::add_type(node);
     return node;
@@ -624,6 +632,32 @@ static std::unique_ptr<Function> function(){
       }
       return;
     } //if ARRAY
+
+    if(type->kind == Lunaria::TypeKind::STRUCT){
+      const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+      auto it_mem = type->member.begin();
+
+      if(!myTokenizer::look(myTokenizer::TokenType::BRACE_R)){
+	do {
+	  desg.push_back(std::make_unique<Designator>(0, *it_mem));
+	  lvar_initializer2(cur, lvar, (*it_mem)->type, desg);
+	  desg.pop_back();
+	  it_mem++;
+	}while(it_mem != type->member.end() && !myTokenizer::look(myTokenizer::TokenType::BRACE_R) && myTokenizer::consume_symbol(myTokenizer::TokenType::COMMA));
+      } //if !"}"
+
+      if(open && !myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+	skip_excess_elements();
+      }
+
+      while(it_mem != type->member.end()){
+	desg.push_back(std::make_unique<Designator>(0, *it_mem));
+	lvar_init_zero(cur, lvar, (*it_mem)->type, desg);
+	desg.pop_back();
+	it_mem++;
+      }
+      return;
+    } //if STRUCT
 
     const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
     auto assign_node = assign();

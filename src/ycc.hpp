@@ -308,7 +308,11 @@ struct Program {
 
   struct Designator{
     int index; //for array
-    Designator(int i): index(i){}
+    std::shared_ptr<Lunaria::Member> member;
+    Designator(int i): index(i), member(nullptr)
+    {}
+    Designator(int i, const std::shared_ptr<Lunaria::Member>& m): index(i), member(m)
+    {}
   };
 
   std::unique_ptr<Program> program();
