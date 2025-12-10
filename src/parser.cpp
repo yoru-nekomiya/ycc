@@ -225,6 +225,18 @@ static std::unique_ptr<AstNode> new_num(long long val){
     cur.push_back(std::make_unique<Lunaria::Initializer>(label, addend));
   }
 
+  static void
+  emit_struct_padding(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
+		      const std::shared_ptr<Lunaria::Type>& parent,
+		      const std::list<std::shared_ptr<Lunaria::Member>>::iterator& it_mem,
+		      bool is_end)
+  {
+    const int start = (*it_mem)->offset + (*it_mem)->type->size;
+    const int end = is_end ? parent->size : (*(std::next(it_mem)))->offset;
+    new_init_zero(cur, end-start);
+    return;
+  }
+  
   static void skip_excess_elements2(){
     while(1){
       if(myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
@@ -307,8 +319,29 @@ static std::unique_ptr<AstNode> new_num(long long val){
       return;
     } //if ARRAY
 
-    //if(type->kind == STRUCT)
-    //TODO:
+    if(type->kind == Lunaria::TypeKind::STRUCT){
+      const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
+      auto it_mem = type->member.begin();
+
+      if(!myTokenizer::look(myTokenizer::TokenType::BRACE_R)){
+	do {
+	  gvar_initializer2(cur, (*it_mem)->type);
+	  emit_struct_padding(cur, type, it_mem, std::next(it_mem) == type->member.end());
+	  it_mem++;
+	}while(it_mem != type->member.end() && !myTokenizer::look(myTokenizer::TokenType::BRACE_R) && myTokenizer::consume_symbol(myTokenizer::TokenType::COMMA));
+      }
+
+      if(open && !myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+	skip_excess_elements();
+      }
+
+      //set struct element which is not initialized to zero
+      if(it_mem != type->member.end()){
+	new_init_zero(cur, type->size - (*it_mem)->offset);
+      }
+      return;
+    } //if STRUCT
+    
 
     const bool open = myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L);
     auto expression = conditional();
