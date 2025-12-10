@@ -159,17 +159,19 @@ static std::unique_ptr<AstNode> new_num(long long val){
       i++;
     }
 
-    //expect_ident()
-    if(myTokenizer::tokens[i]->tokenType != myTokenizer::TokenType::IDENT){
-      std::cerr << "parse error in isFunction()" << std::endl;
-      exit(1);
-    }
-    i++;
-
-    //consume_symbol("(")
-    if(myTokenizer::tokens[i]->tokenType == myTokenizer::TokenType::PAREN_L){
-      isFunc = true;
-    }
+    if(myTokenizer::tokens[i]->tokenType != myTokenizer::TokenType::SEMICOLON){
+      //expect_ident()
+      if(myTokenizer::tokens[i]->tokenType != myTokenizer::TokenType::IDENT){
+	std::cerr << "parse error in isFunction()" << std::endl;
+	exit(1);
+      }
+      i++;
+      
+      //consume_symbol("(")
+      if(myTokenizer::tokens[i]->tokenType == myTokenizer::TokenType::PAREN_L){
+	isFunc = true;
+      }
+    } //if token != ";"
     return isFunc;
   }
 
@@ -337,9 +339,12 @@ static std::unique_ptr<AstNode> new_num(long long val){
   //global_var = basetype ident type_suffix ("=" gvar_initializer)? ";"
   void global_var(){
     auto type = basetype();
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
+      return;
+    }
+    
     auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
-    //expect(myTokenizer::TokenType::SEMICOLON);
 
     if(type->kind == Lunaria::TypeKind::VOID){
       std::cerr << "variable is declared void\n";

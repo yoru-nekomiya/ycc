@@ -6,6 +6,12 @@ struct TEST_G {
   long d;
 } tg;
 
+struct Tree_G{
+  int val;
+  struct Tree_G* lest;
+  struct Tree_G* right;
+};
+
 int main(){
   struct TEST_L {
     int x;
@@ -24,7 +30,12 @@ int main(){
   assert(20, tg.b, "tg.b");
   assert(30, tg.c, "tg.c");
   assert(40, tg.d, "tg.d");
-  
+
+  struct Tree_L{
+    int val;
+    struct Tree_L* lest;
+    struct Tree_L* right;
+  };
   
   return 0;
 }
