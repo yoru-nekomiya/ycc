@@ -27,6 +27,14 @@ namespace Lunaria {
     VOID,
     PTR,
     ARRAY,
+    STRUCT,
+  };
+
+  struct Type;
+  struct Member{
+    std::shared_ptr<Type> type;
+    std::string name;
+    int offset;
   };
 
   struct Type {
@@ -36,6 +44,7 @@ namespace Lunaria {
     int align;
     int array_size;
     bool is_incomplete; //whether index is omitted
+    std::list<std::shared_ptr<Member>> member; //struct
     
     Type(){}
     Type(TypeKind k, int sz, int al)
@@ -55,7 +64,8 @@ namespace Lunaria {
   std::shared_ptr<Type> pointer_to(const std::shared_ptr<Type>&);
   int align_to(int n, int align);
   std::shared_ptr<Type> array_of(const std::shared_ptr<Type>&, int size);
-
+  std::shared_ptr<Type> struct_type();
+  
   struct Initializer {
     int size;
     int val;
@@ -165,6 +175,9 @@ enum class TokenType {
   CARET, //^
   TILDA, //~
   QUESTION, //?
+  STRUCT, 
+  DOT, //.
+  ARROW, //->
   TK_EOF,
 };
 
@@ -244,6 +257,7 @@ enum class AstKind {
   AST_BITAND, //&
   AST_BITNOT, //~
   AST_CONDITIONAL, //? :
+  AST_MEMBER, //. 
   AST_NULL,
 };
 
@@ -274,6 +288,8 @@ struct AstNode {
   std::list<std::unique_ptr<AstNode>> args;
 
   std::shared_ptr<Lunaria::Type> type;
+
+  std::shared_ptr<Lunaria::Member> member;
 };
 
 struct Function {
@@ -356,6 +372,7 @@ enum class HirKind {
   HIR_BITAND, //&
   HIR_BITNOT, //~
   HIR_CONDITIONAL, //? :
+  HIR_MEMBER, //. 
   HIR_NULL,
 };
   
@@ -388,6 +405,8 @@ struct HirNode {
   std::list<std::shared_ptr<HirNode>> args;
 
   std::shared_ptr<Lunaria::Type> type;
+
+  std::shared_ptr<Lunaria::Member> member;
 };
 
   struct Function {

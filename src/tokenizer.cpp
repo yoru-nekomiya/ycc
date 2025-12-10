@@ -89,7 +89,7 @@ static TokenType starts_keyword(const std::string& str){
     {"return","if","else","while","for",
      "int","sizeof","char","short","long",
      "void","do","break","continue","switch",
-     "case","default","goto"};  
+     "case","default","struct"};  
   int i = 0;
   for(const auto& kw: keyword){
     if(str == kw){
@@ -128,6 +128,8 @@ static TokenType starts_keyword(const std::string& str){
 	return TokenType::CASE;
       case 16:
 	return TokenType::DEFAULT;
+      case 17:
+	return TokenType::STRUCT;
       }
     }
     i++;
@@ -191,6 +193,9 @@ void tokenize(const std::string& input){
       } else if(input[end] == '='){
 	end++;
 	new_token(TokenType::MINUS_ASSIGN);
+      } else if(input[end] == '>'){
+	end++;
+	new_token(TokenType::ARROW);
       } else {
 	new_token(TokenType::MINUS);
       }
@@ -363,6 +368,11 @@ void tokenize(const std::string& input){
 
     if(c == '?'){             
       new_token(TokenType::QUESTION);
+      continue; 
+    }
+
+    if(c == '.'){             
+      new_token(TokenType::DOT);
       continue; 
     }
 

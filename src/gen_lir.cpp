@@ -111,6 +111,13 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<myHIR::HirNod
     hirPtrAdd->type = hirPtrAdd->lhs->type;
     return gen_expr_lir(hirPtrAdd);
   }
+  if(hirNode->kind == myHIR::HirKind::HIR_MEMBER){
+    auto r1 = new_reg();
+    auto r2 = gen_lval_lir(hirNode->lhs);
+    auto r3 = new_imm(hirNode->member->offset);
+    emit_lir(LirKind::LIR_ADD, r1, r2, r3);
+    return r1;
+  }
 
   assert(hirNode->kind == myHIR::HirKind::HIR_VAR);
   std::shared_ptr<LirNode> lirNode = nullptr;
@@ -292,6 +299,12 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
       return gen_lval_lir(hirNode);
     }    
     auto reg = new_reg(hirNode->var->name);
+    auto node_lval = gen_lval_lir(hirNode);
+    auto lirNode = load(reg, node_lval, hirNode->type->size);
+    return lirNode;
+  }
+  case myHIR::HirKind::HIR_MEMBER: {
+    auto reg = new_reg();
     auto node_lval = gen_lval_lir(hirNode);
     auto lirNode = load(reg, node_lval, hirNode->type->size);
     return lirNode;

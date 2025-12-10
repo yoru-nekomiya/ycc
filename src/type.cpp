@@ -38,7 +38,13 @@ namespace Lunaria {
 					base->align);
     type->array_size = size;
     return type;
-  } 
+  }
+
+  std::shared_ptr<Type> struct_type(){
+    auto type = new_type(TypeKind::STRUCT, 0, 1);
+    type->is_incomplete = true;
+    return type;
+  }
 } //namespace Lunaria
 
 namespace myParser {
@@ -102,6 +108,9 @@ namespace myParser {
       return;
     case AstKind::AST_VAR:
       node->type = node->var->type;
+      return;
+    case AstKind::AST_MEMBER:
+      node->type = node->member->type;
       return;
     case AstKind::AST_ADDR: //address &
       //node->type = pointer_to(node->lhs->type);
@@ -196,8 +205,10 @@ namespace myHIR {
     case HirKind::HIR_VAR:
       node->type = node->var->type;
       return;
+    case HirKind::HIR_MEMBER:
+      node->type = node->member->type;
+      return;
     case HirKind::HIR_ADDR: //address &
-      //node->type = pointer_to(node->lhs->type);
       if(node->lhs->type->kind == Lunaria::TypeKind::ARRAY){
 	node->type = pointer_to(node->lhs->type->base);
       } else {

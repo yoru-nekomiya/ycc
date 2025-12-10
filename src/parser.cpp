@@ -129,6 +129,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
       || look(myTokenizer::TokenType::SHORT)
       || look(myTokenizer::TokenType::LONG)
       || look(myTokenizer::TokenType::VOID)
+      || look(myTokenizer::TokenType::STRUCT)
       ;
   }
 
@@ -138,6 +139,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
        && t != myTokenizer::TokenType::SHORT
        && t != myTokenizer::TokenType::LONG
        && t != myTokenizer::TokenType::VOID
+       && t != myTokenizer::TokenType::STRUCT
        ){
       return true;
     }
@@ -192,6 +194,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> primary();
   static std::shared_ptr<Lunaria::Type> basetype();
   static std::shared_ptr<Lunaria::Type> type_suffix(std::shared_ptr<Lunaria::Type>&);
+  static std::shared_ptr<Lunaria::Type> struct_decl();
   static long const_expr();
   static long eval(const std::unique_ptr<AstNode>&);
   static long eval2(const std::unique_ptr<AstNode>& node, std::shared_ptr<std::shared_ptr<Lunaria::Var>>& v);
@@ -313,7 +316,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
 
     std::shared_ptr<Lunaria::Var> v = nullptr;
     std::shared_ptr<std::shared_ptr<Lunaria::Var>> vv = std::make_shared<std::shared_ptr<Lunaria::Var>>(v);
-    const int constant = eval2(expression, vv);
+    const long constant = eval2(expression, vv);
     if(*vv){
       const int scale = ((*vv)->type->kind == Lunaria::TypeKind::ARRAY)
 	? (*vv)->type->base->size : (*vv)->type->size;
@@ -383,11 +386,9 @@ std::unique_ptr<Program> program(){
   return prog;
 }
   
-  //basetype = builtin-type "*"*
+  //basetype = (builtin-type | struct-decl) "*"*
   //builtin-type = "int" | "char" | "short" | "long" | "void"
   static std::shared_ptr<Lunaria::Type> basetype(){
-    //expect(myTokenizer::TokenType::INT);
-    //auto type = Lunaria::int_type;
     std::shared_ptr<Lunaria::Type> type = nullptr;
     if(myTokenizer::consume_symbol(myTokenizer::TokenType::INT)){
       type = Lunaria::int_type;
@@ -399,6 +400,16 @@ std::unique_ptr<Program> program(){
       type = Lunaria::long_type;
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::VOID)){
       type = Lunaria::void_type;
+    }
+
+    if(!look(myTokenizer::TokenType::INT)
+       && !look(myTokenizer::TokenType::CHAR)
+       && !look(myTokenizer::TokenType::SHORT)
+       && !look(myTokenizer::TokenType::LONG)
+       && !look(myTokenizer::TokenType::VOID)){
+      if(look(myTokenizer::TokenType::STRUCT)){
+	type = struct_decl();
+      }
     }
     
     while(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
@@ -595,11 +606,16 @@ static std::unique_ptr<Function> function(){
   }
 
 //declaration = basetype ident type_suffix ("=" lvar_initializer)? ";"
+//              | basetype ";"
   static std::unique_ptr<AstNode> declaration(){
     auto type = basetype();
+
+    if(myTokenizer::consume_symbol(myTokenizer::TokenType::SEMICOLON)){
+      return new_node(AstKind::AST_NULL);
+    }
+    
     const auto name = myTokenizer::expect_ident();
     type = type_suffix(type);
-    //myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
 
     if(type->kind == Lunaria::TypeKind::VOID){
       std::cerr << "variable is declared void\n";
@@ -642,6 +658,60 @@ static std::unique_ptr<Function> function(){
     }
     type = Lunaria::array_of(type, size);
     type->is_incomplete = is_incomplete;
+    return type;
+  }
+
+  //struct_member = basetype ident type-suffix ";"
+  static std::shared_ptr<Lunaria::Member> struct_member(){
+    auto type = basetype();
+    const auto name = myTokenizer::expect_ident();
+    type = type_suffix(type);
+    myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
+
+    auto mem = std::make_shared<Lunaria::Member>();
+    mem->type = type;
+    mem->name = name;
+    return mem;
+  }
+
+  //struct_decl = "struct" ident? ("{" struct-member "}")?
+  static std::shared_ptr<Lunaria::Type> struct_decl(){
+    myTokenizer::expect(myTokenizer::TokenType::STRUCT);
+    const auto tok = myTokenizer::consume_ident();
+
+    //TODO: process tag
+
+    if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
+      return Lunaria::struct_type();
+    }
+
+    std::list<std::shared_ptr<Lunaria::Member>> lst = {};
+    while(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_R)){
+      lst.push_back(struct_member());
+    }
+    auto type = Lunaria::struct_type();
+    type->member = lst;
+
+    //assign offset into the struct menbers
+    int offset = 0;
+    for(const auto& mem: type->member){
+      if(mem->type->is_incomplete){
+	std::cerr << "incomplete type in struct member\n";
+	exit(1);
+      }
+
+      offset = Lunaria::align_to(offset, mem->type->align);
+      mem->offset = offset;
+      offset += mem->type->size;
+
+      if(type->align < mem->type->align){
+	//set type->align to max align in struct members
+	type->align = mem->type->align;
+      } //if
+    } //for mem
+
+    type->size = Lunaria::align_to(offset, type->align);
+    type->is_incomplete = false;
     return type;
   }
 
@@ -1230,8 +1300,35 @@ static std::unique_ptr<AstNode> unary(){
   }
   return postfix();
 }
+  
+  static std::shared_ptr<Lunaria::Member> find_member(const std::shared_ptr<Lunaria::Type>& type, const std::string& name){
+    for(const auto& mem: type->member){
+      if(mem->name == name){
+	return mem;
+      }
+    }
+    return nullptr;
+  }
 
-  //postfix = primary ("[" expr "]" | "++" | "--")*
+  static std::unique_ptr<AstNode> struct_ref(std::unique_ptr<AstNode>& lhs){
+    add_type(lhs);
+    if(lhs->type->kind != Lunaria::TypeKind::STRUCT){
+      std::cerr << "lhs is not a struct type\n";
+      exit(1);
+    }
+
+    const auto mem = find_member(lhs->type, myTokenizer::expect_ident());
+    if(!mem){
+      std::cerr << "no such member\n";
+      exit(1);
+    }
+
+    auto node = new_unary(AstKind::AST_MEMBER, lhs);
+    node->member = mem;
+    return node;
+  }
+
+  //postfix = primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
   static std::unique_ptr<AstNode> postfix(){
     auto node = primary();
     while(true){
@@ -1240,6 +1337,18 @@ static std::unique_ptr<AstNode> unary(){
 	auto node_expr = expr();
 	expect(myTokenizer::TokenType::BRACKET_R);
 	node = new_binary(AstKind::AST_SUBSCRIPTED, node, node_expr);
+	continue;
+      }
+
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::DOT)){
+	node = struct_ref(node);
+	continue;
+      }
+
+      if(myTokenizer::consume_symbol(myTokenizer::TokenType::ARROW)){
+	//x->y ==> (*x).y
+	node = new_unary(AstKind::AST_DEREF, node);
+	node = struct_ref(node);
 	continue;
       }
 
