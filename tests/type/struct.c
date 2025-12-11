@@ -33,6 +33,18 @@ struct Tree_G{
 };
 struct Tree_G tree_g = {0,0,0};
 
+struct TEST_G5 {
+    long x;
+    long y;
+    long z;
+};
+
+void add_10(struct TEST_G5* tg){
+  tg->x += 10;
+  tg->y += 10;
+  tg->z += 10;
+}
+
 int main(){
   struct TEST_L {
     int x;
@@ -118,5 +130,12 @@ int main(){
     assert(1, tsc.x, "tsc.x, 1");
   }
   assert(0, tsc.x, "tsc.x, 0");
+
+  struct TEST_G5 tl5 = {1,2,3};
+  add_10(&tl5);
+  assert(11, tl5.x, "tl5.x");
+  assert(12, tl5.y, "tl5.y");
+  assert(13, tl5.z, "tl5.z");
+  
   return 0;
 }

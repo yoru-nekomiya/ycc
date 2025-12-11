@@ -32,5 +32,22 @@ int main(){
   assert(1, sizeof(d), "sizeof(d)");
   assert(2, sizeof(e), "sizeof(e)");
   assert(8, sizeof(f), "sizeof(f)");
+
+  assert(1, sizeof(char), "sizeof(char)");
+  assert(2, sizeof(short), "sizeof(short)");
+  assert(4, sizeof(int), "sizeof(int)");
+  assert(8, sizeof(long), "sizeof(long)");
+  assert(8, sizeof(char*), "sizeof(char*)");
+  assert(8, sizeof(short*), "sizeof(short*)");
+  assert(8, sizeof(int*), "sizeof(int*)");
+  assert(8, sizeof(long*), "sizeof(long*)");
+  assert(8, sizeof(int**), "sizeof(int**)");
+  assert(16, sizeof(int[4]), "sizeof(int[4])");
+  assert(48, sizeof(int[3][4]), "sizeof(int[3][4])");
+  assert(8, sizeof(struct {int a; int b;}), "sizeof(struct {int a; int b;})");
+  assert(24, sizeof(struct {char a; long b; int c;}), "sizeof(struct {char a; long b; int c;})");
+
+  struct TEST{char a; int b; long c;};
+  assert(16, sizeof(struct TEST), "sizeof(struct TEST)");
   return 0;
 }

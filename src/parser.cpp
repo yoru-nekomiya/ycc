@@ -1390,6 +1390,7 @@ static std::unique_ptr<AstNode> mul(){
 
 //unary = ("+" | "-" | "*" | "&" | "!" | "~")? unary
 //        | ("++" | "--") unary
+//        | "sizeof" "(" type_name ")"
 //        | "sizeof" unary
 //        | postfix
 static std::unique_ptr<AstNode> unary(){
@@ -1434,6 +1435,23 @@ static std::unique_ptr<AstNode> unary(){
   }
   
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::SIZEOF)){
+    if(myTokenizer::look(myTokenizer::TokenType::PAREN_L)){
+      auto tok = std::move(myTokenizer::tokens.front());
+      myTokenizer::tokens.pop_front();
+      if(isTypeName()){
+	//simple implementation
+	auto type = basetype();
+	type = type_suffix(type);
+	if(type->is_incomplete){
+	  std::cerr << "incomplete type\n";
+	  exit(1);
+	}
+	myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
+	return new_num(type->size);
+      } //if(isTypeName())
+      myTokenizer::tokens.push_front(std::move(tok));
+    } //if "("
+    
     auto node_unary = unary();
     add_type(node_unary);
     return new_num(node_unary->type->size);
