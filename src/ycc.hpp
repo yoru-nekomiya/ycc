@@ -257,7 +257,8 @@ enum class AstKind {
   AST_BITAND, //&
   AST_BITNOT, //~
   AST_CONDITIONAL, //? :
-  AST_MEMBER, //. 
+  AST_MEMBER, //.
+  AST_CAST, 
   AST_NULL,
 };
 
@@ -376,7 +377,8 @@ enum class HirKind {
   HIR_BITAND, //&
   HIR_BITNOT, //~
   HIR_CONDITIONAL, //? :
-  HIR_MEMBER, //. 
+  HIR_MEMBER, //.
+  HIR_CAST,
   HIR_NULL,
 };
   
@@ -475,6 +477,7 @@ enum class LirKind {
   LIR_BITOR, //|
   LIR_BITXOR, //^
   LIR_BITAND, //&
+  LIR_CAST,
   LIR_NULL,
 };
 

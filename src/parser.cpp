@@ -223,6 +223,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
   static std::unique_ptr<AstNode> shift();
   static std::unique_ptr<AstNode> add();
   static std::unique_ptr<AstNode> mul();
+  static std::unique_ptr<AstNode> cast();
   static std::unique_ptr<AstNode> unary();
   static std::unique_ptr<AstNode> postfix();
   static std::unique_ptr<AstNode> primary();
@@ -1361,19 +1362,19 @@ static std::unique_ptr<AstNode> add(){
   }
 }
 
-//mul = unary ("*" unary | "/" unary | "%" unary)*
+//mul = cast ("*" cast | "/" cast | "%" cast)*
 static std::unique_ptr<AstNode> mul(){
-  auto node = unary();
+  auto node = cast();
 
   while(1){
     if(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
-      auto node_unary = unary();
+      auto node_unary = cast();
       node = new_binary(AstKind::AST_MUL, node, node_unary);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::SLASH)){
-      auto node_unary = unary();
+      auto node_unary = cast();
       node = new_binary(AstKind::AST_DIV, node, node_unary);
     } else if(myTokenizer::consume_symbol(myTokenizer::TokenType::PERCENT)){
-      auto node_unary = unary();
+      auto node_unary = cast();
       node = new_binary(AstKind::AST_REM, node, node_unary);
     } else {
       return node;
@@ -1388,38 +1389,61 @@ static std::unique_ptr<AstNode> mul(){
     return node;
   }
 
-//unary = ("+" | "-" | "*" | "&" | "!" | "~")? unary
+  //cast = "(" type-name ")" cast | unary
+  static std::unique_ptr<AstNode> cast(){
+    if(myTokenizer::look(myTokenizer::TokenType::PAREN_L)){
+      auto tok = std::move(myTokenizer::tokens.front());
+      myTokenizer::tokens.pop_front();
+      if(isTypeName()){
+	//simple implementation
+	auto type = basetype();
+	type = type_suffix(type);
+	myTokenizer::expect(myTokenizer::TokenType::PAREN_R);
+	if(!myTokenizer::consume_symbol(myTokenizer::TokenType::BRACE_L)){
+	  auto _cast = cast();
+	  auto node = new_unary(AstKind::AST_CAST, _cast);
+	  add_type(node->lhs);
+	  node->type = type;
+	  return node;
+	} //if !"{"
+      } //if(isTypeName())
+      myTokenizer::tokens.push_front(std::move(tok));
+    } //if "("
+    return unary();
+  }
+
+//unary = ("+" | "-" | "*" | "&" | "!" | "~")? cast
 //        | ("++" | "--") unary
 //        | "sizeof" "(" type_name ")"
 //        | "sizeof" unary
 //        | postfix
 static std::unique_ptr<AstNode> unary(){
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::PLUS)){
-    return unary();
+    return cast();
   }
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::MINUS)){
-    auto node_unary = unary();
+    auto node_unary = cast();
     auto node_zero = new_num(0);
     return new_binary(AstKind::AST_SUB, node_zero, node_unary);
   }
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::STAR)){
     auto node_deref = new_node(AstKind::AST_DEREF);
-    node_deref->lhs = unary();
+    node_deref->lhs = cast();
     return node_deref;
   }
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::AND)){
     auto node_addr = new_node(AstKind::AST_ADDR);
-    node_addr->lhs = unary();
+    node_addr->lhs = cast();
     return node_addr;
   }
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::NOT)){
     auto node_not = new_node(AstKind::AST_NOT);
-    node_not->lhs = unary();
+    node_not->lhs = cast();
     return node_not;
   }
   if(myTokenizer::consume_symbol(myTokenizer::TokenType::TILDA)){
     auto node = new_node(AstKind::AST_BITNOT);
-    node->lhs = unary();
+    node->lhs = cast();
     return node;
   }
   

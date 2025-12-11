@@ -309,6 +309,13 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     auto lirNode = load(reg, node_lval, hirNode->type->size);
     return lirNode;
   }
+  case myHIR::HirKind::HIR_CAST: {
+    auto a = gen_expr_lir(hirNode->lhs);
+    auto lirNode = new_lir(LirKind::LIR_CAST);
+    lirNode->a = a;
+    lirNode->type_size = hirNode->type->size;
+    return lirNode->a;
+  }
   case myHIR::HirKind::HIR_ASSIGN: {
     auto a = gen_lval_lir(hirNode->lhs);
     auto b = gen_expr_lir(hirNode->rhs);

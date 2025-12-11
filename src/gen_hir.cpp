@@ -111,6 +111,11 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->member = astNode->member;
     hirNode->type = hirNode->member->type;
     return hirNode;
+  } else if(astNode->kind == myParser::AstKind::AST_CAST){
+    auto hirNode = new_node(HirKind::HIR_CAST);
+    hirNode->lhs = program(astNode->lhs);
+    hirNode->type = astNode->type;
+    return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_RETURN){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     if(astNode->lhs){

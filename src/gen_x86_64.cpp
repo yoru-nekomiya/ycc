@@ -70,6 +70,22 @@ static void print_cmp(const std::string& cmp,
     }
   }
 
+  static void truncate(const std::shared_ptr<myLIR::LirNode>& lirNode){
+    const int size = lirNode->type_size;
+    const int a = lirNode->a ? lirNode->a->rn : 0;
+    //signed trancate (type extension)
+    if(size == 1){
+      std::cout << "  movsx " << regs[a] << ", " << regs8[a] << std::endl;
+    } else if(size == 2){
+      std::cout << "  movsx " << regs[a] << ", " << regs16[a] << std::endl;
+    } else if(size == 4){
+      std::cout << "  movsxd " << regs[a] << ", " << regs32[a] << std::endl;
+    } else {
+      assert(size == 8);
+      std::cout << "  mov " << regs[a] << ", " << regs[a] << std::endl;
+    }
+  }
+
 static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   const int d = lirNode->d ? lirNode->d->rn : 0;
   const int a = lirNode->a ? lirNode->a->rn : 0;
@@ -251,7 +267,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_BITAND: {
     std::cout << "  and " << regs[d] << ", " << regs[b] << std::endl;
     break;
-  } 
+  }
+  case myLIR::LirKind::LIR_CAST: {
+    truncate(lirNode);
+    break;
+  }
   } //switch
 }
 
