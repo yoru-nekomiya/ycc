@@ -238,7 +238,7 @@ static std::unique_ptr<AstNode> new_num(long long val){
   
   static void
   new_init_val(std::vector<std::unique_ptr<Lunaria::Initializer>>& cur,
-	       int sz, int val){
+	       int sz, long val){
     cur.push_back(std::make_unique<Lunaria::Initializer>(sz, val));
   }
 

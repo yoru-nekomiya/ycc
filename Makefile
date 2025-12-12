@@ -16,11 +16,15 @@ test: $(TARGET)
 	sh run_tests.sh
 
 bench: $(TARGET)
-	sh run_bench.sh
+	sh run_bench.sh $(filter-out $@,$(MAKECMDGOALS))
 
 clean:
 	rm -rf build/
 	rm -rf tests/out/ tests/*.s
-	rm -rf bench/out/
+	find bench -mindepth 2 -maxdepth 2 -type d -name out -exec rm -rf {} +
+	rm -f bench/report.txt
+
+%::
+	@:
 
 .PHONY: test bench clean

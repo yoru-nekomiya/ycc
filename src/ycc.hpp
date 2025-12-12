@@ -68,13 +68,13 @@ namespace Lunaria {
   
   struct Initializer {
     int size;
-    int val;
+    long val;
 
     //reference to other global variable
     std::string label;
     long addend;
 
-    Initializer(int sz, int v)
+    Initializer(int sz, long v)
       : size(sz), val(v), label(""), addend(0)
     {}
     Initializer(const std::string& _label, long _addend)
@@ -194,7 +194,7 @@ struct Token {
 extern std::deque<std::unique_ptr<Token>> tokens;
 
 void expect(TokenType tk_type);
-int expect_number();
+unsigned long long expect_number();
 std::string expect_ident();
 bool consume_symbol(TokenType tk_type);
 std::unique_ptr<Token> consume_ident();

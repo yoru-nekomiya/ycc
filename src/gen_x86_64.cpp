@@ -96,7 +96,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  mov " << regs[d] << ", " << regs[b] << std::endl;
     break;
   case myLIR::LirKind::LIR_IMM:
-    std::cout << "  mov " << regs[d] << ", " << lirNode->imm << std::endl;
+    if(lirNode->imm >= INT32_MIN && lirNode->imm <= INT32_MAX){
+      std::cout << "  mov " << regs[d] << ", " << lirNode->imm << std::endl;
+    } else {
+      std::cout << "  movabsq " << regs[d] << ", " << lirNode->imm << std::endl;
+    }
     break;
   case myLIR::LirKind::LIR_ADD:
     std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
@@ -175,8 +179,12 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_BR:
     //std::cout << "  cmp " << regs[b] << ", 0" << std::endl;
     std::cout << "  test " << regs[b] << ", " << regs[b] << std::endl;
+    /*
     std::cout << "  jne .L" << lirNode->bb1->label << std::endl;
     std::cout << "  jmp .L" << lirNode->bb2->label << std::endl;
+    */
+    std::cout << "  je .L" << lirNode->bb2->label << std::endl;
+    std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
     break;
   case myLIR::LirKind::LIR_JMP:
     if(lirNode->bbarg){

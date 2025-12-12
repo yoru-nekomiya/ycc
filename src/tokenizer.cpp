@@ -13,13 +13,13 @@ void expect(TokenType tk_type){
   return;
 }
 
-int expect_number(){
+unsigned long long expect_number(){
   auto& token = tokens.front();
   if(token->tokenType != TokenType::NUM){
     std::cerr << "not a number" << std::endl;
     exit(1);
   }
-  const int retVal = token->value;
+  const unsigned long long retVal = token->value;
   tokens.pop_front();
   return retVal;
 }
@@ -169,7 +169,7 @@ void tokenize(const std::string& input){
     
     if(std::isdigit(c)){     
       while(std::isdigit(input[end])) ++end;
-      new_token(TokenType::NUM, std::stoull(input.substr(begin, end-begin)));
+      new_token(TokenType::NUM, std::stoull(input.substr(begin, end-begin)));      
       continue;      
     }
     
