@@ -3,14 +3,19 @@
 int printf();
 
 // --- Configuration ---
+/*
 int SIGNAL_SIZE = 100000; // Size of the input signal
 int COEFF_SIZE = 32;      // Number of filter coefficients (taps)
 int ITERATIONS = 200;     // Number of times to run the filter
+*/
+#define SIGNAL_SIZE 100000 // Size of the input signal
+#define COEFF_SIZE 32      // Number of filter coefficients (taps)
+#define ITERATIONS 200     // Number of times to run the filter
 
 // Input signal and filter coefficients
-int signal[100000 + 32]; 
-int coeffs[32];
-int output[100000];
+int signal[SIGNAL_SIZE + COEFF_SIZE /*100000 + 32*/]; 
+int coeffs[COEFF_SIZE/*32*/];
+int output[SIGNAL_SIZE/*100000*/];
 
 // --- Initialization ---
 void init_data() {

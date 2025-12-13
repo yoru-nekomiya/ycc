@@ -3,11 +3,15 @@
 int printf();
 
 // --- Configuration ---
+/*
 int ARRAY_SIZE = 1048576; // 2^20 elements (large enough to test memory and SIMD)
 int ITERATIONS = 100;     // Run several times for stability
+*/
+#define ARRAY_SIZE 1048576 // 2^20 elements (large enough to test memory and SIMD)
+#define ITERATIONS 100     // Run several times for stability
 
 // Global array to hold the input data
-int data[/*ARRAY_SIZE*/1048576];
+int data[ARRAY_SIZE/*1048576*/];
 
 // --- Core Reduction Function ---
 // Calculates the sum of squares of all elements in the array.

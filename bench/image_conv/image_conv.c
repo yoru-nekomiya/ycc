@@ -2,23 +2,29 @@
 //#include <time.h>
 
 int printf();
-
+/*
 int IMG_SIZE = 512; // 512x512 image
 int KERNEL_SIZE = 3; // 3x3 kernel
 int IMG_AREA = 512 * 512;
 int ITERATIONS = 10;
+*/
+#define IMG_SIZE 512    // 512x512 image
+#define KERNEL_SIZE 3   // 3x3 kernel
+#define IMG_AREA 262144 //512 * 512
+#define ITERATIONS 10
 
 // Image data (stored as a 1D array for better cache performance)
-int image[/*IMG_AREA*/512 * 512]; 
-int output[/*IMG_AREA*/512 * 512]; 
+int image[IMG_AREA/*512 * 512*/]; 
+int output[IMG_AREA/*512 * 512*/]; 
 
 // 3x3 Sharpening kernel (Fixed-point scale 1000)
-int kernel[/*KERNEL_SIZE*/3][/*KERNEL_SIZE*/3] = {
+int kernel[KERNEL_SIZE/*3*/][KERNEL_SIZE/*3*/] = {
   {0, -1000, 0},
   {-1000, 5000, -1000},
   {0, -1000, 0}
 };
-int KERNEL_SCALE = 1000;
+//int KERNEL_SCALE = 1000;
+#define KERNEL_SCALE 1000
 
 // 2D Convolution operation
 void convolve(int size) {
@@ -40,7 +46,7 @@ void convolve(int size) {
 	  }
 	}
 	// Store result in the output array, scaled down
-	output[i * size + j] = (int)(sum / (long)KERNEL_SCALE);
+	output[i * size + j] = (int)(sum / /*(long)*/KERNEL_SCALE);
       }
     }
     

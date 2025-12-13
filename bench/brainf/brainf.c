@@ -4,8 +4,9 @@
 
 int printf();
 
-int DATA_SIZE = 30000;
-char data_mem[30000]; 
+//int DATA_SIZE = 30000;
+#define DATA_SIZE 30000
+char data_mem[DATA_SIZE/*30000*/]; 
 int instruction_count = 0;
 
 char* PROGRAM = 

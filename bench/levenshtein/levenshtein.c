@@ -4,6 +4,14 @@
 
 int printf();
 
+// Constant definitions
+/*
+int STR_LEN = 256;
+int ITERATIONS = 1500;
+*/
+#define STR_LEN 256
+#define ITERATIONS 1500
+
 // This is the size of the DP table needed for strings up to 256 characters long.
 int dp[257][257]; 
 char s1[257];
@@ -71,11 +79,7 @@ int levenshtein_distance(int len1, int len2) {
   return dp[len1][len2];
 }
 
-int main() {
-  // Constant definitions
-  int STR_LEN = 256;
-  int ITERATIONS = 1500;
-  
+int main() {  
   int i;
   // Use long long for checksum accumulation to prevent overflow
   long total_distance = 0;

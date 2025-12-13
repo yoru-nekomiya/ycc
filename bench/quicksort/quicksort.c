@@ -4,9 +4,10 @@
 
 int printf();
 
-//#define SIZE 100000 
-//int data[SIZE];
-int data[100000];
+#define S 100000
+#define SIZE 100000 
+int data[SIZE];
+//int data[100000];
 
 void swap(int* a, int* b) {
   int t = *a;
@@ -38,7 +39,7 @@ void quicksort(int* arr, int low, int high) {
 }
 
 int main() {
-  int S = 100000;
+  //int S = 100000;
   int i;
   int check_result;
   

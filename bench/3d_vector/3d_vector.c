@@ -9,12 +9,16 @@ struct Vec3 {
   long y;
   long z;
 };
-
+/*
 int V_COUNT = 500000; // Number of vectors
 int ITERATIONS = 100; // Number of calculation iterations
 int SCALE = 1000; // Fixed-point scale factor
+*/
+#define V_COUNT 500000
+#define ITERATIONS 100
+#define SCALE 1000
 
-struct Vec3 vectors[/*V_COUNT*/500000];
+struct Vec3 vectors[V_COUNT/*500000*/];
 
 // Calculates dot product (A . B) and updates A: A = A + (A . B)
 void vector_op(int n) {

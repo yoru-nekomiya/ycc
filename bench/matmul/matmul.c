@@ -1,16 +1,18 @@
-//#define N 64 //size of matrix (N*N)
-//#define ITERATIONS 100
+#define N 64 //size of matrix (N*N)
+#define ITERATIONS 100
+/*
 int N = 64;
 int ITERATIONS = 100;
-/*
+*/
+
 int A[N][N];
 int B[N][N];
 int C[N][N];
-*/
+/*
 int A[64][64];
 int B[64][64];
 int C[64][64];
-
+*/
 int printf();
 
 void init_matrix() {

@@ -4,16 +4,22 @@
 int printf();
 
 // CSR (Compressed Sparse Row)
+/*
 int NUM_ROWS = 4096; 
 int NUM_NON_ZEROS = 16384; 
 int ITERATIONS = 100; 
+*/
+#define NUM_ROWS 8192
+#define NUM_NON_ZEROS 65536
+#define ITERATIONS 1000
+#define N_ROWS 8192
 
-int values[/*NUM_NON_ZEROS*/16384];      
-int col_indices[/*NUM_NON_ZEROS*/16384]; 
-int row_pointers[/*NUM_ROWS + 1*/4096+1]; 
+int values[NUM_NON_ZEROS];      
+int col_indices[NUM_NON_ZEROS]; 
+int row_pointers[NUM_ROWS + 1]; 
 
-int X[/*NUM_ROWS*/4096]; 
-int Y[/*NUM_ROWS*/4096]; 
+int X[NUM_ROWS]; 
+int Y[NUM_ROWS]; 
 
 void init_sparse_matrix(int n, int nnz) {
   int i;
@@ -60,7 +66,7 @@ void spmv(int n) {
 }
 
 int main() {
-  int N_ROWS = 4096;
+  //int N_ROWS = 4096;
   init_sparse_matrix(N_ROWS, NUM_NON_ZEROS);
   
   spmv(N_ROWS);

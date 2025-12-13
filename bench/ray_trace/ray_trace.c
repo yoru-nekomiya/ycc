@@ -3,6 +3,7 @@
 int printf();
 
 // Fixed Point Configuration
+/*
 int FP_BITS = 10;  // 10 bits for the fractional part (Scale factor = 1024)
 int SCALE = 1024;  // 2^FP_BITS
 
@@ -13,6 +14,20 @@ int MAX_ITERATIONS = 100;
 int NUM_SPHERES = 3;
 
 long NO_HIT_DIST = 9223372036854775807;
+*/
+
+// Fixed Point Configuration
+#define FP_BITS 10  // 10 bits for the fractional part (Scale factor = 1024)
+#define SCALE 1024  // 2^FP_BITS
+
+// Scene Configuration
+#define WIDTH 128
+#define HEIGHT 128
+#define MAX_ITERATIONS 100  
+#define NUM_SPHERES 3
+
+#define NO_HIT_DIST 9223372036854775807
+
 
 // ----------------------------------------------------
 // Fixed Point Math Helpers
@@ -125,12 +140,14 @@ long intersect_sphere(struct Vec3 *ray_origin, struct Vec3 *ray_dir, struct Sphe
   
   long t = tca - thc;
   
-  //return (t > 0) ? t : NO_HIT_DIST;
+  return (t > 0) ? t : NO_HIT_DIST;
+  /*
   if(t > 0){
     return t;
   } else {
     return NO_HIT_DIST;
   }
+  */
 }
 
 // Main trace function
@@ -140,7 +157,6 @@ int trace_ray(struct Vec3 *ray_origin, struct Vec3 *ray_dir, long *hit_t) {
     
   for (int i = 0; i < NUM_SPHERES; i++) {
     long t = intersect_sphere(ray_origin, ray_dir, &scene[i]);
-    //printf("t=%ld, ", t);
     if (t > 0 && t < closest_t) {
       closest_t = t;
       hit_sphere_index = i;
@@ -156,7 +172,7 @@ int trace_ray(struct Vec3 *ray_origin, struct Vec3 *ray_dir, long *hit_t) {
 // Main Render Loop
 // ----------------------------------------------------
 
-int image_buffer[/*WIDTH*/128 * /*HEIGHT*/128 * 3];
+int image_buffer[WIDTH/*128*/ * HEIGHT/*128*/ * 3];
 
 void render_scene() {
   // Camera settings 

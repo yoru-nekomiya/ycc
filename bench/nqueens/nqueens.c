@@ -3,9 +3,11 @@
 
 int printf();
 
-int BOARD_SIZE = 12; 
+//int BOARD_SIZE = 12;
+#define BOARD_SIZE 12
+
 int solutions_count = 0;
-int board[12]; 
+int board[BOARD_SIZE/*12*/]; 
 
 int is_safe(int row, int col) {
   int prev_row;

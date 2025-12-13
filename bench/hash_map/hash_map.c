@@ -7,8 +7,12 @@ void* malloc(long);
 void free(void*);
 
 // Hash Map Configuration
+/*
 int HASH_TABLE_SIZE = 1024; 
 int OPERATIONS = 500000;
+*/
+#define HASH_TABLE_SIZE 1024
+#define OPERATIONS 500000
 
 // Hash Node Structure (Linked List element)
 struct Node {
@@ -18,7 +22,7 @@ struct Node {
 };
 
 // Hash Table (Array of Pointers to Nodes)
-struct Node* table[/*HASH_TABLE_SIZE*/1024];
+struct Node* table[HASH_TABLE_SIZE/*1024*/];
 
 long current_rand = 42;
 

@@ -5,19 +5,27 @@
 //#include <math.h> 
 
 int printf();
-
+/*
 int SCALE = 10000; 
 int V_COUNT = 100000;
 int ITERATIONS = 100;
+*/
+#define SCALE 10000
+#define V_COUNT 100000
+#define ITERATIONS 100
 
 // cos(0.5 rad) ≈ 0.87758, sin(0.5 rad) ≈ 0.47942
 // cos_val = 8776, sin_val = 4794
+/*
 int COS_VAL = 8776; 
 int SIN_VAL = 4794; 
+*/
+#define COS_VAL 8776 
+#define SIN_VAL 4794
 
-long x[/*V_COUNT*/100000];
-long y[/*V_COUNT*/100000];
-long z[/*V_COUNT*/100000];
+long x[V_COUNT/*100000*/];
+long y[V_COUNT/*100000*/];
+long z[V_COUNT/*100000*/];
 
 void rotate_z(int n, int cos_val, int sin_val) {
   for (int it = 0; it < ITERATIONS; it++) {

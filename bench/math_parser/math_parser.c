@@ -3,6 +3,9 @@
 
 int printf();
 
+//int RUNS = 10000000;
+#define RUNS 10000000
+
 //char *EXPRESSION = "10 + 2 * (100 - 5 * 3) / 5"; 
 char *EXPRESSION = "100 + 5 * (20 * 2) - 50 * (100 / 25) + 3000 / (10 + 5) * 10 + 1000 * (1 + 2)";
 
@@ -74,8 +77,6 @@ int main() {
   current_pos = EXPRESSION;
   int result;  
   
-  //int RUNS = 100000;
-  int RUNS = 10000000;
   for(int i=0; i<RUNS; i++) {
     current_pos = EXPRESSION;
     result = parse_expression();

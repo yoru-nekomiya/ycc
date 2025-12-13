@@ -9,8 +9,10 @@ struct Node {
   struct Node* next;
 };
 
-int LIST_SIZE = /*50000*/5000;
-int INSERT_COUNT = /*100000*/50000;
+//int LIST_SIZE = /*50000*/5000;
+//int INSERT_COUNT = /*100000*/50000;
+#define LIST_SIZE 5000
+#define INSERT_COUNT 50000
 
 long current_rand = 12345;
 int simple_rand() {

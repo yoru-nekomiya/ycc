@@ -3,8 +3,9 @@
 
 int printf();
 
-//#define N_MAX 10000000
-int is_prime[10000000 + 1]; 
+#define N_MAX 10000000
+#define N 10000000
+int is_prime[N_MAX/*10000000*/ + 1]; 
 
 void sieve(int n) {
   int i;
@@ -27,7 +28,7 @@ void sieve(int n) {
 }
 
 int main() {
-  int N = 10000000;
+  //int N = 10000000;
   long prime_sum = 0; // 結果の総和
   
   sieve(N);

@@ -3,13 +3,19 @@
 int printf();
 
 // --- Configuration ---
+/*
 int DATA_SIZE = 1000000;
 int ITERATIONS = 50; 
 int ALPHABET_SIZE = 256;
 int ADLER_MOD = 65521; // The modulus for Adler-32 (largest prime less than 2^16)
+*/
+#define DATA_SIZE 1000000
+#define ITERATIONS 50
+#define ALPHABET_SIZE 256
+#define ADLER_MOD 65521  // The modulus for Adler-32 (largest prime less than 2^16)
 
 // --- Global Data and Checksum ---
-int input_data[/*DATA_SIZE*/1000000]; 
+int input_data[DATA_SIZE/*1000000*/]; 
 long total_adler_checksum = 0;
 
 // --- 1. Adler-32 Checksum Implementation ---
@@ -71,7 +77,7 @@ void calculate_frequency(int *data, int len, int *freq) {
 // --- Main Logic ---
 
 // Input frequency array (Alphabet size 256)
-int frequency_table[/*ALPHABET_SIZE*/256];
+int frequency_table[ALPHABET_SIZE/*256*/];
 
 void initialize_data() {
   int i;

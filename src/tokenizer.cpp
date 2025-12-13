@@ -2,6 +2,7 @@
 
 namespace myTokenizer {
   std::deque<std::unique_ptr<Token>> tokens = {};
+  std::unordered_map<std::string, unsigned long long> table_define;
   
 void expect(TokenType tk_type){
   auto& token = tokens.front();
@@ -410,6 +411,31 @@ void tokenize(const std::string& input){
       new_token(TokenType::STR, 0, "", str);
       continue;
     }
+
+    if(c == '#'){             
+      while(std::isalpha(input[end])) end++;
+      const auto word = input.substr(begin+1, end-(begin+1));
+      if(word == std::string("define")){
+	while(std::isspace(input[end])) end++;
+	
+	const auto id_begin = end;	
+	while(std::isalpha(input[end]) || input[end] == '_')
+	  end++;
+	const auto id = input.substr(id_begin, end-id_begin);
+	
+	while(std::isspace(input[end])) end++;
+
+	const auto num_begin = end;
+	while(std::isdigit(input[end])) end++;
+	const auto num = std::stoull(input.substr(num_begin, end-num_begin));
+	table_define.emplace(id, num);
+      } else {	
+	std::cerr << "unknown preprocessor keyword\n";
+	std::cerr << "word = " << word << "|" << std::endl;
+	exit(1);
+      }
+      continue; 
+    }
     
     //identifier or keyword
     if(std::isalpha(c) || c == '_'){
@@ -423,7 +449,12 @@ void tokenize(const std::string& input){
 	new_token(tokenType);
       } else {
 	//identifier
-	new_token(TokenType::IDENT, 0, word);
+	const auto iter = table_define.find(word);
+	if(iter != table_define.end()){
+	  new_token(TokenType::NUM, iter->second);
+	} else {
+	  new_token(TokenType::IDENT, 0, word);
+	}
       }
       continue;
     }
