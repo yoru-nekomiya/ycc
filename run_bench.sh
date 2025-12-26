@@ -6,9 +6,17 @@ YCC=./build/ycc
 GCC=gcc
 CLANG=clang
 BENCH_DIR=./bench
-#OUT_DIR=./bench/out
 GLOBAL_REPORT="$BENCH_DIR/report.txt"
-TTY_DEVICE=/dev/tty
+YCC_OUT="/tmp/ycc_out.txt"
+GCC_OUT="/tmp/gcc_out.txt"
+CLANG_OUT="/tmp/clang_out.txt"
+#TTY_DEVICE=/dev/tty
+CHECKSUM_FAILURES=""
+
+#ANSI color
+GREEN="\033[1;32m"
+RED="\033[1;31m"
+RESET="\033[0m"
 
 echo "Benchmark Report" > "$GLOBAL_REPORT"
 echo "=================" >> "$GLOBAL_REPORT"
@@ -17,7 +25,7 @@ echo "" >> "$GLOBAL_REPORT"
 # target benchmark
 TARGETS="$@"
 if [ -z "$TARGETS" ]; then
-    # if no targets specified, all benchmarks will be target.
+    # if no targets are specified, all benchmarks will be target.
     TARGETS=$(find "$BENCH_DIR" -maxdepth 1 -mindepth 1 -type d -printf "%f\n")
 else
     for t in $TARGETS; do
@@ -76,18 +84,45 @@ for t in $TARGETS; do
     echo "=================" >> "$LOCAL_REPORT"
     echo "" >> "$LOCAL_REPORT"
 
-    echo -n "YCC: "
-    ycc_time=$( { /usr/bin/time -p "$exe_ycc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    #echo -n "YCC: "
+    #ycc_time=$( { /usr/bin/time -p "$exe_ycc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    ycc_time=$( { /usr/bin/time -p "$exe_ycc" 1> "$YCC_OUT"; } 2>&1 | awk '/real/ {print $2}' )
+    YCC_CHECKSUM=$(grep "Checksum" "$YCC_OUT" | awk '{print $NF}' | tr -d '\n')
 
-    echo -n "GCC(-O2): "
-    gcc_time=$( { /usr/bin/time -p "$exe_gcc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    #echo -n "GCC(-O2): "
+    #gcc_time=$( { /usr/bin/time -p "$exe_gcc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    gcc_time=$( { /usr/bin/time -p "$exe_gcc" 1> "$GCC_OUT"; } 2>&1 | awk '/real/ {print $2}' )
+    GCC_CHECKSUM=$(grep "Checksum" "$GCC_OUT" | awk '{print $NF}' | tr -d '\n')
 
-    echo -n "Clang(-O2): "
-    clang_time=$( { /usr/bin/time -p "$exe_clang" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    #echo -n "Clang(-O2): "
+    #clang_time=$( { /usr/bin/time -p "$exe_clang" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    clang_time=$( { /usr/bin/time -p "$exe_clang" 1> "$CLANG_OUT"; } 2>&1 | awk '/real/ {print $2}' )
+    CLANG_CHECKSUM=$(grep "Checksum" "$CLANG_OUT" | awk '{print $NF}' | tr -d '\n')
+
+    # compare checksum-----
+    COLOR_CODE="$GREEN"
+    if [ "$GCC_CHECKSUM" != "$CLANG_CHECKSUM" ]; then
+        CHECKSUM_STATUS="FAIL (Reference Checksum Mismatch: GCC=$GCC_CHECKSUM, Clang=$CLANG_CHECKSUM)"
+	CHECKSUM_FAILURES="$CHECKSUM_FAILURES $t (Ref)"
+	COLOR_CODE="$RED"
+    elif [ "$YCC_CHECKSUM" = "$GCC_CHECKSUM" ]; then
+        CHECKSUM_STATUS="PASS (Checksum: $YCC_CHECKSUM)"
+	COLOR_CODE="$GREEN"
+    else
+        CHECKSUM_STATUS="FAIL (YCC=$YCC_CHECKSUM, Reference=$GCC_CHECKSUM)"
+	CHECKSUM_FAILURES="$CHECKSUM_FAILURES $t"
+	COLOR_CODE="$RED"
+    fi    
+    # ---------------------
     
+    # output report-----
     ratio_gcc=$(awk "BEGIN { printf \"%.2f\", $gcc_time / $ycc_time }")
     ratio_clang=$(awk "BEGIN { printf \"%.2f\", $clang_time / $ycc_time }")
 
+    echo "  YCC Checksum   : $YCC_CHECKSUM"
+    echo "  GCC Checksum   : $GCC_CHECKSUM"
+    echo "  Clang Checksum : $CLANG_CHECKSUM"
+    echo "  Checksum Check : ${COLOR_CODE}${CHECKSUM_STATUS}${RESET}"
     echo "  YCC        : $ycc_time sec"
     echo "  GCC(-O2)   : $gcc_time sec"
     echo "  Clang(-O2) : $clang_time sec"
@@ -96,6 +131,10 @@ for t in $TARGETS; do
     echo ""
 
     {
+	echo "  YCC Checksum   : $YCC_CHECKSUM"
+	echo "  GCC Checksum   : $GCC_CHECKSUM"
+	echo "  Clang Checksum : $CLANG_CHECKSUM"
+	echo "  Checksum Check : $CHECKSUM_STATUS"
 	echo "  YCC        : $ycc_time sec"
 	echo "  GCC(-O2)   : $gcc_time sec"
 	echo "  Clang(-O2) : $clang_time sec"
@@ -106,6 +145,7 @@ for t in $TARGETS; do
     
     {
         echo "Benchmark: $t"
+	echo "  Checksum Check : $CHECKSUM_STATUS"
         echo "  YCC        : $ycc_time sec"
         echo "  GCC(-O2)   : $gcc_time sec"
         echo "  Clang(-O2) : $clang_time sec"
@@ -115,6 +155,31 @@ for t in $TARGETS; do
     } >> "$GLOBAL_REPORT"
 done
 
+rm -f "$YCC_OUT" "$GCC_OUT" "$CLANG_OUT"
+
 echo ""
+echo "========================================="
+echo "--- FINAL CHECKUSM VALIDATION SUMMARY ---" >> "$GLOBAL_REPORT"
+
+if [ -z "$CHECKSUM_FAILURES" ]; then
+    SUCCESS_MSG="SUCCESS: All benchmarks passed the checksum validation."
+    echo "${GREEN}${SUCCESS_MSG}${RESET}"
+    echo "$SUCCESS_MSG" >> "$GLOBAL_REPORT"
+else
+    FAIL_MSG="FAILURE: The following benchmarks had CHECKUM MISMATCHES:"
+    echo "${RED}${FAIL_MSG}${RESET}"
+    echo "$FAIL_MSG" >> "$GLOBAL_REPORT"
+    
+    echo "" >> "$GLOBAL_REPORT"
+    echo "--- Failed Benchmarks ---"
+    
+    echo "$CHECKSUM_FAILURES" | tr ' ' '\n' | grep -v '^$' | while read bench_name; do
+        echo "- $bench_name"
+        echo "- $bench_name" >> "$GLOBAL_REPORT"
+    done
+    echo "-------------------------" >> "$GLOBAL_REPORT"
+fi
+
+echo "========================================="
 echo "All specified benchmarks finished."
 echo "Global report generated at: $GLOBAL_REPORT"

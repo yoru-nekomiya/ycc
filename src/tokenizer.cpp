@@ -431,7 +431,7 @@ void tokenize(const std::string& input){
 	table_define.emplace(id, num);
       } else {	
 	std::cerr << "unknown preprocessor keyword\n";
-	std::cerr << "word = " << word << "|" << std::endl;
+	std::cerr << "word = " << word << std::endl;
 	exit(1);
       }
       continue; 

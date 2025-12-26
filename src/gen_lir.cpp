@@ -5,7 +5,6 @@ namespace myLIR {
   static std::shared_ptr<Function> func = nullptr;
   static std::shared_ptr<BasicBlock> outBB = nullptr;
   static int label = 0;
-  //static std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
   std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
 
 static std::shared_ptr<LirNode>

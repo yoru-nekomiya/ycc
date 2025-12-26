@@ -44,6 +44,6 @@ void matrix_multiply() {
 int main() {
   init_matrix();
   matrix_multiply();
-  printf("C[N-1][N-1] = %d\n", C[N-1][N-1]);
+  printf("Checksum: C[N-1][N-1] = %d\n", C[N-1][N-1]);
   return 0;
 }

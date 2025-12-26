@@ -461,7 +461,9 @@ enum class LirKind {
   LIR_NE, //!=
   LIR_LVAR,
   LIR_LOAD,
+  LIR_LOAD_SPILL,
   LIR_STORE,
+  LIR_STORE_SPILL,
   LIR_STORE_ARG,
   LIR_RETURN,
   LIR_BR, //branch
@@ -501,6 +503,7 @@ struct LirNode {
   int rn; //real register number
   int def;
   int lastUse;
+  bool spill;
 
   std::shared_ptr<Lunaria::Var> lvar;
   std::string name; //for global variable
@@ -517,7 +520,7 @@ struct LirNode {
 
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1),
-	     vn(-1), rn(-1), def(0), lastUse(0),
+	     vn(-1), rn(-1), def(0), lastUse(0), spill(false),
 	     lvar(nullptr), name(""),
 	     bb1(nullptr), bb2(nullptr), bbarg(nullptr),
 	     funcName(""), args({}),

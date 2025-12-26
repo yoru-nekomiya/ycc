@@ -26,6 +26,6 @@ int main() {
   */
   int result = tarai(X, Y, Z);
   
-  printf("Result: %d\n", result);
+  printf("Result (Checksum): %d\n", result);
   return 0;
 }

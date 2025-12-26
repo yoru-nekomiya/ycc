@@ -19,6 +19,6 @@ int main() {
   int M = 3;
   int N = 10; 
   int result = ackermann(M, N);
-  printf("Result: %d\n", result);
+  printf("Result (Checksum): %d\n", result);
   return 0;
 }

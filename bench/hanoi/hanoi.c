@@ -19,6 +19,6 @@ void hanoi(int n, int from, int to, int via) {
 int main(int argc, char** argv) {
   int n = (argc >= 2) ? atoi(argv[1]) : 25;
   hanoi(n, 0, 2, 1);
-  printf("Hanoi(%d) moves: %ld\n", n, move_count);
+  printf("Hanoi(%d) moves (Checksum): %ld\n", n, move_count);
   return 0;
 }

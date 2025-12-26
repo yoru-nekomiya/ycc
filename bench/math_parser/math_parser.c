@@ -81,6 +81,6 @@ int main() {
     current_pos = EXPRESSION;
     result = parse_expression();
   }
-  printf("Final Result: %d\n", result);
+  printf("Final Result (Checksum): %d\n", result);
   return 0;
 }

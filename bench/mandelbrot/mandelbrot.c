@@ -41,6 +41,6 @@ int main() {
       total_iterations += n;
     }
   }
-    printf("Total Iterations: %ld\n", total_iterations);    
+    printf("Total Iterations (Checksum): %ld\n", total_iterations);    
     return 0;
 }

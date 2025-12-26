@@ -157,11 +157,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  lea " << regs[d] << ", " << lirNode->name << std::endl;
     break;
   case myLIR::LirKind::LIR_LOAD:
-    //std::cout << "  mov " << reg(d, lirNode->type_size) << ", [" << regs[b] << "]" << std::endl;
     load(lirNode);
+    break;
+  case myLIR::LirKind::LIR_LOAD_SPILL:
+    std::cout << "  mov " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]\n";
     break;
   case myLIR::LirKind::LIR_STORE:
     std::cout << "  mov [" << regs[a] << "], " << reg(b, lirNode->type_size) << std::endl;
+    break;
+  case myLIR::LirKind::LIR_STORE_SPILL:
+    std::cout << "  mov [rbp-" << lirNode->lvar->offset << "], " << regs[a] << std::endl;
     break;
   case myLIR::LirKind::LIR_STORE_ARG:
     std::cout << "  mov [rbp-" << lirNode->lvar->offset

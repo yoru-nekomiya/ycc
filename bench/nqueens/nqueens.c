@@ -43,6 +43,6 @@ int main() {
   solve_queens(0);
     
   printf("N-Queens (Size: %d), ", BOARD_SIZE);
-  printf("Solutions Found: %d\n", solutions_count); 
+  printf("Solutions Found (Checksum): %d\n", solutions_count); 
   return 0;
 }
