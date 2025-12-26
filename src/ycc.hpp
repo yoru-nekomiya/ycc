@@ -545,6 +545,7 @@ struct LirNode {
 
 std::unique_ptr<Program>
 generateLirNode(const std::unique_ptr<myHIR::Program>&);
+  void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename);
 } //namespace myLIR
 
 //---------------------------

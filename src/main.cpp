@@ -16,11 +16,13 @@ int main(int argc, char* argv[]){
     return 1;
   }
   try{
-    const std::string input = readFileToString(argv[1]);
+    const std::string filename = argv[1];
+    const std::string input = readFileToString(filename);
     myTokenizer::tokenize(input);
     auto prog = myParser::program();
     auto progHir = myHIR::generateHirNode(prog);
     auto progLir = myLIR::generateLirNode(progHir);
+    dumpLIR(progLir, std::string(filename + ".lir"));
     myRegAlloc::allocateRegister_x86_64(progLir);  
     myCodeGen::gen_x86_64(progLir);
   } catch(const std::exception& e){

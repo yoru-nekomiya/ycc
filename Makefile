@@ -23,6 +23,7 @@ clean:
 	rm -rf tests/out/ tests/*.s
 	find bench -mindepth 2 -maxdepth 2 -type d -name out -exec rm -rf {} +
 	rm -f bench/report.txt
+	find . -name "*.lir" -delete
 
 %::
 	@:
