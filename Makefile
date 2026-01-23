@@ -1,6 +1,6 @@
 CXX=g++
 CXXFLAGS=-g -static -std=c++20
-SRCS=$(wildcard src/*.cpp)
+SRCS=$(wildcard src/*.cpp) $(wildcard src/optimization/*.cpp)
 OBJS=$(patsubst src/%.cpp,build/%.o,$(SRCS))
 TARGET=build/ycc
 
@@ -10,6 +10,7 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@
 
 build/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: $(TARGET)
@@ -23,7 +24,7 @@ clean:
 	rm -rf tests/out/ tests/*.s
 	find bench -mindepth 2 -maxdepth 2 -type d -name out -exec rm -rf {} +
 	rm -f bench/report.txt
-	find . -name "*.lir" -delete
+	find . -type f \( -name "*.lir" -o -name "*.dot" -o -name "*.svg" \) -delete
 
 %::
 	@:

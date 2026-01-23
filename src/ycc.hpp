@@ -15,6 +15,7 @@
 #include <climits>
 #include <stack>
 #include <format>
+#include <filesystem>
 
 //---------------------------
 //Lunaria Utility
@@ -490,6 +491,9 @@ struct BasicBlock {
   std::list<std::shared_ptr<BasicBlock>> pred;
   std::list<std::shared_ptr<BasicBlock>> succ;
   std::shared_ptr<LirNode> param;
+
+  bool is_start_node;
+  bool is_end_node;
 };
 
 struct LirNode {
@@ -531,21 +535,28 @@ struct LirNode {
   struct Function {
     std::string name;
     std::list<std::shared_ptr<Lunaria::Var>> params;
-    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
     std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
     int stackSize;
     std::list<std::shared_ptr<BasicBlock>> bbs;
+    std::shared_ptr<BasicBlock> start_node;
+    std::shared_ptr<BasicBlock> end_node;
   };
 
   struct Program {
     std::list<std::shared_ptr<Function>> fns;
-    //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> globalVars;
     std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   };
 
 std::unique_ptr<Program>
 generateLirNode(const std::unique_ptr<myHIR::Program>&);
+  std::string print_lir(const std::shared_ptr<LirNode>& i);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename);
+
+  namespace opt {
+    void optimize(std::unique_ptr<Program>& prog,
+		  const std::string& filename);
+  } //namespace opt
+  
 } //namespace myLIR
 
 //---------------------------

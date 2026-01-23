@@ -663,12 +663,21 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       gen_expr_lir(hirNode);
     }
     fnLir->localVars = localVars;
+
+    //calculate local variable offset size
+    int offset = 0;
+    for(const auto& lvar: fnLir->localVars){
+      offset = Lunaria::align_to(offset, lvar->type->align);
+      offset += lvar->type->size;
+      lvar->offset = offset;
+    }
+    
     progLir->fns.push_back(fnLir);    
   }
   return progLir;
 }
 
-  static void print_lir(std::ofstream& f, const std::shared_ptr<LirNode>& i);
+  static void print_lir_formatted(std::ofstream& f, const std::shared_ptr<LirNode>& i);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename){
     std::ofstream f;
     f.open(filename);
@@ -682,7 +691,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       for(const auto& bb: fn->bbs){
 	f << "BB_" << bb->label << ":\n";	
 	for(const auto& i: bb->insts){
-	  print_lir(f, i);
+	  print_lir_formatted(f, i);
 	} //for i
 	f << std::endl;
       } //for bb
@@ -691,126 +700,174 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     f.close();
   }
 
-  static void print_lir(std::ofstream& f, const std::shared_ptr<LirNode>& i){
+  std::string print_lir(const std::shared_ptr<LirNode>& i){
     const int d = i->d ? i->d->vn : 0;
     const int a = i->a ? i->a->vn : 0;
     const int b = i->b ? i->b->vn : 0;
     
     switch(i->opcode){
     case LirKind::LIR_MOV:
-      f << "  v" << d << " <- v" << b << std::endl;
+      //f << "  v" << d << " <- v" << b;
+      return std::format("v{} <- v{}", d, b);
       break;
     case LirKind::LIR_IMM:
-      f << "  v" << d << " <- " << i->imm << std::endl;
+      //f << "  v" << d << " <- " << i->imm;
+      return std::format("v{} <- {}", d, i->imm);
       break;
     case LirKind::LIR_ADD:
-      f << "  v" << d << " <- v" << a << " + v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " + v" << b;
+      return std::format("v{} <- v{} + v{}", d, a, b);
       break;
     case LirKind::LIR_SUB:
-      f << "  v" << d << " <- v" << a << " - v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " - v" << b;
+      return std::format("v{} <- v{} - v{}", d, a, b);
       break;
     case LirKind::LIR_MUL:
-      f << "  v" << d << " <- v" << a << " * v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " * v" << b;
+      return std::format("v{} <- v{} * v{}", d, a, b);
       break;
     case LirKind::LIR_DIV:
-      f << "  v" << d << " <- v" << a << " / v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " / v" << b;
+      return std::format("v{} <- v{} / v{}", d, a, b);
       break;
     case LirKind::LIR_REM:
-      f << "  v" << d << " <- v" << a << " % v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " % v" << b;
+      return std::format("v{} <- v{} % v{}", d, a, b);
       break;
     case LirKind::LIR_LT:
-      f << "  v" << d << " <- v" << a << " < v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " < v" << b;
+      return std::format("v{} <- v{} < v{}", d, a, b);
       break;
     case LirKind::LIR_LE:
-      f << "  v" << d << " <- v" << a << " <= v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " <= v" << b;
+      return std::format("v{} <- v{} <= v{}", d, a, b);
       break;
     case LirKind::LIR_EQ:
-      f << "  v" << d << " <- v" << a << " == v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " == v" << b;
+      return std::format("v{} <- v{} == v{}", d, a, b);
       break;
     case LirKind::LIR_NE:
-      f << "  v" << d << " <- v" << a << " != v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " != v" << b;
+      return std::format("v{} <- v{} != v{}", d, a, b);
       break;
     case LirKind::LIR_LVAR:
-      f << "  Load_lvar: v" << d << " <- [rbp-" << i->lvar->offset << "]\n";
+      //f << "  Load_lvar: v" << d << " <- [rbp-" << i->lvar->offset << "]";
+      return std::format("Load_lvar: v{} <- [rbp-{}]", d, i->lvar->offset);
       break;
     case LirKind::LIR_LOAD:
-      f << "  Load: v" << d << " <- [v" << b << "]\n";
+      //f << "  Load: v" << d << " <- [v" << b << "]";
+      return std::format("Load: v{} <- [v{}]", d, b);
       break;
     case LirKind::LIR_LOAD_SPILL:
-      f << "  Load_spill: v" << d << " <- [rbp-" << i->lvar->offset << "]\n";
+      //f << "  Load_spill: v" << d << " <- [rbp-" << i->lvar->offset << "]";
+      return std::format("Load_spill: v{} <- [rbp-{}]", d, i->lvar->offset);
       break;
     case LirKind::LIR_STORE:
-      f << "  Store: [v" << a << "] <- v" << b << std::endl;
+      //f << "  Store: [v" << a << "] <- v" << b;
+      return std::format("Store: [v{}] <- v{}", a, b);
       break;
     case LirKind::LIR_STORE_SPILL:
-      f << "  Store_spill: [rbp-" << i->lvar->offset << "] <- v" << a << std::endl;
+      //f << "  Store_spill: [rbp-" << i->lvar->offset << "] <- v" << a;
+      return std::format("Store_spill: [rbp-{}] <- v{}", i->lvar->offset, a);
       break;
     case LirKind::LIR_STORE_ARG:
-      f << "  Store_arg: [rbp-" << i->lvar->offset << "] <- argreg(" << i->imm << ")\n";
+      //f << "  Store_arg: [rbp-" << i->lvar->offset << "] <- argreg(" << i->imm << ")";
+      return std::format("Store_arg: [rbp-{}] <- argreg({})", i->lvar->offset, i->imm);
       break;
     case LirKind::LIR_RETURN:
       if(i->a != nullptr){
-	f << "  Return v" << a << std::endl;
+	//f << "  Return v" << a;
+	return std::format("Return v{}", a);
       } else {
-	f << "  Return\n";
+	//f << "  Return";
+	return "Return";
       }
       break;
     case LirKind::LIR_BR:
+      /*
       f << "  br v" << b << ", BB_" << i->bb1->label
-	<< ", BB_" << i->bb2->label << std::endl;
+	<< ", BB_" << i->bb2->label;
+      */
+      return std::format("br v{}, BB_{}, BB_{}", b, i->bb1->label, i->bb2->label);
       break;
-    case LirKind::LIR_JMP:
+    case LirKind::LIR_JMP: {
+      std::string s;
       if(i->bbarg){
-	f << "  BBARG: v" << i->bb1->param->vn << " <- v" << i->bbarg->vn << std::endl;
+	//f << "  BBARG: v" << i->bb1->param->vn << " <- v" << i->bbarg->vn;
+	s = std::format("BBARG: v{} <- v{}", i->bb1->param->vn, i->bbarg->vn);
       }
-      f << "  jmp BB_" << i->bb1->label << std::endl;
+      //f << "  jmp BB_" << i->bb1->label;
+      return s + std::format("jmp BB_{}", i->bb1->label);
       break;
-    case LirKind::LIR_FUNCALL:
-      f << "  v" << d << " <- call " << i->funcName << "(";
+    }
+    case LirKind::LIR_FUNCALL: {
+      //f << "  v" << d << " <- call " << i->funcName << "(";
+      std::string s = std::format("v{} <- call {}(", d, i->funcName);
       if(i->args.size() != 0){
-	f << "v" << i->args[0]->vn;
+	//f << "v" << i->args[0]->vn;
+	s += std::format("v{}", i->args[0]->vn);
       }
       for(int j = 1; j < i->args.size(); j++){
-	f << ", v" << i->args[j]->vn;
+	//f << ", v" << i->args[j]->vn;
+	s += std::format(", v{}", i->args[j]->vn);
       }
-      f << ")\n";
+      //f << ")";
+      return s += ")";
       break;
+    }
     case LirKind::LIR_PTR_ADD:
-      f << "  PTR_ADD: v" << d << " <- v" << a << " + v" << b << std::endl;
+      //f << "  PTR_ADD: v" << d << " <- v" << a << " + v" << b;
+      return std::format("PTR_ADD: v{} <- v{} + v{}", d, a, b);
       break;
     case LirKind::LIR_PTR_SUB:
-      f << "  PTR_SUB: v" << d << " <- v" << a << " - v" << b << std::endl;
+      //f << "  PTR_SUB: v" << d << " <- v" << a << " - v" << b;
+      return std::format("PTR_SUB: v{} <- v{} - v{}", d, a, b);
       break;
     case LirKind::LIR_PTR_DIFF:
-      f << "  PTR_DIFF: v" << d << " <- v" << a << " - v" << b << std::endl;
+      //f << "  PTR_DIFF: v" << d << " <- v" << a << " - v" << b;
+      return std::format("PTR_DIFF: v{} <- v{} - v{}", d, a, b);
       break;
     case LirKind::LIR_LABEL_ADDR:
-      f << "  Load_global: v" << d << " <- " << i->name << std::endl;
+      //f << "  Load_global: v" << d << " <- " << i->name;
+      return std::format("Load_global: v{} <- {}", d, i->name);
       break;
     case LirKind::LIR_SHL:
-      f << "  v" << d << " <- v" << a << " << v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " << v" << b;
+      return std::format("v{} <- v{} << v{}", d, a, b);
       break;
     case LirKind::LIR_SHR:
-      f << "  v" << d << " <- v" << a << " >> v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " >> v" << b;
+      return std::format("v{} <- v{} >> v{}", d, a, b);
       break;
     case LirKind::LIR_SAR:
-      f << "  v" << d << " <- v" << a << " >>(arith) v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " >>(arith) v" << b;
+      return std::format("v{} <- v{} >>(arith) v{}", d, a, b);
       break;
     case LirKind::LIR_BITOR:
-      f << "  v" << d << " <- v" << a << " | v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " | v" << b;
+      return std::format("v{} <- v{} | v{}", d, a, b);
       break;
     case LirKind::LIR_BITXOR:
-      f << "  v" << d << " <- v" << a << " ^ v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " ^ v" << b;
+      return std::format("v{} <- v{} ^ v{}", d, a, b);
       break;
     case LirKind::LIR_BITAND:
-      f << "  v" << d << " <- v" << a << " & v" << b << std::endl;
+      //f << "  v" << d << " <- v" << a << " & v" << b;
+      return std::format("v{} <- v{} & v{}", d, a, b);
       break;
     case LirKind::LIR_CAST:
-      f << "  Cast: v" << a << " <- v" << a << std::endl;
+      //f << "  Cast: v" << a << " <- v" << a;
+      return std::format("Cast: v{} <- v{}", a, a);
       break;
     default:
       std::cerr << "unknown LIR\n";
       exit(1);
     } //switch
+  }
+
+  static void print_lir_formatted(std::ofstream& f, const std::shared_ptr<LirNode>& i){
+    f << "  ";
+    f << print_lir(i);
+    f << "\n";
   }
 } //namespace myLIR

@@ -372,7 +372,6 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
       lvar->offset = offset;
     }
     //16 byte alignment
-    //fn->stackSize = offset % 16 == 0 ? offset + 8 : offset;
     fn->stackSize = Lunaria::align_to(offset, 16);
     fn->stackSize += 8;
     

@@ -9,3 +9,6 @@ tmp
 *.txt
 *.expected
 *.lir
+*.dot
+*.png
+*.svg

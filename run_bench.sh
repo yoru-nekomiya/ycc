@@ -65,6 +65,16 @@ for t in $TARGETS; do
     #compile by gcc and clang
     $GCC -O2 "$src" -o "$exe_gcc"
     $CLANG -O2 "$src" -o "$exe_clang"
+
+    # dot -> svg
+    for dot_file in "$BENCH_PATH"/*.dot; do
+        if [ -f "$dot_file" ]; then
+            svg_file="${dot_file%.dot}.svg"
+            dot -Tsvg "$dot_file" -o "$svg_file"
+            mv "$svg_file" "$OUT_DIR/"
+            # mv "$dot_file" "$OUT_DIR/"
+        fi
+    done
 done
 
 echo ""

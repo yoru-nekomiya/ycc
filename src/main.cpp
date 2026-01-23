@@ -10,6 +10,14 @@ static std::string readFileToString(const std::string& filename){
   return buf.str();
 }
 
+static std::string
+replace_file_extension(const std::string& input_path,
+		       const std::string& ext){
+  std::filesystem::path p(input_path);
+  p.replace_extension(std::format(".{}", ext));
+  return p.string();
+}
+
 int main(int argc, char* argv[]){
   if(argc < 2){
     std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
@@ -21,8 +29,12 @@ int main(int argc, char* argv[]){
     myTokenizer::tokenize(input);
     auto prog = myParser::program();
     auto progHir = myHIR::generateHirNode(prog);
+    
     auto progLir = myLIR::generateLirNode(progHir);
-    dumpLIR(progLir, std::string(filename + ".lir"));
+    dumpLIR(progLir, replace_file_extension(filename, "lir"));
+    
+    myLIR::opt::optimize(progLir, filename);
+    
     myRegAlloc::allocateRegister_x86_64(progLir);  
     myCodeGen::gen_x86_64(progLir);
   } catch(const std::exception& e){

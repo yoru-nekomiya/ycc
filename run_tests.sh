@@ -46,6 +46,15 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
 	continue
     fi
 
+    # dot -> svg
+    file_dir=$(dirname "$file")
+    for dot_file in "$file_dir/${base}"*.dot; do
+        if [ -f "$dot_file" ]; then
+            dot -Tsvg "$dot_file" -o "${dot_file%.dot}.svg"            
+            # mv "${dot_file%.dot}.svg" "$TEST_DIR/out/$rel_dir/"
+        fi
+    done
+
     #assemble and link
     gcc $LINK_OPT -o "$exe" "$asm" "$LIB"
     if [ $? -ne 0 ]; then
