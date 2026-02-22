@@ -19,6 +19,8 @@ replace_file_extension(const std::string& input_path,
 }
 
 int main(int argc, char* argv[]){
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
   if(argc < 2){
     std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
     return 1;
@@ -31,10 +33,11 @@ int main(int argc, char* argv[]){
     auto progHir = myHIR::generateHirNode(prog);
     
     auto progLir = myLIR::generateLirNode(progHir);
-    dumpLIR(progLir, replace_file_extension(filename, "lir"));
+    //dumpLIR(progLir, replace_file_extension(filename, "lir"));
     
     myLIR::opt::optimize(progLir, filename);
-    
+
+    dumpLIR(progLir, replace_file_extension(filename, "lir"));
     myRegAlloc::allocateRegister_x86_64(progLir);  
     myCodeGen::gen_x86_64(progLir);
   } catch(const std::exception& e){

@@ -7,10 +7,10 @@
 #include <string_view>
 
 namespace myLIR::opt {
+  bool optimize_bb(std::shared_ptr<BasicBlock>& bb);
   void constructCFGs(std::unique_ptr<Program>& prog);
   void printCFGs(std::unique_ptr<Program>& prog,
 		 const std::string& filename);
-  
 } //namespace myLIR::opt
 
 #endif

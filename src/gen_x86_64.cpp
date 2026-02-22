@@ -1,4 +1,5 @@
 #include "ycc.hpp"
+#include "util.hpp"
 
 namespace myCodeGen {
   static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
@@ -14,29 +15,17 @@ namespace myCodeGen {
 static std::string funcname = "";
 
   static std::string reg(int r, int size){
-    if(size == 1){
-      return regs8[r];
-    }
-    if(size == 2){
-      return regs16[r];
-    }
-    if(size == 4){
-      return regs32[r];
-    }
+    if(size == 1) return regs8[r];    
+    if(size == 2) return regs16[r];    
+    if(size == 4) return regs32[r];
     assert(size == 8);
     return regs[r];
   }
 
   static std::string argreg(int r, int size){
-    if(size == 1){
-      return argregs8[r];
-    }
-    if(size == 2){
-      return argregs16[r];
-    }
-    if(size == 4){
-      return argregs32[r];
-    }
+    if(size == 1) return argregs8[r];    
+    if(size == 2) return argregs16[r];
+    if(size == 4) return argregs32[r];    
     assert(size == 8);
     return argregs[r];
   }
@@ -48,10 +37,23 @@ static void print_cmp(const std::string& cmp,
   const int a = lirNode->a ? lirNode->a->rn : 0;
   const int b = lirNode->b ? lirNode->b->rn : 0;
 
-  std::cout << "  cmp " << regs[a] << ", " << regs[b] << std::endl; //the result is stored in the flag register
-  std::cout << "  " << cmp << " " << regs8[d] << std::endl; //store the result stored in the flag register into an 8-bit register
-  std::cout << "  movzb " << regs[d] << ", " << regs8[d] << std::endl; //clear the upper 56 bits of the 64-bit register to zero
+  if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+    std::cout << std::format("  cmp {}, {}\n", regs[a], lirNode->b->imm);
+  } else {
+    std::cout << std::format("  cmp {}, {}\n", regs[a], regs[b]); //the result is stored in the flag register
+  }
+  std::cout << std::format("  {} {}\n", cmp, regs8[d]); //store the result stored in the flag register into an 8-bit register
+  
+  std::cout << std::format("  movzb {}, {}\n", regs[d], regs8[d]); //clear the upper 56 bits of the 64-bit register to zero
 }
+
+  static std::string get_size_qualifier(int size){
+    if(size == 1) return std::string("byte ptr");    
+    if(size == 2) return std::string("word ptr");    
+    if(size == 4) return std::string("dword ptr");
+    assert(size == 8);
+    return std::string("qword ptr");
+  }
 
   static void load(const std::shared_ptr<myLIR::LirNode>& lirNode){
     const int d = lirNode->d ? lirNode->d->rn : 0;
@@ -59,14 +61,14 @@ static void print_cmp(const std::string& cmp,
     const int size = lirNode->type_size;
     //signed extension
     if(size == 1){
-      std::cout << "  movsx " << regs[d] << ", byte ptr [" << regs[b] << "]" << std::endl;
+      std::cout << std::format("  movsx {}, byte ptr [{}]\n", regs[d], regs[b]);
     } else if(size == 2){
-      std::cout << "  movsx " << regs[d] << ", word ptr [" << regs[b] << "]" << std::endl;
+      std::cout << std::format("  movsx {}, word ptr [{}]\n", regs[d], regs[b]);
     } else if(size == 4){
-      std::cout << "  movsxd " << regs[d] << ", dword ptr [" << regs[b] << "]" << std::endl;
+      std::cout << std::format("  movsxd {}, dword ptr [{}]\n", regs[d], regs[b]);
     } else {
       assert(size == 8);
-      std::cout << "  mov " << regs[d] << ", [" << regs[b] << "]" << std::endl;
+      std::cout << std::format("  mov {}, [{}]\n", regs[d], regs[b]);
     }
   }
 
@@ -75,14 +77,14 @@ static void print_cmp(const std::string& cmp,
     const int a = lirNode->a ? lirNode->a->rn : 0;
     //signed trancate (type extension)
     if(size == 1){
-      std::cout << "  movsx " << regs[a] << ", " << regs8[a] << std::endl;
+      std::cout << std::format("  movsx {}, {}\n", regs[a], regs8[a]);
     } else if(size == 2){
-      std::cout << "  movsx " << regs[a] << ", " << regs16[a] << std::endl;
+      std::cout << std::format("  movsx {}, {}\n", regs[a], regs16[a]);
     } else if(size == 4){
-      std::cout << "  movsxd " << regs[a] << ", " << regs32[a] << std::endl;
+      std::cout << std::format("  movsxd {}, {}\n", regs[a], regs32[a]);
     } else {
       assert(size == 8);
-      std::cout << "  mov " << regs[a] << ", " << regs[a] << std::endl;
+      std::cout << std::format("  mov {}, {}\n", regs[a], regs[a]);
     }
   }
 
@@ -93,20 +95,38 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 
   switch(lirNode->opcode){
   case myLIR::LirKind::LIR_MOV:
-    std::cout << "  mov " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b)){
+      if(is_int32(lirNode->b)){
+	std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
+      } else {
+	std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->b->imm);
+      }
+    } else {
+      std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
+    }
     break;
   case myLIR::LirKind::LIR_IMM:
-    if(lirNode->imm >= INT32_MIN && lirNode->imm <= INT32_MAX){
-      std::cout << "  mov " << regs[d] << ", " << lirNode->imm << std::endl;
+    if(is_int32(lirNode)){
+      std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->imm);
     } else {
-      std::cout << "  movabsq " << regs[d] << ", " << lirNode->imm << std::endl;
+      std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->imm);
     }
     break;
   case myLIR::LirKind::LIR_ADD:
-    std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
+    //64-bits immediate value is assumed to be stored in a register by movabsq before this instruction.
+    // The instructions that can take 32-bits immediate value as its input are also assumed that.
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
+      std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+    }
     break;
   case myLIR::LirKind::LIR_SUB:
-    std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  sub {}, {}\n", regs[d], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+    }
     break;
   case myLIR::LirKind::LIR_MUL:
     /*
@@ -114,20 +134,24 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << "  imul " << regs[d] << std::endl;
     std::cout << "  mov " << regs[d] << ", rax" << std::endl;*/
     //for 64 bit
-    //In this style, discard the upper 64 bits of the result
-    std::cout << "  imul " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
+      std::cout << std::format("  imul {}, {}, {}\n", regs[d], regs[d], lirNode->b->imm);
+    } else {
+      //In this style, discard the upper 64 bits of the result
+      std::cout << std::format("  imul {}, {}\n", regs[d], regs[b]);
+    }
     //TODO: for 128 bit
     break;
   case myLIR::LirKind::LIR_DIV:
-    std::cout << "  mov rax, " << regs[d] << std::endl;
-    std::cout << "  cqo" << std::endl;
-    std::cout << "  idiv " << regs[b] << std::endl;
-    std::cout << "  mov " << regs[d] << ", rax" << std::endl;
+    std::cout << "  mov rax, " << regs[d] << '\n';
+    std::cout << "  cqo\n";
+    std::cout << "  idiv " << regs[b] << '\n';
+    std::cout << "  mov " << regs[d] << ", rax\n";
     break;
   case myLIR::LirKind::LIR_REM:
-    std::cout << "  mov rax, " << regs[d] << std::endl;
-    std::cout << "  cqo" << std::endl;
-    std::cout << "  idiv " << regs[b] << std::endl;
+    std::cout << "  mov rax, " << regs[d] << '\n';
+    std::cout << "  cqo\n";
+    std::cout << "  idiv " << regs[b] << '\n';
     std::cout << "  mov " << regs[d] << ", rdx\n";
     break;
   case myLIR::LirKind::LIR_LT:
@@ -143,74 +167,101 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     print_cmp("setne", lirNode);
     break;
   case myLIR::LirKind::LIR_SHL:
-    std::cout << "  mov cl, " << regs8[b] << std::endl;
-    std::cout << "  shl " << regs[d] << ", cl\n";
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov cl, {}\n", regs8[b]);
+    }
+    std::cout << std::format("  shl {}, cl\n", regs[d]);
     break;
   case myLIR::LirKind::LIR_SAR:
-    std::cout << "  mov cl, " << regs8[b] << std::endl;
-    std::cout << "  sar " << regs[d] << ", cl\n";
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov cl, {}\n", regs8[b]);
+    }
+    std::cout << std::format("  sar {}, cl\n", regs[d]);
     break;
   case myLIR::LirKind::LIR_LVAR:
-    std::cout << "  lea " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]" << std::endl;
+    std::cout << std::format("  lea {}, [rbp-{}]\n", regs[d], lirNode->lvar->offset);
     break;
   case myLIR::LirKind::LIR_LABEL_ADDR:
-    std::cout << "  lea " << regs[d] << ", " << lirNode->name << std::endl;
+    std::cout << std::format("  lea {}, {}\n", regs[d], lirNode->name);
     break;
   case myLIR::LirKind::LIR_LOAD:
     load(lirNode);
     break;
   case myLIR::LirKind::LIR_LOAD_SPILL:
-    std::cout << "  mov " << regs[d] << ", [rbp-" << lirNode->lvar->offset << "]\n";
+    std::cout << std::format("  mov {}, [rbp-{}]\n", regs[d], lirNode->lvar->offset);
     break;
   case myLIR::LirKind::LIR_STORE:
-    std::cout << "  mov [" << regs[a] << "], " << reg(b, lirNode->type_size) << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      const auto q = get_size_qualifier(lirNode->type_size);
+      std::cout << std::format("  mov {} [{}], {}\n", q, regs[a], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov [{}], {}\n", regs[a], reg(b, lirNode->type_size));
+    }
     break;
   case myLIR::LirKind::LIR_STORE_SPILL:
-    std::cout << "  mov [rbp-" << lirNode->lvar->offset << "], " << regs[a] << std::endl;
+    std::cout << std::format("  mov [rbp-{}], {}\n", lirNode->lvar->offset, regs[a]);
     break;
-  case myLIR::LirKind::LIR_STORE_ARG:
-    std::cout << "  mov [rbp-" << lirNode->lvar->offset
-	      << "], "
-	      << argreg(lirNode->imm, lirNode->type_size)
-	      << std::endl;
+  case myLIR::LirKind::LIR_STORE_ARG:    
+    std::cout << std::format("  mov [rbp-{}], {}\n",
+			     lirNode->lvar->offset,
+			     argreg(lirNode->imm, lirNode->type_size));
     break;
   case myLIR::LirKind::LIR_RETURN:
     if(lirNode->a){
-      std::cout << "  mov rax, " << regs[a] << std::endl;
-    }
-    std::cout << "  jmp .L.return." << funcname << std::endl;
-    
-      break;
+      if(is_imm(lirNode->a) && is_int32(lirNode->a)){
+	std::cout << std::format("  mov rax, {}\n", lirNode->a->imm);
+      } else {
+	std::cout << std::format("  mov rax, {}\n", regs[a]);
+      }
+    } //if(lirNode->a)
+    std::cout << std::format("  jmp .L.return.{}\n", funcname);    
+    break;
   case myLIR::LirKind::LIR_BR:
-    //std::cout << "  cmp " << regs[b] << ", 0" << std::endl;
-    std::cout << "  test " << regs[b] << ", " << regs[b] << std::endl;
-    /*
-    std::cout << "  jne .L" << lirNode->bb1->label << std::endl;
-    std::cout << "  jmp .L" << lirNode->bb2->label << std::endl;
-    */
-    std::cout << "  je .L" << lirNode->bb2->label << std::endl;
-    std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
+    if(is_imm(lirNode->b)){
+      if(lirNode->b->imm == 0){
+	std::cout << std::format("  jmp .L{}\n", lirNode->bb2->label);
+      } else {
+	std::cout << std::format("  jmp .L{}\n", lirNode->bb1->label);
+      }
+    } else {      
+      std::cout << std::format("  test {}, {}\n", regs[b], regs[b]);
+      std::cout << std::format("  je .L{}\n", lirNode->bb2->label);
+      std::cout << std::format("  jmp .L{}\n", lirNode->bb1->label);
+    }
     break;
   case myLIR::LirKind::LIR_JMP:
     if(lirNode->bbarg){
-      std::cout << "  mov " << regs[lirNode->bb1->param->rn]
-		<< ", " << regs[lirNode->bbarg->rn]
-		<< std::endl;
-    }
-    std::cout << "  jmp .L" << lirNode->bb1->label << std::endl;
+      if(is_imm(lirNode->bbarg)){
+	if(is_int32(lirNode->bbarg)){
+	  std::cout << std::format("  mov {}, {}\n", regs[lirNode->bb1->param->rn], lirNode->bbarg->imm);
+	} else {
+	  std::cout << std::format("  movabsq {}, {}\n", regs[lirNode->bb1->param->rn], lirNode->bbarg->imm);
+	}
+      } else {	
+	std::cout << std::format("  mov {}, {}\n", regs[lirNode->bb1->param->rn], regs[lirNode->bbarg->rn]);
+      }
+    } //if(lirNode->bbarg)
+    std::cout << std::format("  jmp .L{}\n", lirNode->bb1->label);
     break;
   case myLIR::LirKind::LIR_FUNCALL:
     for(int i = 0; i < lirNode->args.size(); i++){
-      std::cout << "  mov " << argregs[i] << ", "
-		<< regs[lirNode->args[i]->rn] << std::endl;
+      if(is_imm(lirNode->args[i]) && is_int32(lirNode->args[i])){
+	std::cout << std::format("  mov {}, {}\n", argregs[i], lirNode->args[i]->imm);
+      } else {	
+	std::cout << std::format("  mov {}, {}\n", argregs[i], regs[lirNode->args[i]->rn]);
+      }
     }
-    std::cout << "  push r10" << std::endl
-	      << "  push r11" << std::endl
-	      << "  mov rax, 0" << std::endl
-	      << "  call " << lirNode->funcName << std::endl
-	      << "  pop r11" << std::endl
-	      << "  pop r10" << std::endl
-	      << "  mov " << regs[d] << ", rax" << std::endl;
+    std::cout << "  push r10\n" 
+	      << "  push r11\n" 
+	      << "  xor rax, rax\n"
+	      << "  call " << lirNode->funcName << '\n'
+	      << "  pop r11\n"
+	      << "  pop r10\n"
+	      << "  mov " << regs[d] << ", rax\n";
     break;
   case myLIR::LirKind::LIR_PTR_ADD: {
     /*
@@ -219,14 +270,13 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     */
     const int size = lirNode->type_base_size;
     if(size == 1){
-      std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
-    } else if(size == 2 || size == 4 || size == 8){
-      std::cout << "  lea " << regs[d] << ", ["
-		<< regs[d] << "+" << regs[b] << "*" << size
-		<< "]" << std::endl;
+      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+    } else if(size == 2 || size == 4 || size == 8){      
+      std::cout << std::format("  lea {}, [{}+{}*{}]\n",
+			       regs[d], regs[d], regs[b], size);
     } else {
-      std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-      std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
+      std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
+      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
     }
     break;
   }
@@ -237,48 +287,59 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     */
     const int size = lirNode->type_base_size;
     if(size == 1){
-      std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
-    } else if(size == 2 || size == 4 || size == 8){
-      std::cout << "  neg " << regs[b] << std::endl;
-      std::cout << "  lea " << regs[d] << ", ["
-		<< regs[d] << "+" << regs[b] << "*" << size
-		<< "]" << std::endl;
-    } else {
-      std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-      std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+      std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+    } else if(size == 2 || size == 4 || size == 8){      
+      std::cout << std::format("  neg {}\n", regs[b]);
+      std::cout << std::format("  lea {}, [{}+{}*{}]\n",
+			       regs[d], regs[d], regs[b], size);
+    } else {      
+      std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
+      std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
     }
     break;
   }
   case myLIR::LirKind::LIR_PTR_DIFF: {
     const int size = lirNode->type_base_size;
-    std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
+    std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
     if(size == 1){
       ;
     } else if(size == 2){
-      std::cout << "  sar " << regs[d] << ", 1\n";
+      std::cout << std::format("  sar {}, 1\n", regs[d]);
     } else if(size == 4){
-      std::cout << "  sar " << regs[d] << ", 2\n";
+      std::cout << std::format("  sar {}, 2\n", regs[d]);
     } else if(size == 8){
-      std::cout << "  sar " << regs[d] << ", 3\n";
+      std::cout << std::format("  sar {}, 3\n", regs[d]);
     } else {
-      std::cout << "  mov rax, " << regs[d] << std::endl;
-      std::cout << "  cqo" << std::endl;
-      std::cout << "  mov " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-      std::cout << "  idiv " << regs[b] << std::endl;
-      std::cout << "  mov " << regs[d] << ", rax" << std::endl;
+      std::cout << std::format("  mov rax, {}\n", regs[d]);
+      std::cout << "  cqo\n";
+      std::cout << std::format("  mov {}, {}\n", regs[b], lirNode->type_base_size);
+      std::cout << std::format("  idiv {}\n", regs[b]);
+      std::cout << std::format("  mov {}, rax\n", regs[d]);
     }
     break;
   }
   case myLIR::LirKind::LIR_BITOR: {
-    std::cout << "  or " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  or {}, {}\n", regs[d], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  or {}, {}\n", regs[d], regs[b]);
+    }
     break;
   }
   case myLIR::LirKind::LIR_BITXOR: {
-    std::cout << "  xor " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  xor {}, {}\n", regs[d], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  xor {}, {}\n", regs[d], regs[b]);
+    }
     break;
   }
   case myLIR::LirKind::LIR_BITAND: {
-    std::cout << "  and " << regs[d] << ", " << regs[b] << std::endl;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  and {}, {}\n", regs[d], lirNode->b->imm);
+    } else {
+      std::cout << std::format("  and {}, {}\n", regs[d], regs[b]);
+    }
     break;
   }
   case myLIR::LirKind::LIR_CAST: {
@@ -319,37 +380,36 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   }
 
   static void emit_data(const std::unique_ptr<myLIR::Program>& prog){
-    std::cout << ".bss" << std::endl;
+    std::cout << ".bss\n";
 
     for(const auto& gvar: prog->globalVars){
       if(gvar->isLiteral || !gvar->initializer.empty()){
 	continue;
-      }
-      std::cout << ".align " << gvar->type->align << std::endl;
-      std::cout << gvar->name << ":\n";
-      std::cout << "  .zero " << gvar->type->size << std::endl;
+      }      
+      std::cout << std::format(".align {}\n", gvar->type->align);
+      std::cout << std::format("{}:\n", gvar->name);
+      std::cout << std::format("  .zero {}\n", gvar->type->size);
     }
 
     std::cout << ".data\n";
     for(const auto& gvar: prog->globalVars){
-      if(gvar->isLiteral){
-	std::cout << ".align " << gvar->type->align << std::endl;
-	std::cout << gvar->name << ":\n";
+      if(gvar->isLiteral){	
+	std::cout << std::format(".align {}\n", gvar->type->align);
+	std::cout << std::format("{}:\n", gvar->name);
 	print_literal(gvar->literal);
       }
 
-      if(!gvar->initializer.empty()){
-	std::cout << ".align " << gvar->type->align << std::endl;
-	std::cout << gvar->name << ":\n";
+      if(!gvar->initializer.empty()){	
+	std::cout << std::format(".align {}\n", gvar->type->align);
+	std::cout << std::format("{}:\n", gvar->name);
 	for(const auto& init: gvar->initializer){
 	  if(!init->label.empty()){
 	    std::cout << std::format("  .quad {}{:+}\n", init->label, init->addend);
 	  }
 	  else if(init->size == 1){
-	    std::cout << "  .byte " << init->val << std::endl;	    
-	  } else {
-	    std::cout << "  ." << init->size << "byte "
-		      << init->val << std::endl;
+	    std::cout << std::format("  .byte {}\n", init->val);
+	  } else {	    
+	    std::cout << std::format("  .{}byte {}\n", init->size, init->val);
 	  }
 	} //for init
       } //if !gvar->initializer.empty()
@@ -357,11 +417,10 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   }
   
 static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
-  std::cout << ".text" << std::endl;
+  std::cout << ".text\n";
 
-  for(const auto& fn: prog->fns){
-    std::cout << ".global " << fn->name << std::endl
-	      << fn->name << ":" << std::endl;
+  for(const auto& fn: prog->fns){    
+    std::cout << std::format(".global {}\n{}:\n", fn->name, fn->name);
     funcname = fn->name;
 
     //calculate stack size
@@ -376,31 +435,31 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     fn->stackSize += 8;
     
     //prologue
-    std::cout << "  push rbp" << std::endl
-	      << "  mov rbp, rsp" << std::endl
-	      << "  sub rsp, " << fn->stackSize << std::endl;
-    std::cout << "  push r12" << std::endl
-	      << "  push r13" << std::endl
-	      << "  push r14" << std::endl
-	      << "  push r15" << std::endl
-	      << "  push rbx" << std::endl;
+    std::cout << "  push rbp\n"
+	      << "  mov rbp, rsp\n"
+	      << "  sub rsp, " << fn->stackSize << '\n';
+    std::cout << "  push r12\n"
+	      << "  push r13\n"
+	      << "  push r14\n"
+	      << "  push r15\n"
+	      << "  push rbx\n";
 
     //generate code
     for(const auto& bb: fn->bbs){
-      std::cout << ".L" << bb->label << ":" << std::endl;
+      std::cout << std::format(".L{}:\n", bb->label);
       for(const auto& lirNode: bb->insts){
 	gen(lirNode);
       }
     }
     
     //epilogue
-    std::cout << ".L.return." << funcname << ":" << std::endl;
-    std::cout << "  pop rbx" << std::endl
-	      << "  pop r15" << std::endl
-	      << "  pop r14" << std::endl
-	      << "  pop r13" << std::endl
-	      << "  pop r12" << std::endl;
-    std::cout << "  mov rsp, rbp" << std::endl
+    std::cout << ".L.return." << funcname << ":\n";
+    std::cout << "  pop rbx\n"
+	      << "  pop r15\n"
+	      << "  pop r14\n"
+	      << "  pop r13\n"
+	      << "  pop r12\n";
+    std::cout << "  mov rsp, rbp\n"
     //std::cout << "  add rsp, " << fn->stackSize << std::endl
 	      << "  pop rbp\n"
 	      << "  ret\n";
@@ -408,7 +467,7 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
 }
 
 void gen_x86_64(const std::unique_ptr<myLIR::Program>& prog){
-  std::cout << ".intel_syntax noprefix" << std::endl;
+  std::cout << ".intel_syntax noprefix\n";
   emit_data(prog);
   emit_text(prog);
 }

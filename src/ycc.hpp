@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <vector>
 #include <climits>
+#include <cstdint>
 #include <stack>
 #include <format>
 #include <filesystem>
@@ -547,8 +548,9 @@ struct LirNode {
     std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   };
 
-std::unique_ptr<Program>
-generateLirNode(const std::unique_ptr<myHIR::Program>&);
+  std::shared_ptr<LirNode> new_reg(const std::string& varName);
+  std::unique_ptr<Program>
+  generateLirNode(const std::unique_ptr<myHIR::Program>&);
   std::string print_lir(const std::shared_ptr<LirNode>& i);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename);
 

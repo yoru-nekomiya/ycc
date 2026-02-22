@@ -1,16 +1,39 @@
 #include "ycc.hpp"
+#include "util.hpp"
 
 namespace myRegAlloc {
   const int num_reg = 7;
 
-static void convertThreeAddress2Two(std::unique_ptr<myLIR::Program>& prog){
+  static void insert_64bit_imm_mov(std::unique_ptr<myLIR::Program>& prog){
+    //Check if operand "b" is 64-bit immediate value.
+    //If so, insert the MOV instruction to load the value in 64-bit register
+    for(auto& fn: prog->fns){
+      for(auto& bb: fn->bbs){
+	for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
+	  if(!(*iter)->b) continue;
+	  if(myLIR::is_imm((*iter)->b) && !myLIR::is_int32((*iter)->b)){
+	    auto d = myLIR::new_reg("");
+	    auto imm_node = std::make_shared<myLIR::LirNode>();
+	    imm_node->opcode = myLIR::LirKind::LIR_IMM;
+	    imm_node->d = std::move(d);
+	    imm_node->imm = (*iter)->b->imm;
+
+	    (*iter)->b = imm_node->d;
+	    iter = bb->insts.insert(iter, imm_node);
+	    iter++;
+	  }	  
+	} //for iter
+      } //for bb
+    } //for fn
+  }
+  
+static void convert_3ac_to_2ac(std::unique_ptr<myLIR::Program>& prog){
+  //convert 3-address code to 2-address code
   //d = a op b; --> d = a; d = d op b;
   for(auto& fn: prog->fns){
     for(auto& bb: fn->bbs){
       for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
-	if(!(*iter)->d || !(*iter)->a){
-	  continue;
-	}
+	if(!(*iter)->d || !(*iter)->a) continue;	
 	auto movNode = std::make_shared<myLIR::LirNode>();
 	movNode->opcode = myLIR::LirKind::LIR_MOV;
 	movNode->d = (*iter)->d;
@@ -152,7 +175,8 @@ static void allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
 
   static int spill_num = 0;
 void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
-  convertThreeAddress2Two(prog);
+  insert_64bit_imm_mov(prog);
+  convert_3ac_to_2ac(prog);
   for(auto& fn: prog->fns){
     auto listReg = collectReg(fn);
     allocate(listReg);
