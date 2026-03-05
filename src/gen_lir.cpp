@@ -816,8 +816,9 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     case LirKind::LIR_STORE:
       if(is_imm(i->b)){
 	ret = std::format("Store: [v{}] <- {}", a, i->b->imm);
+      } else {
+	ret = std::format("Store: [v{}] <- v{}", a, b);
       }
-      ret = std::format("Store: [v{}] <- v{}", a, b);
       break;
     case LirKind::LIR_STORE_SPILL:
       ret = std::format("Store_spill: [rbp-{}] <- v{}", i->lvar->offset, a);

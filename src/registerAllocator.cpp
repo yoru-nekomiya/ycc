@@ -4,48 +4,60 @@
 namespace myRegAlloc {
   const int num_reg = 7;
 
-  static void insert_64bit_imm_mov(std::unique_ptr<myLIR::Program>& prog){
+  static void insert_64bit_imm_mov(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+				   std::shared_ptr<myLIR::BasicBlock>& bb){
     //Check if operand "b" is 64-bit immediate value.
     //If so, insert the MOV instruction to load the value in 64-bit register
-    for(auto& fn: prog->fns){
-      for(auto& bb: fn->bbs){
-	for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
-	  if(!(*iter)->b) continue;
-	  if(myLIR::is_imm((*iter)->b) && !myLIR::is_int32((*iter)->b)){
-	    auto d = myLIR::new_reg("");
-	    auto imm_node = std::make_shared<myLIR::LirNode>();
-	    imm_node->opcode = myLIR::LirKind::LIR_IMM;
-	    imm_node->d = std::move(d);
-	    imm_node->imm = (*iter)->b->imm;
+    if(!(*iter)->b) return;
+    if(myLIR::is_imm((*iter)->b) && !myLIR::is_int32((*iter)->b)){
+      auto d = myLIR::new_reg("");
+      auto imm_node = std::make_shared<myLIR::LirNode>();
+      imm_node->opcode = myLIR::LirKind::LIR_IMM;
+      imm_node->d = std::move(d);
+      imm_node->imm = (*iter)->b->imm;
+      
+      (*iter)->b = imm_node->d;
+      iter = bb->insts.insert(iter, imm_node);
+      iter++;
+    }
+  }
 
-	    (*iter)->b = imm_node->d;
-	    iter = bb->insts.insert(iter, imm_node);
-	    iter++;
-	  }	  
-	} //for iter
-      } //for bb
-    } //for fn
+  static void
+  insert_32bit_imm_mov_for_idiv(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+				std::shared_ptr<myLIR::BasicBlock>& bb){
+    //Check if an instruction is LIR_DIV or LIR_REM,
+    //and check if operand "b" is 32-bit immediate value.
+    //If so, insert the MOV instruction to load the value in register
+    if((*iter)->opcode == myLIR::LirKind::LIR_DIV
+       || (*iter)->opcode == myLIR::LirKind::LIR_REM){     
+      if(myLIR::is_imm((*iter)->b) && myLIR::is_int32((*iter)->b)){
+	auto d = myLIR::new_reg("");
+	auto imm_node = std::make_shared<myLIR::LirNode>();
+	imm_node->opcode = myLIR::LirKind::LIR_IMM;
+	imm_node->d = std::move(d);
+	imm_node->imm = (*iter)->b->imm;
+      
+	(*iter)->b = imm_node->d;
+	iter = bb->insts.insert(iter, imm_node);
+	iter++;
+      } //if b
+    } //if DIV or REM
   }
   
-static void convert_3ac_to_2ac(std::unique_ptr<myLIR::Program>& prog){
+  static void convert_3ac_to_2ac(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+				 std::shared_ptr<myLIR::BasicBlock>& bb){
   //convert 3-address code to 2-address code
   //d = a op b; --> d = a; d = d op b;
-  for(auto& fn: prog->fns){
-    for(auto& bb: fn->bbs){
-      for(auto iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
-	if(!(*iter)->d || !(*iter)->a) continue;	
-	auto movNode = std::make_shared<myLIR::LirNode>();
-	movNode->opcode = myLIR::LirKind::LIR_MOV;
-	movNode->d = (*iter)->d;
-	movNode->b = (*iter)->a;
-	
-	(*iter)->a = (*iter)->d;
-	iter = bb->insts.insert(iter, std::move(movNode));
-	//Now, iter points movNode, so increment iter
-	iter++;
-      } //for iter
-    } //for bbs
-  } //for fn
+  if(!(*iter)->d || !(*iter)->a) return;	
+  auto movNode = std::make_shared<myLIR::LirNode>();
+  movNode->opcode = myLIR::LirKind::LIR_MOV;
+  movNode->d = (*iter)->d;
+  movNode->b = (*iter)->a;
+  
+  (*iter)->a = (*iter)->d;
+  iter = bb->insts.insert(iter, std::move(movNode));
+  //Now, iter points movNode, so increment iter
+  iter++;
 }
 
 static void setLastUse(std::shared_ptr<myLIR::LirNode>& lirNode,
@@ -173,10 +185,21 @@ static void allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
     std::copy(insts.begin(), insts.end(), bb->insts.begin());
   }
 
+  static void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog){
+    for(auto& fn: prog->fns){
+      for(auto& bb: fn->bbs){
+	for(std::list<std::shared_ptr<myLIR::LirNode>>::iterator iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
+	  insert_64bit_imm_mov(iter, bb);
+	  insert_32bit_imm_mov_for_idiv(iter, bb);
+	  convert_3ac_to_2ac(iter, bb);
+	}
+      }
+    }
+  }
+  
   static int spill_num = 0;
 void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
-  insert_64bit_imm_mov(prog);
-  convert_3ac_to_2ac(prog);
+  preprocess_x86_64(prog);
   for(auto& fn: prog->fns){
     auto listReg = collectReg(fn);
     allocate(listReg);

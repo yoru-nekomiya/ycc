@@ -143,9 +143,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     //TODO: for 128 bit
     break;
   case myLIR::LirKind::LIR_DIV:
-    std::cout << "  mov rax, " << regs[d] << '\n';
+    std::cout << "  mov rax, " << regs[d] << '\n';    
     std::cout << "  cqo\n";
-    std::cout << "  idiv " << regs[b] << '\n';
+    std::cout << "  idiv " << regs[b] << '\n';    
     std::cout << "  mov " << regs[d] << ", rax\n";
     break;
   case myLIR::LirKind::LIR_REM:
