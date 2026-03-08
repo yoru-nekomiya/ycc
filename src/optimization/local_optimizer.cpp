@@ -115,9 +115,9 @@ namespace myLIR::opt {
     return changed;
   }
 
-  int64_t calc_constant(LirKind k, const std::shared_ptr<LirNode>& inst){
+  int64_t calc_constant(const std::shared_ptr<LirNode>& inst){
     int c;
-    switch(k){
+    switch(inst->opcode){
     case LirKind::LIR_ADD:
       c = inst->a->imm + inst->b->imm; break;
     case LirKind::LIR_SUB:
@@ -151,29 +151,127 @@ namespace myLIR::opt {
     }
     return c;
   }
+
+  static void constant_folding(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+			       std::shared_ptr<myLIR::BasicBlock>& bb){
+    auto& inst = *iter;
+    const int64_t c = calc_constant(inst);
+    auto imm_node = std::make_shared<LirNode>();
+    imm_node->opcode = LirKind::LIR_IMM;
+    imm_node->d = inst->d;
+    imm_node->imm = c;
+    
+    //delete original instruction
+    iter = bb->insts.erase(iter);
+    
+    //insert MOV instruction
+    iter = bb->insts.insert(iter, imm_node);	  
+  }
+
+  template <std::integral T>
+  static bool is_abs_power_of_two(T n) {
+    // 0 は2の冪乗ではない
+    if(n == 0) return false;
+    
+    // 負の最小値 (INT_MINなど) の絶対値は、正の最大値 (INT_MAX) を超えるため
+    // 安全に扱うために符号なし型 (std::make_unsigned_t<T>) にキャストする
+    using U = std::make_unsigned_t<T>;
+    
+    U abs_n;
+    if(n < 0){
+      // n が負の場合、2の補数表現での絶対値を計算
+      // (単に -n とすると INT_MIN でオーバーフローする可能性があるためキャストが先)
+      abs_n = static_cast<U>(0) - static_cast<U>(n);
+    } else {
+      abs_n = static_cast<U>(n);
+    }
+    
+    // C++20: 立っているビットが1つだけなら true
+    return std::has_single_bit(abs_n);
+  }
+
+  template <std::integral T>
+  static int get_log2(T n) {
+    using U = std::make_unsigned_t<T>;
+    return std::countr_zero(static_cast<U>(n));
+  }
+
+  static void convert_mul_to_shift(std::shared_ptr<LirNode>& node,
+				   int64_t c,
+				   std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+				   std::shared_ptr<myLIR::BasicBlock>& bb){
+    const int num_shift = get_log2(c);
+    auto imm_node = std::make_shared<LirNode>();
+    imm_node->opcode = LirKind::LIR_IMM;
+    imm_node->imm = num_shift;
+
+    auto shift_node = std::make_shared<LirNode>();
+    shift_node->opcode = LirKind::LIR_SHL;
+    shift_node->a = node;      
+    shift_node->b = imm_node;
+      
+    if(c >= 0){
+      //d <- a * c
+      //-->
+      //d <- a << log2(c)      
+      shift_node->d = (*iter)->d;      
+
+      iter = bb->insts.erase(iter);
+      iter = bb->insts.insert(iter, shift_node);
+    } else {
+      //d <- a * c
+      //-->
+      //d2 <- a << log2(c)
+      //d <- 0 - d2
+      shift_node->d = new_reg("");
+      auto zero_node = std::make_shared<LirNode>();
+      zero_node->opcode = LirKind::LIR_IMM;
+      zero_node->imm = 0;
+      
+      auto sub_node = std::make_shared<LirNode>();
+      sub_node->opcode = LirKind::LIR_SUB;
+      sub_node->d = (*iter)->d;
+      sub_node->a = zero_node;
+      sub_node->b = shift_node->d;
+
+      iter = bb->insts.erase(iter);
+      iter = bb->insts.insert(iter, sub_node);
+      iter = bb->insts.insert(iter, shift_node);      
+      iter++;
+    }
+  }
   
   static bool peephole(std::shared_ptr<BasicBlock>& bb){
     bool changed = false;
     for(auto iter_inst = bb->insts.begin(); iter_inst != bb->insts.end(); ++iter_inst){
       auto& inst = *iter_inst;
+      
       if(is_binary_opcode(inst->opcode)
 	 && is_imm(inst->a)
 	 && is_imm(inst->b)){
-	//constant folding	
-	const int64_t c = calc_constant(inst->opcode, inst);
-	auto imm_node = std::make_shared<LirNode>();
-	imm_node->opcode = LirKind::LIR_IMM;
-	imm_node->d = inst->d;
-	imm_node->imm = c;
-	
-	//delete original instruction
-	iter_inst = bb->insts.erase(iter_inst);
-	
-	//insert MOV instruction
-	iter_inst = bb->insts.insert(iter_inst, imm_node);	  
+	//constant folding
+	constant_folding(iter_inst, bb);	
 	changed = true;
 	continue;	
+      } //if is_binary_opcode
+      
+      if(inst->opcode == LirKind::LIR_MUL){
+	if(is_imm(inst->a) && !is_imm(inst->b)){
+	  if(is_abs_power_of_two(inst->a->imm)){
+	    convert_mul_to_shift(inst->b, inst->a->imm, iter_inst, bb);
+	    changed = true;
+	    continue;
+	  }
+	}
+	if(!is_imm(inst->a) && is_imm(inst->b)){
+	  if(is_abs_power_of_two(inst->b->imm)){
+	    convert_mul_to_shift(inst->a, inst->b->imm, iter_inst, bb);
+	    changed = true;
+	    continue;
+	  }
+	}
       }
+      
     } //for inst
     return changed;
   }

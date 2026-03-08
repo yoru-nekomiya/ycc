@@ -18,6 +18,8 @@
 #include <stack>
 #include <format>
 #include <filesystem>
+#include <bit>     // std::has_single_bit
+#include <concepts> // std::integral
 
 //---------------------------
 //Lunaria Utility

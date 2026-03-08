@@ -73,7 +73,6 @@ int main(int argc, char* argv[]){
     auto progHir = myHIR::generateHirNode(prog);
     
     auto progLir = myLIR::generateLirNode(progHir);
-    
     myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);
     if(config.emit_lir){
       dumpLIR(progLir, replace_file_extension(config.input_file, "lir"));

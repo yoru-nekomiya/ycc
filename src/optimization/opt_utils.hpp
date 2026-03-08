@@ -2,9 +2,6 @@
 #define OPT_UTILS_HPP
 
 #include "../ycc.hpp"
-#include <memory>
-#include <format>
-#include <string_view>
 
 namespace myLIR::opt {
   bool optimize_bb(std::shared_ptr<BasicBlock>& bb);
