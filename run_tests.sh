@@ -1,6 +1,7 @@
 #!/bin/sh
 
 YCC=./build/ycc
+YCC_OPT="-opt -emit-lir -emit-cfg"
 TEST_DIR=./tests
 LIB="$TEST_DIR"/testlib.s
 PASS=0
@@ -38,7 +39,7 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     #echo "=== Testing $file ==="
 
     #compile by ycc
-    $YCC "$file" > "$asm"
+    $YCC $YCC_OPT "$file" > "$asm"
     if [ $? -ne 0 ]; then
 	printf "[${RED}FAIL${RESET}] %s (compile error)\n" "$rel_path"
 	FAIL=$((FAIL+1))

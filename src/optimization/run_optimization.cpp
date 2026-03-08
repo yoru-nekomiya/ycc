@@ -3,18 +3,21 @@
 
 namespace myLIR::opt {
   void optimize(std::unique_ptr<Program>& prog,
-		const std::string& filename){
-
-    for(auto& fn: prog->fns){
-      for(auto& bb: fn->bbs){
-	bool optimized = optimize_bb(bb);
-	while(optimized){
-	  optimized = optimize_bb(bb);
+		const std::string& filename,
+		bool opt,
+		bool emit_cfg){
+    if(opt){
+      for(auto& fn: prog->fns){
+	for(auto& bb: fn->bbs){
+	  bool optimized = optimize_bb(bb);
+	  while(optimized){
+	    optimized = optimize_bb(bb);
+	  }
 	}
       }
     }
     
     constructCFGs(prog);
-    printCFGs(prog, filename);
+    if(emit_cfg) printCFGs(prog, filename);
   }
 } //namespace myLIR::opt

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <deque>
 #include <memory>
 #include <cassert>
@@ -556,7 +557,9 @@ struct LirNode {
 
   namespace opt {
     void optimize(std::unique_ptr<Program>& prog,
-		  const std::string& filename);
+		  const std::string& filename,
+		  bool opt,
+		  bool emit_cfg);
   } //namespace opt
   
 } //namespace myLIR
