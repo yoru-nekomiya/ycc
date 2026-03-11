@@ -174,6 +174,14 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     }
     std::cout << std::format("  shl {}, cl\n", regs[d]);
     break;
+  case myLIR::LirKind::LIR_SHR:
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov cl, {}\n", regs8[b]);
+    }
+    std::cout << std::format("  shr {}, cl\n", regs[d]);
+    break;
   case myLIR::LirKind::LIR_SAR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
       std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);

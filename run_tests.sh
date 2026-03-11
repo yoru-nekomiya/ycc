@@ -2,6 +2,7 @@
 
 YCC=./build/ycc
 YCC_OPT="-opt -emit-lir -emit-cfg"
+#YCC_OPT="-emit-lir -emit-cfg"
 TEST_DIR=./tests
 LIB="$TEST_DIR"/testlib.s
 PASS=0

@@ -15,6 +15,7 @@
 #include <vector>
 #include <climits>
 #include <cstdint>
+#include <cstdlib>
 #include <stack>
 #include <format>
 #include <filesystem>

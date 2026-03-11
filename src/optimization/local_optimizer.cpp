@@ -116,7 +116,7 @@ namespace myLIR::opt {
   }
 
   int64_t calc_constant(const std::shared_ptr<LirNode>& inst){
-    int c;
+    int64_t c;
     switch(inst->opcode){
     case LirKind::LIR_ADD:
       c = inst->a->imm + inst->b->imm; break;
@@ -139,7 +139,7 @@ namespace myLIR::opt {
     case LirKind::LIR_SHL:
       c = inst->a->imm << inst->b->imm; break;
     case LirKind::LIR_SHR:
-      c = inst->a->imm >> inst->b->imm; break;
+      c = static_cast<int64_t>(static_cast<uint64_t>(inst->a->imm) >> inst->b->imm); break;
     case LirKind::LIR_SAR:
       c = inst->a->imm >> inst->b->imm; break;
     case LirKind::LIR_BITOR:
@@ -192,6 +192,7 @@ namespace myLIR::opt {
 
   template <std::integral T>
   static int get_log2(T n) {
+    assert(n != 0);
     using U = std::make_unsigned_t<T>;
     return std::countr_zero(static_cast<U>(n));
   }
@@ -240,6 +241,173 @@ namespace myLIR::opt {
       iter++;
     }
   }
+
+  static bool reduce_mul(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+			 std::shared_ptr<myLIR::BasicBlock>& bb){
+    auto& inst = *iter;
+    bool changed = false;
+    if(is_imm(inst->a) && !is_imm(inst->b)){
+      if(is_abs_power_of_two(inst->a->imm)){
+	convert_mul_to_shift(inst->b, inst->a->imm, iter, bb);
+	changed = true;
+      }
+    }
+    else if(!is_imm(inst->a) && is_imm(inst->b)){
+      if(is_abs_power_of_two(inst->b->imm)){
+	convert_mul_to_shift(inst->a, inst->b->imm, iter, bb);
+	changed = true;
+      }
+    }
+    return changed;
+  }
+
+  std::shared_ptr<LirNode> make_node(LirKind k){
+    auto n = std::make_shared<LirNode>();
+    n->opcode = k;
+    return n;
+  }
+  
+  std::shared_ptr<LirNode> make_imm_node(int64_t imm){
+    auto n = std::make_shared<LirNode>();
+    n->opcode = LirKind::LIR_IMM;
+    n->imm = imm;
+    return n;
+  }
+
+  static void convert_div_and_rem_to_shift(std::shared_ptr<LirNode>& x,
+					   int64_t c,
+					   std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+					   std::shared_ptr<myLIR::BasicBlock>& bb){
+    //d = x / c
+    //-->
+    //k = log2(|c|)
+    //temp = x >> 63 (SAR)
+    //bias = temp >>> (64-k) (SHR)
+    //x2 = x + bias
+    //d = x2 >> k (SAR)
+
+    //d = x % c
+    //-->
+    //k = log2(|c|)
+    //temp = x >> 63 (SAR)
+    //bias = temp >>> (64-k) (SHR)
+    //x2 = x + bias
+    //mask = |c| - 1
+    //x3 = x2 & mask
+    //d = x3 - bias
+    const LirKind kind = (*iter)->opcode;
+    const int k = get_log2(c);
+    const int mask = std::abs(c) - 1;
+    
+    auto sar_node_1 = make_node(LirKind::LIR_SAR);
+    sar_node_1->d = new_reg("");
+    sar_node_1->a = x;
+    sar_node_1->b = make_imm_node(63);
+
+    auto shr_node = make_node(LirKind::LIR_SHR);
+    shr_node->d = new_reg("");
+    shr_node->a = sar_node_1->d;
+    shr_node->b = make_imm_node(64-k);
+
+    auto add_node = make_node(LirKind::LIR_ADD);
+    add_node->d = new_reg("");
+    add_node->a = x;
+    add_node->b = shr_node->d;
+
+    if(kind == LirKind::LIR_DIV){
+      auto sar_node_2 = make_node(LirKind::LIR_SAR);
+      sar_node_2->a = add_node->d;
+      sar_node_2->b = make_imm_node(k);
+      
+      if(c >= 0){
+	sar_node_2->d = (*iter)->d;
+	
+	iter = bb->insts.erase(iter);
+	iter = bb->insts.insert(iter, sar_node_2);
+	iter = bb->insts.insert(iter, add_node);
+	iter = bb->insts.insert(iter, shr_node);
+	iter = bb->insts.insert(iter, sar_node_1);
+	std::advance(iter, 3);
+      } else {
+	//d2 = x2 >> k (SAR)
+	//d = 0-d2 
+	sar_node_2->d = new_reg("");
+	
+	auto sub_node = make_node(LirKind::LIR_SUB);
+	sub_node->d = (*iter)->d;
+	sub_node->a = make_imm_node(0);
+	sub_node->b = sar_node_2->d;
+	
+	iter = bb->insts.erase(iter);
+	iter = bb->insts.insert(iter, sub_node);
+	iter = bb->insts.insert(iter, sar_node_2);
+	iter = bb->insts.insert(iter, add_node);
+	iter = bb->insts.insert(iter, shr_node);
+	iter = bb->insts.insert(iter, sar_node_1);
+	std::advance(iter, 4);
+      }
+    }    
+    else if(kind == LirKind::LIR_REM){
+      auto and_node = make_node(LirKind::LIR_BITAND);
+      and_node->d = new_reg("");
+      and_node->a = add_node->d;
+      and_node->b = make_imm_node(mask);
+
+      auto sub_node = make_node(LirKind::LIR_SUB);
+      sub_node->d = (*iter)->d;
+      sub_node->a = and_node->d;
+      sub_node->b = shr_node->d;
+
+      iter = bb->insts.erase(iter);
+      iter = bb->insts.insert(iter, sub_node);
+      iter = bb->insts.insert(iter, and_node);
+      iter = bb->insts.insert(iter, add_node);
+      iter = bb->insts.insert(iter, shr_node);
+      iter = bb->insts.insert(iter, sar_node_1);
+      std::advance(iter, 4);
+    }    
+  }
+  
+  static bool reduce_div_and_rem(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+				 std::shared_ptr<myLIR::BasicBlock>& bb){
+    auto& inst = *iter;
+    bool changed = false;
+    if(!is_imm(inst->a) && is_imm(inst->b)){
+      if(inst->b->imm == 1 || inst->b->imm == -1){
+	if(inst->opcode == LirKind::LIR_DIV){
+	  //d = x / 1  --> d = x
+	  //d = x / -1 --> d = 0-x
+	  if(inst->b->imm == 1){
+	    auto mov_node = make_node(LirKind::LIR_MOV);
+	    mov_node->d = inst->d;
+	    mov_node->b = inst->a;
+	    iter = bb->insts.erase(iter);
+	    iter = bb->insts.insert(iter, mov_node);
+	  } else if(inst->b->imm == -1){
+	    auto sub_node = make_node(LirKind::LIR_SUB);
+	    sub_node->d = inst->d;
+	    sub_node->a = make_imm_node(0);
+	    sub_node->b = inst->a;
+	    iter = bb->insts.erase(iter);
+	    iter = bb->insts.insert(iter, sub_node);
+	  }
+	} else if(inst->opcode == LirKind::LIR_REM){
+	  //d = x % 1   --> d = 0
+	  //d = x % -1  --> d = 0
+	  auto imm_node = make_imm_node(0);
+	  imm_node->d = inst->d;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, imm_node);
+	}
+	changed = true;
+      } 
+      else if(is_abs_power_of_two(inst->b->imm)){
+	convert_div_and_rem_to_shift(inst->a, inst->b->imm, iter, bb);
+	changed = true;
+      }
+    }
+    return changed;
+  }
   
   static bool peephole(std::shared_ptr<BasicBlock>& bb){
     bool changed = false;
@@ -255,22 +423,18 @@ namespace myLIR::opt {
 	continue;	
       } //if is_binary_opcode
       
-      if(inst->opcode == LirKind::LIR_MUL){
-	if(is_imm(inst->a) && !is_imm(inst->b)){
-	  if(is_abs_power_of_two(inst->a->imm)){
-	    convert_mul_to_shift(inst->b, inst->a->imm, iter_inst, bb);
-	    changed = true;
-	    continue;
-	  }
-	}
-	if(!is_imm(inst->a) && is_imm(inst->b)){
-	  if(is_abs_power_of_two(inst->b->imm)){
-	    convert_mul_to_shift(inst->a, inst->b->imm, iter_inst, bb);
-	    changed = true;
-	    continue;
-	  }
-	}
-      }
+      if(inst->opcode == LirKind::LIR_MUL){	
+	const bool c = reduce_mul(iter_inst, bb);
+	changed = changed || c;
+	if(c) continue;
+      } //if LIR_MUL
+
+      if(inst->opcode == LirKind::LIR_DIV
+	 || inst->opcode == LirKind::LIR_REM){
+	const bool c = reduce_div_and_rem(iter_inst, bb);
+	changed = changed || c;
+	if(c) continue;
+      } //if LIR_DIV
       
     } //for inst
     return changed;
