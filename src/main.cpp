@@ -73,12 +73,12 @@ int main(int argc, char* argv[]){
     auto progHir = myHIR::generateHirNode(prog);
     
     auto progLir = myLIR::generateLirNode(progHir);
-    myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);
+    myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);    
+    myRegAlloc::allocateRegister_x86_64(progLir);    
+    myCodeGen::gen_x86_64(progLir);
     if(config.emit_lir){
       dumpLIR(progLir, replace_file_extension(config.input_file, "lir"));
     }
-    myRegAlloc::allocateRegister_x86_64(progLir);  
-    myCodeGen::gen_x86_64(progLir);
   } catch(const std::exception& e){
     std::cerr << e.what() << std::endl;
     return 1;

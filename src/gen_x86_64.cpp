@@ -102,7 +102,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->b->imm);
       }
     } else {
-      std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
+      if(d != b)
+	std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
     }
     break;
   case myLIR::LirKind::LIR_IMM:

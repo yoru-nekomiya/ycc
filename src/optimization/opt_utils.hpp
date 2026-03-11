@@ -8,6 +8,8 @@ namespace myLIR::opt {
   void constructCFGs(std::unique_ptr<Program>& prog);
   void printCFGs(std::unique_ptr<Program>& prog,
 		 const std::string& filename);
+  std::shared_ptr<LirNode> make_node(LirKind k);
+  std::shared_ptr<LirNode> make_imm_node(int64_t imm);
 } //namespace myLIR::opt
 
 #endif

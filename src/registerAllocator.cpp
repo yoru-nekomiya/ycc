@@ -211,6 +211,7 @@ void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
       const std::string name = "__tmp_lvar_spill__" + std::to_string(spill_num++);
       const auto type = Lunaria::pointer_to(Lunaria::int_type);
       auto lvar = std::make_shared<Lunaria::Var>(name, type, true);
+      lvar->id = fn->localVars.size() + 1;
       reg->lvar = lvar;
       fn->localVars.insert(lvar);
       std::cerr << "--- spilled register in function " << fn->name << std::endl;

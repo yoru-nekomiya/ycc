@@ -247,31 +247,36 @@ namespace myLIR::opt {
     auto& inst = *iter;
     bool changed = false;
     if(is_imm(inst->a) && !is_imm(inst->b)){
-      if(is_abs_power_of_two(inst->a->imm)){
+      if(inst->a->imm == 1){
+	//d = 1 * b --> d = b
+	auto mov_node = make_node(LirKind::LIR_MOV);
+	mov_node->d = inst->d;
+	mov_node->b = inst->b;
+	iter = bb->insts.erase(iter);
+	iter = bb->insts.insert(iter, mov_node);
+	changed = true;
+      }
+      else if(is_abs_power_of_two(inst->a->imm)){
 	convert_mul_to_shift(inst->b, inst->a->imm, iter, bb);
 	changed = true;
       }
     }
     else if(!is_imm(inst->a) && is_imm(inst->b)){
-      if(is_abs_power_of_two(inst->b->imm)){
+      if(inst->b->imm == 1){
+	//d = a * 1 --> d = a
+	auto mov_node = make_node(LirKind::LIR_MOV);
+	mov_node->d = inst->d;
+	mov_node->b = inst->a;
+	iter = bb->insts.erase(iter);
+	iter = bb->insts.insert(iter, mov_node);
+	changed = true;
+      }
+      else if(is_abs_power_of_two(inst->b->imm)){
 	convert_mul_to_shift(inst->a, inst->b->imm, iter, bb);
 	changed = true;
       }
     }
     return changed;
-  }
-
-  std::shared_ptr<LirNode> make_node(LirKind k){
-    auto n = std::make_shared<LirNode>();
-    n->opcode = k;
-    return n;
-  }
-  
-  std::shared_ptr<LirNode> make_imm_node(int64_t imm){
-    auto n = std::make_shared<LirNode>();
-    n->opcode = LirKind::LIR_IMM;
-    n->imm = imm;
-    return n;
   }
 
   static void convert_div_and_rem_to_shift(std::shared_ptr<LirNode>& x,
@@ -439,6 +444,35 @@ namespace myLIR::opt {
     } //for inst
     return changed;
   }
+
+  static bool
+  eliminate_redundant_load_from_stack(std::shared_ptr<BasicBlock>& bb){
+    //Lunaria assumes that rbp keeps the same value during the execution of a function.
+    //Load_lvar: v11 <- [rbp-8]
+    //Load_lvar: v12 <- [rbp-8]
+    //-->
+    //Load_lvar: v11 <- [rbp-8]
+    //v12 <- v11
+    bool changed = false;
+    std::unordered_map<int, std::shared_ptr<LirNode>> table;
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
+      auto& inst = *iter;
+      if(inst->opcode == LirKind::LIR_LVAR){
+	if(table.contains(inst->lvar->offset)){
+	  auto mov_node = make_node(LirKind::LIR_MOV);
+	  mov_node->d = inst->d;
+	  mov_node->b = table.find(inst->lvar->offset)->second;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	} else {
+	  //register offset
+	  table.insert(std::make_pair(inst->lvar->offset, inst->d));
+	}
+      } //if LIR_LVAR
+    } //for
+    return changed;
+  }
   
   bool optimize_bb(std::shared_ptr<BasicBlock>& bb){
     //changed IR --> return true
@@ -446,6 +480,7 @@ namespace myLIR::opt {
     bool changed = false;
     changed = changed || peephole(bb);
     changed = changed || constant_propagation(bb);
+    changed = changed || eliminate_redundant_load_from_stack(bb);
     return changed;
   }
 }

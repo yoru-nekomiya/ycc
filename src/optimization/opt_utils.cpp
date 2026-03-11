@@ -124,5 +124,18 @@ namespace myLIR::opt {
       f.close();
     } //for fn
   }
+
+  std::shared_ptr<LirNode> make_node(LirKind k){
+    auto n = std::make_shared<LirNode>();
+    n->opcode = k;
+    return n;
+  }
+
+  std::shared_ptr<LirNode> make_imm_node(int64_t imm){
+    auto n = std::make_shared<LirNode>();
+    n->opcode = LirKind::LIR_IMM;
+    n->imm = imm;
+    return n;
+  }
   
 } //namespace myLIR::opt
