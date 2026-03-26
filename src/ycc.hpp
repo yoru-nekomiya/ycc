@@ -545,6 +545,21 @@ struct LirNode {
     std::list<std::shared_ptr<BasicBlock>> bbs;
     std::shared_ptr<BasicBlock> start_node;
     std::shared_ptr<BasicBlock> end_node;
+
+    std::list<std::shared_ptr<BasicBlock>> get_topological_sort();
+    std::list<std::shared_ptr<BasicBlock>> get_reverse_topological_sort();
+
+  private:
+    std::list<std::shared_ptr<BasicBlock>> topo_order;
+    std::list<std::shared_ptr<BasicBlock>> reverse_topo_order;
+    void calc_topological_sort();
+    void calc_reverse_topological_sort();
+    void depth_first_search(const std::shared_ptr<BasicBlock>& bb,
+			    std::list<std::shared_ptr<BasicBlock>>& order,
+			    std::unordered_set<int>& mark);
+    void depth_first_search_reverse(const std::shared_ptr<BasicBlock>& bb,
+				    std::list<std::shared_ptr<BasicBlock>>& order,
+				    std::unordered_set<int>& mark);
   };
 
   struct Program {

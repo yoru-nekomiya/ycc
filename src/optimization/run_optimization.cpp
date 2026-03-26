@@ -8,16 +8,28 @@ namespace myLIR::opt {
 		bool emit_cfg){
     if(opt){
       for(auto& fn: prog->fns){
+	//local optimization
 	for(auto& bb: fn->bbs){
-	  bool optimized = optimize_bb(bb);
-	  while(optimized){
+	  bool optimized = false;
+	  do {
 	    optimized = optimize_bb(bb);
-	  }
-	}
-      }
-    }
+	  } while(optimized);
+	} //for bb	
+      } //for fn
+    } //if opt
     
     constructCFGs(prog);
+
+    if(opt){
+      for(auto& fn: prog->fns){
+	//global optimization
+	bool optimized = false;
+	do {
+	  optimized = optimize_fn(fn);
+	} while(optimized);
+      }
+    } //if opt
+    
     if(emit_cfg) printCFGs(prog, filename);
   }
 } //namespace myLIR::opt

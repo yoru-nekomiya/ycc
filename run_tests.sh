@@ -40,7 +40,6 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     #echo "=== Testing $file ==="
 
     #compile by ycc
-    #$YCC -emit-lir "$file" > "$asm"
     $YCC $YCC_OPT "$file" > "$asm"
     if [ $? -ne 0 ]; then
 	printf "[${RED}FAIL${RESET}] %s (compile error)\n" "$rel_path"

@@ -279,13 +279,25 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     */
     const int size = lirNode->type_base_size;
     if(size == 1){
-      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
-    } else if(size == 2 || size == 4 || size == 8){      
-      std::cout << std::format("  lea {}, [{}+{}*{}]\n",
-			       regs[d], regs[d], regs[b], size);
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm);
+      } else {
+	std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+      }
+    } else if(size == 2 || size == 4 || size == 8){
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm * size);
+      } else {
+	std::cout << std::format("  lea {}, [{}+{}*{}]\n",
+				 regs[d], regs[d], regs[b], size);
+      }
     } else {
-      std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
-      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm * lirNode->type_base_size);
+      } else {
+	std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
+	std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+      }
     }
     break;
   }
@@ -296,14 +308,26 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     */
     const int size = lirNode->type_base_size;
     if(size == 1){
-      std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
-    } else if(size == 2 || size == 4 || size == 8){      
-      std::cout << std::format("  neg {}\n", regs[b]);
-      std::cout << std::format("  lea {}, [{}+{}*{}]\n",
-			       regs[d], regs[d], regs[b], size);
-    } else {      
-      std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
-      std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  sub {}, {}\n", regs[d], lirNode->b->imm);
+      } else {
+	std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+      }
+    } else if(size == 2 || size == 4 || size == 8){
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  sub {}, {}\n", regs[d], lirNode->b->imm * size);
+      } else {
+	std::cout << std::format("  neg {}\n", regs[b]);
+	std::cout << std::format("  lea {}, [{}+{}*{}]\n",
+				 regs[d], regs[d], regs[b], size);
+      }
+    } else {
+      if(is_imm(lirNode->b) && is_int32(lirNode->b)){
+	std::cout << std::format("  sub {}, {}\n", regs[d], lirNode->b->imm * lirNode->type_base_size);
+      } else {
+	std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
+	std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+      }
     }
     break;
   }

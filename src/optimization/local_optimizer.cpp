@@ -11,27 +11,6 @@ namespace myLIR {
 }
 
 namespace myLIR::opt {
-  static bool is_binary_opcode(LirKind k){
-    return k == LirKind::LIR_ADD
-      || k == LirKind::LIR_SUB
-      || k == LirKind::LIR_MUL
-      || k == LirKind::LIR_DIV
-      || k == LirKind::LIR_REM
-      || k == LirKind::LIR_EQ
-      || k == LirKind::LIR_NE
-      || k == LirKind::LIR_LT
-      || k == LirKind::LIR_LE
-      || k == LirKind::LIR_PTR_ADD
-      || k == LirKind::LIR_PTR_SUB
-      || k == LirKind::LIR_PTR_DIFF
-      || k == LirKind::LIR_SHL
-      || k == LirKind::LIR_SHR
-      || k == LirKind::LIR_SAR
-      || k == LirKind::LIR_BITOR
-      || k == LirKind::LIR_BITAND
-      || k == LirKind::LIR_BITXOR;
-  }
-
   static bool is_unary_opcode(LirKind k){
     return k == LirKind::LIR_MOV
       || k == LirKind::LIR_STORE
@@ -471,6 +450,85 @@ namespace myLIR::opt {
 	}
       } //if LIR_LVAR
     } //for
+    return changed;
+  }
+
+  static bool dead_code_elimination(std::shared_ptr<BasicBlock>& bb){
+    bool changed = false;
+    std::unordered_set<std::shared_ptr<LirNode>, LirSharedPtrHash> live;
+    for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); ++iter){
+      auto& inst = *iter;
+      
+      //delete inst if it is dead
+      if(inst->opcode != LirKind::LIR_STORE
+	 && inst->opcode != LirKind::LIR_STORE_SPILL
+	 && inst->opcode != LirKind::LIR_STORE_ARG
+	 && inst->opcode != LirKind::LIR_RETURN
+	 && inst->opcode != LirKind::LIR_BR
+	 && inst->opcode != LirKind::LIR_JMP
+	 && inst->opcode != LirKind::LIR_FUNCALL
+	 && inst->opcode != LirKind::LIR_CAST
+	 && !live.contains(inst->d)){
+	iter = std::make_reverse_iterator(bb->insts.erase(std::next(iter).base()));
+	iter--;
+	changed = true;
+	continue;
+      }
+
+      if(inst->opcode == LirKind::LIR_IMM
+	 || inst->opcode == LirKind::LIR_LABEL_ADDR){
+	live.erase(inst->d);
+	continue;
+      }
+      
+      if(is_binary_opcode(inst->opcode)){
+	live.erase(inst->d);
+	if(!is_imm(inst->a)) live.insert(inst->a);
+	if(!is_imm(inst->b)) live.insert(inst->b);
+	continue;
+      } //if is_binary_opcode
+
+      if(inst->opcode == LirKind::LIR_MOV
+	 || inst->opcode == LirKind::LIR_LOAD){
+	live.erase(inst->d);
+	if(!is_imm(inst->b)) live.insert(inst->b);
+	continue;
+      }
+
+      if(inst->opcode == LirKind::LIR_BR){
+	if(!is_imm(inst->b)) live.insert(inst->b);
+	continue;
+      }
+
+      if(inst->opcode == LirKind::LIR_STORE){
+	live.insert(inst->a);
+	if(!is_imm(inst->b)) live.insert(inst->b);
+	continue;
+      }
+
+      if(inst->opcode == LirKind::LIR_STORE_SPILL){
+	live.insert(inst->a);
+	continue;
+      }
+
+      if(inst->opcode == LirKind::LIR_RETURN){
+	if(inst->a != nullptr){
+	  if(!is_imm(inst->a)) live.insert(inst->a);
+	  continue;
+	}
+      }
+
+      if(inst->opcode == LirKind::LIR_FUNCALL){
+	live.erase(inst->d);
+	for(int i = 0; i < inst->args.size(); i++){
+	  if(!is_imm(inst->args[i])) {
+	    live.insert(inst->args[i]);
+	  }
+	}
+	continue;
+      }
+      
+    } //for iter
     return changed;
   }
   

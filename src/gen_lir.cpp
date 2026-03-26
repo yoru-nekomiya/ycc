@@ -853,7 +853,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
 	  s = std::format("BBARG: v{} <- v{}\n", i->bb1->param->vn, i->bbarg->vn);
 	}
       }
-      ret = s + std::format("jmp BB_{}", i->bb1->label);
+      ret = s + std::format("  jmp BB_{}", i->bb1->label);
       break;
     }
     case LirKind::LIR_FUNCALL: {

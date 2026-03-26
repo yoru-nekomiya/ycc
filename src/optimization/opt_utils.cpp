@@ -28,12 +28,12 @@ namespace myLIR::opt {
     
     for(auto& fn: prog->fns){
       auto s = std::make_shared<BasicBlock>();
-      s->label = 0;
+      s->label = -1;
       s->is_start_node = true;
       s->is_end_node = false;
 
       auto e = std::make_shared<BasicBlock>();
-      e->label = 0;
+      e->label = -2;
       e->is_start_node = false;
       e->is_end_node = true;
 
@@ -137,5 +137,83 @@ namespace myLIR::opt {
     n->imm = imm;
     return n;
   }
+
+  bool is_binary_opcode(LirKind k){
+    return k == LirKind::LIR_ADD
+      || k == LirKind::LIR_SUB
+      || k == LirKind::LIR_MUL
+      || k == LirKind::LIR_DIV
+      || k == LirKind::LIR_REM
+      || k == LirKind::LIR_EQ
+      || k == LirKind::LIR_NE
+      || k == LirKind::LIR_LT
+      || k == LirKind::LIR_LE
+      || k == LirKind::LIR_PTR_ADD
+      || k == LirKind::LIR_PTR_SUB
+      || k == LirKind::LIR_PTR_DIFF
+      || k == LirKind::LIR_SHL
+      || k == LirKind::LIR_SHR
+      || k == LirKind::LIR_SAR
+      || k == LirKind::LIR_BITOR
+      || k == LirKind::LIR_BITAND
+      || k == LirKind::LIR_BITXOR;
+  }
   
 } //namespace myLIR::opt
+
+namespace myLIR {
+  void Function::depth_first_search(const std::shared_ptr<BasicBlock>& bb,
+				    std::list<std::shared_ptr<BasicBlock>>& order,
+				    std::unordered_set<int>& mark){
+    if(!mark.contains(bb->label)){
+      mark.insert(bb->label);    
+      for(const auto& s: bb->succ){
+	depth_first_search(s, order, mark);
+      } //for    
+      order.push_front(bb);
+    } //if
+  }
+  
+  void Function::calc_topological_sort(){
+    //This function calculates topological sort order of basic blocks on an acyclic graph
+    //or quasi-topological sort order of basic blocks on a cyclic graph
+    this->topo_order.clear();
+    std::unordered_set<int> mark = {};
+    depth_first_search(this->start_node, this->topo_order, mark);  
+    return; 
+  }
+
+  std::list<std::shared_ptr<BasicBlock>> Function::get_topological_sort(){
+    //TODO: If a CFG has not been changed since it was previously calculated, this function should return the previous value without recalculating.
+    calc_topological_sort();
+    return this->topo_order;
+  }
+
+  void Function::depth_first_search_reverse(const std::shared_ptr<BasicBlock>& bb,
+					    std::list<std::shared_ptr<BasicBlock>>& order,
+					    std::unordered_set<int>& mark){
+    if(!mark.contains(bb->label)){
+      mark.insert(bb->label);
+      for(const auto& p: bb->pred){
+	depth_first_search_reverse(p, order, mark);
+      } //for
+      order.push_front(bb);
+    } //if
+  }
+  
+  void Function::calc_reverse_topological_sort(){
+    //This function reverse-topological sort order of basic blocks on an acyclic graph
+    //or quasi-reverse-topological sort order of basic blocks on a cyclic graph
+    this->reverse_topo_order.clear();
+    std::unordered_set<int> mark = {};
+    depth_first_search_reverse(this->end_node, this->reverse_topo_order, mark);
+    return;
+  }
+
+  std::list<std::shared_ptr<BasicBlock>> Function::get_reverse_topological_sort(){
+    //TODO: If a CFG has not been changed since it was previously calculated, this function should return the previous value without recalculating.
+    calc_reverse_topological_sort();
+    return this->reverse_topo_order;
+  }
+  
+} //namespace myLIR
