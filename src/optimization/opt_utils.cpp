@@ -142,6 +142,7 @@ namespace myLIR::opt {
     return k == LirKind::LIR_ADD
       || k == LirKind::LIR_SUB
       || k == LirKind::LIR_MUL
+      || k == LirKind::LIR_MULHIGH
       || k == LirKind::LIR_DIV
       || k == LirKind::LIR_REM
       || k == LirKind::LIR_EQ

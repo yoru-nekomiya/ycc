@@ -133,7 +133,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     /*
     std::cout << "  mov rax, " << regs[b] << std::endl;
     std::cout << "  imul " << regs[d] << std::endl;
-    std::cout << "  mov " << regs[d] << ", rax" << std::endl;*/
+    std::cout << "  mov " << regs[d] << ", rax" << std::endl;
+    */
     //for 64 bit
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
       std::cout << std::format("  imul {}, {}, {}\n", regs[d], regs[d], lirNode->b->imm);
@@ -142,6 +143,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       std::cout << std::format("  imul {}, {}\n", regs[d], regs[b]);
     }
     //TODO: for 128 bit
+    break;
+  case myLIR::LirKind::LIR_MULHIGH:    
+    std::cout << std::format("  mov rax, {}\n", regs[b]);
+    std::cout << std::format("  imul {}\n", regs[d]);
+    std::cout << std::format("  mov {}, rdx\n", regs[d]);
     break;
   case myLIR::LirKind::LIR_DIV:
     std::cout << "  mov rax, " << regs[d] << '\n';    

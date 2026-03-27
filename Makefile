@@ -1,6 +1,6 @@
 CXX=g++
 CXXFLAGS=-g -static -std=c++20
-SRCS=$(wildcard src/*.cpp) $(wildcard src/optimization/*.cpp) $(wildcard src/optimization/global/*.cpp)
+SRCS=$(wildcard src/*.cpp) $(wildcard src/optimization/*.cpp) $(wildcard src/optimization/global/*.cpp) $(wildcard src/optimization/local/*.cpp)
 OBJS=$(patsubst src/%.cpp,build/%.o,$(SRCS))
 TARGET=build/ycc
 

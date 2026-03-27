@@ -459,6 +459,7 @@ enum class LirKind {
   LIR_ADD,
   LIR_SUB,
   LIR_MUL,
+  LIR_MULHIGH,
   LIR_DIV,
   LIR_REM,
   LIR_LT, //<
