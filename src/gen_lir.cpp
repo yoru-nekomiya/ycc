@@ -757,6 +757,9 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     case LirKind::LIR_MULHIGH:
       ret = std::format("v{} <- v{} * v{} (HIGH)", d, a, b);
       break;
+    case LirKind::LIR_MAD:
+      ret = std::format("v{} <- v{} + v{} * {}", d, a, b, i->scale);
+      break;
     case LirKind::LIR_DIV:
       ret = std::format("v{} <- v{} / v{}", d, a, b);
       break;

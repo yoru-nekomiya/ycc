@@ -144,10 +144,13 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     }
     //TODO: for 128 bit
     break;
-  case myLIR::LirKind::LIR_MULHIGH:    
+  case myLIR::LirKind::LIR_MULHIGH:
     std::cout << std::format("  mov rax, {}\n", regs[b]);
     std::cout << std::format("  imul {}\n", regs[d]);
     std::cout << std::format("  mov {}, rdx\n", regs[d]);
+    break;
+  case myLIR::LirKind::LIR_MAD:
+    std::cout << std::format("  lea {}, [{}+{}*{}]\n", regs[d], regs[d], regs[b], lirNode->scale);
     break;
   case myLIR::LirKind::LIR_DIV:
     std::cout << "  mov rax, " << regs[d] << '\n';    
@@ -175,11 +178,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_SHL:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+      if(lirNode->b->imm == 1){
+	//std::cout << std::format("  lea {}, [{}+{}]\n", regs[d], regs[d], regs[d]);
+	std::cout << std::format("  add {}, {}\n", regs[d], regs[d]);
+      } else {
+	std::cout << std::format("  shl {}, {}\n", regs[d], lirNode->b->imm);
+      }
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
+      std::cout << std::format("  shl {}, cl\n", regs[d]);
     }
-    std::cout << std::format("  shl {}, cl\n", regs[d]);
     break;
   case myLIR::LirKind::LIR_SHR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){

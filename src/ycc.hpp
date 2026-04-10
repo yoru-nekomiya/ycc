@@ -460,6 +460,7 @@ enum class LirKind {
   LIR_SUB,
   LIR_MUL,
   LIR_MULHIGH,
+  LIR_MAD,
   LIR_DIV,
   LIR_REM,
   LIR_LT, //<
@@ -508,6 +509,7 @@ struct LirNode {
   std::shared_ptr<LirNode> a; //left source operand
   std::shared_ptr<LirNode> b; //right source operand
   long long imm;
+  int scale;
 
   int vn; //virtual register number
   int rn; //real register number
@@ -529,7 +531,7 @@ struct LirNode {
   int type_base_size;
 
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
-	     a(nullptr), b(nullptr), imm(-1),
+	     a(nullptr), b(nullptr), imm(-1), scale(0),
 	     vn(-1), rn(-1), def(0), lastUse(0), spill(false),
 	     lvar(nullptr), name(""),
 	     bb1(nullptr), bb2(nullptr), bbarg(nullptr),
