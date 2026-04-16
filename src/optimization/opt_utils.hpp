@@ -9,7 +9,10 @@ namespace myLIR::opt {
   void constructCFGs(std::unique_ptr<Program>& prog);
   void printCFGs(std::unique_ptr<Program>& prog,
 		 const std::string& filename);
-  std::shared_ptr<LirNode> make_node(LirKind k);
+  std::shared_ptr<LirNode> make_node(LirKind k,
+				     const std::shared_ptr<LirNode>& d,
+				     const std::shared_ptr<LirNode>& a,
+				     const std::shared_ptr<LirNode>& b);
   std::shared_ptr<LirNode> make_imm_node(int64_t imm);
   bool is_binary_opcode(LirKind k);
 

@@ -125,9 +125,16 @@ namespace myLIR::opt {
     } //for fn
   }
 
-  std::shared_ptr<LirNode> make_node(LirKind k){
+  std::shared_ptr<LirNode>
+  make_node(LirKind k,
+	    const std::shared_ptr<LirNode>& d,
+	    const std::shared_ptr<LirNode>& a,
+	    const std::shared_ptr<LirNode>& b){
     auto n = std::make_shared<LirNode>();
     n->opcode = k;
+    n->d = d;
+    n->a = a;
+    n->b = b;
     return n;
   }
 

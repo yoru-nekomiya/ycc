@@ -97,7 +97,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_MOV:
     if(is_imm(lirNode->b)){
       if(is_int32(lirNode->b)){
-	std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
+	if(lirNode->b->imm == 0){
+	  std::cout << std::format("  xor {}, {}\n", regs[d], regs[d]);
+	} else {
+	  std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
+	}
       } else {
 	std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->b->imm);
       }
@@ -108,7 +112,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_IMM:
     if(is_int32(lirNode)){
-      std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->imm);
+      if(lirNode->imm == 0){
+	std::cout << std::format("  xor {}, {}\n", regs[d], regs[d]);
+      } else {
+	std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->imm);
+      }
     } else {
       std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->imm);
     }
@@ -178,12 +186,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_SHL:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      if(lirNode->b->imm == 1){
-	//std::cout << std::format("  lea {}, [{}+{}]\n", regs[d], regs[d], regs[d]);
-	std::cout << std::format("  add {}, {}\n", regs[d], regs[d]);
-      } else {
-	std::cout << std::format("  shl {}, {}\n", regs[d], lirNode->b->imm);
-      }
+      std::cout << std::format("  shl {}, {}\n", regs[d], lirNode->b->imm);
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
       std::cout << std::format("  shl {}, cl\n", regs[d]);
@@ -191,19 +194,23 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_SHR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+      //std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+      std::cout << std::format("  shr {}, {}\n", regs[d], lirNode->b->imm);
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
+      std::cout << std::format("  shr {}, cl\n", regs[d]);
     }
-    std::cout << std::format("  shr {}, cl\n", regs[d]);
+    
     break;
   case myLIR::LirKind::LIR_SAR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+      //std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
+      std::cout << std::format("  sar {}, {}\n", regs[d], lirNode->b->imm);
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
+      std::cout << std::format("  sar {}, cl\n", regs[d]);
     }
-    std::cout << std::format("  sar {}, cl\n", regs[d]);
+    
     break;
   case myLIR::LirKind::LIR_LVAR:
     std::cout << std::format("  lea {}, [rbp-{}]\n", regs[d], lirNode->lvar->offset);
