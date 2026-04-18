@@ -6,6 +6,8 @@ namespace myLIR::opt {
 		const std::string& filename,
 		bool opt,
 		bool emit_cfg){
+    constructCFGs(prog);
+    
     if(opt){
       for(auto& fn: prog->fns){
 	//local optimization
@@ -16,9 +18,7 @@ namespace myLIR::opt {
 	  } while(optimized);
 	} //for bb	
       } //for fn
-    } //if opt
-    
-    constructCFGs(prog);
+    } //if opt        
 
     if(opt){
       for(auto& fn: prog->fns){

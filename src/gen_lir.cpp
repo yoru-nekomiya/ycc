@@ -490,6 +490,8 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
       jmp(hirNode->_break);
     }
 
+    outBB = new_bb();
+
     for(const auto& n: hirNode->body){
       gen_expr_lir(n);
     }

@@ -1,3 +1,6 @@
+#ifndef UTIL_HPP
+#define UTIL_HPP
+
 #include "ycc.hpp"
 
 namespace myLIR {
@@ -5,3 +8,6 @@ namespace myLIR {
   bool is_int32(const std::shared_ptr<myLIR::LirNode>& lirNode);
   
 } //namespace myLIR
+
+#endif
+
