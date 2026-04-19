@@ -5,9 +5,7 @@ namespace myLIR::opt {
   void optimize(std::unique_ptr<Program>& prog,
 		const std::string& filename,
 		bool opt,
-		bool emit_cfg){
-    constructCFGs(prog);
-    
+		bool emit_cfg){    
     if(opt){
       for(auto& fn: prog->fns){
 	//local optimization
@@ -20,18 +18,22 @@ namespace myLIR::opt {
       } //for fn
     } //if opt        
 
+    constructCFGs(prog);
+    
     if(opt){
       for(auto& fn: prog->fns){
 	//global optimization
 	bool optimized = false;
-	const bool c = merge_basic_block(fn);	
 	do {
-	  optimized = optimize_fn(fn);
+	  optimized = false;
+	  optimized = optimized || merge_basic_block(fn);
+	  optimized = optimized || optimize_fn(fn);
 	} while(optimized);
 	
       } //for fn
     } //if opt
-    
+
+    constructCFGs(prog);
     if(emit_cfg) printCFGs(prog, filename);
   }
 } //namespace myLIR::opt

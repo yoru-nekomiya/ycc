@@ -173,10 +173,6 @@ namespace myLIR::opt {
 				    inst->d,
 				    nullptr,
 				    inst->b);
-	  /*
-	  mov_node->d = inst->d;
-	  mov_node->b = inst->b;
-	  */
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, mov_node);
 	  changed = true;
@@ -190,10 +186,6 @@ namespace myLIR::opt {
 				    inst->d,
 				    nullptr,
 				    inst->a);
-	  /*
-	  mov_node->d = inst->d;
-	  mov_node->b = inst->a;
-	  */
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, mov_node);
 	  changed = true;
@@ -210,10 +202,6 @@ namespace myLIR::opt {
 				    inst->d,
 				    nullptr,
 				    inst->a);
-	  /*
-	  mov_node->d = inst->d;
-	  mov_node->b = inst->a;
-	  */
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, mov_node);
 	  changed = true;
@@ -243,17 +231,28 @@ namespace myLIR::opt {
 				    inst->d,
 				    inst->a,
 				    inst->a);
-	  /*
-	  add_node->d = inst->d;
-	  add_node->a = inst->a;
-	  add_node->b = inst->a;
-	  */
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, add_node);
 	  changed = true;
 	  continue;
 	}
       } //if LIR_SHL
+
+      if(inst->opcode == LirKind::LIR_BR
+	 && is_imm(inst->b)){
+	//branch folding
+	auto bb = (inst->b->imm == 0) ? inst->bb2 : inst->bb1;
+	auto jmp_node = make_node(LirKind::LIR_JMP,
+				  nullptr,
+				  nullptr,
+				  nullptr);
+	jmp_node->bb1 = bb;
+	jmp_node->bbarg = nullptr;
+	iter = bb->insts.erase(iter);
+	iter = bb->insts.insert(iter, jmp_node);
+	changed = true;
+	continue;
+      } //if LIR_BR
       
     } //for inst
     return changed;

@@ -1,6 +1,17 @@
 #include "opt_utils.hpp"
 
 namespace myLIR::opt {
+  static void cleanCFGs(std::unique_ptr<Program>& prog){
+    for(auto& fn: prog->fns){
+      fn->start_node = nullptr;
+      fn->end_node = nullptr;
+      for(auto& bb: fn->bbs){
+	bb->pred.clear();
+	bb->succ.clear();
+      }
+    } //for fn
+  }
+  
   static void add_edges(std::shared_ptr<BasicBlock>& bb){
     if(bb->insts.empty()) return;
     if(!bb->succ.empty()) return;
@@ -25,6 +36,8 @@ namespace myLIR::opt {
     //this function adds the unique start node "s" and end node "e".
     //Every node of "fn" lies on a path from "s" to "e".
     //"s" has no predecessors, and "e" has no successors.
+
+    cleanCFGs(prog);
     
     for(auto& fn: prog->fns){
       auto s = std::make_shared<BasicBlock>();
