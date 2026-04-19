@@ -6,6 +6,7 @@
 namespace myLIR::opt {
   bool optimize_bb(std::shared_ptr<BasicBlock>& bb);
   bool optimize_fn(std::shared_ptr<Function>& fn);
+  bool merge_basic_block(std::shared_ptr<Function>& fn);
   void constructCFGs(std::unique_ptr<Program>& prog);
   void printCFGs(std::unique_ptr<Program>& prog,
 		 const std::string& filename);

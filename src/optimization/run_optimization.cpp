@@ -24,10 +24,12 @@ namespace myLIR::opt {
       for(auto& fn: prog->fns){
 	//global optimization
 	bool optimized = false;
+	const bool c = merge_basic_block(fn);	
 	do {
 	  optimized = optimize_fn(fn);
 	} while(optimized);
-      }
+	
+      } //for fn
     } //if opt
     
     if(emit_cfg) printCFGs(prog, filename);
