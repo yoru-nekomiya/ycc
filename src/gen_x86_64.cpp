@@ -248,7 +248,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << std::format("  mov rax, {}\n", regs[a]);
       }
     } //if(lirNode->a)
-    std::cout << std::format("  jmp .L.return.{}\n", funcname);    
+    std::cout << std::format("  jmp .L.return.{}\n", funcname);
     break;
   case myLIR::LirKind::LIR_BR:
     if(is_imm(lirNode->b)){

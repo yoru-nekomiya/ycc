@@ -35,7 +35,8 @@ void alias_test_kernel(int *p, char *c) {
   }
   
   // Use local_val to prevent the initial load from being eliminated entirely
-  p[ARRAY_SIZE - 1] += local_val; 
+  p[ARRAY_SIZE - 1] += local_val;
+  return;
 }
 
 // ----------------------------------------------------

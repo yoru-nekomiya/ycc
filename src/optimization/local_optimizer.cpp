@@ -31,6 +31,10 @@ namespace myLIR::opt {
       if(is_imm(inst)){
 	table.insert(std::make_pair(inst->d, inst->imm));
       }
+      if(inst->opcode == LirKind::LIR_MOV
+	 && is_imm(inst->b)){
+	table.insert(std::make_pair(inst->d, inst->b->imm));
+      }
       //-----------------------------
 
       //kill-------------------------
@@ -94,6 +98,98 @@ namespace myLIR::opt {
 	}
       }
     } //for inst
+    return changed;
+  }
+
+  static bool copy_propagation(std::shared_ptr<BasicBlock>& bb){
+    bool changed = false;
+    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> table; //d --> b
+
+    for(auto inst: bb->insts){
+      //generation and kill-------------------
+      if(inst->opcode == LirKind::LIR_MOV
+	 && !is_imm(inst->b)){
+	table.insert(std::make_pair(inst->d, inst->b));
+      }
+      //-----------------------------
+
+      //d=a+b
+      //replace a and b if they are registered in table,
+      //and kill d in table
+      //binary opcode----------
+      if(is_binary_opcode(inst->opcode)){
+	if(table.contains(inst->a) && !is_imm(inst->a)){
+	  inst->a = table.find(inst->a)->second;
+	  changed = true;
+	}
+	if(table.contains(inst->b) && !is_imm(inst->b)){
+	  inst->b = table.find(inst->b)->second;
+	  changed = true;
+	}	
+	table.erase(inst->d);
+      } //if is_binary_opcode
+      //----------
+
+      //unary opcode----------
+      if(inst->opcode == LirKind::LIR_STORE){
+	if(table.contains(inst->a)){
+	  inst->a = table.find(inst->a)->second;
+	  changed = true;
+	}
+	if(table.contains(inst->b) && !is_imm(inst->b)){
+	  inst->b = table.find(inst->b)->second;
+	  changed = true;
+	}	
+      }
+
+      if(inst->opcode == LirKind::LIR_LOAD){
+	if(table.contains(inst->b)){
+	  inst->b = table.find(inst->b)->second;
+	  changed = true;
+	}
+	table.erase(inst->d);
+      }
+
+      if(inst->opcode == LirKind::LIR_RETURN
+	 || inst->opcode == LirKind::LIR_CAST){
+	if(inst->a != nullptr
+	   && !is_imm(inst->a)
+	   && table.contains(inst->a)){
+	  inst->a = table.find(inst->a)->second;
+	  changed = true;
+	}
+      }
+
+      if(inst->opcode == LirKind::LIR_BR){
+	if(table.contains(inst->b) && !is_imm(inst->b)){
+	  inst->b = table.find(inst->b)->second;
+	  changed = true;
+	}
+      }
+      
+      if(inst->opcode == LirKind::LIR_JMP
+	 && inst->bbarg != nullptr
+	 && !is_imm(inst->bbarg)
+	 && table.contains(inst->bbarg)){
+	inst->bbarg = table.find(inst->bbarg)->second;
+	changed = true;
+      }
+      
+      //----------
+
+      //function call
+      if(inst->opcode == LirKind::LIR_FUNCALL){
+	for(int i = 0; i < inst->args.size(); ++i){
+	  if(!is_imm(inst->args[i])
+	     && table.contains(inst->args[i])){
+	    inst->args[i] = table.find(inst->args[i])->second;
+	    changed = true;
+	  }
+	}
+      }
+      
+    } //for inst
+    
     return changed;
   }
 
@@ -298,10 +394,12 @@ namespace myLIR::opt {
     bool changed = false;
     bool cp = false;
     bool cf = false;
+    bool copy_prop = false;
     do {
       cp = constant_propagation(bb);
-      cf = constant_foldings(bb);      
-      changed = changed || cp || cf;
+      cf = constant_foldings(bb);
+      copy_prop = copy_propagation(bb);
+      changed = changed || cp || cf || copy_prop;
     } while(cp || cf);
     changed = changed || peephole(bb);
     changed = changed || eliminate_redundant_load_from_stack(bb);

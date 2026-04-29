@@ -21,6 +21,7 @@ void sieve(int n) {
       }
     }
   }
+  return;
 }
 
 int main() {

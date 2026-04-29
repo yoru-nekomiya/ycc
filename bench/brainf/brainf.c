@@ -53,6 +53,7 @@ void run_bf(char* program) {
     } 
     pc++;
   }
+  return;
 }
 
 int main() {    

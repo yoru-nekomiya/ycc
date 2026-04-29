@@ -19,12 +19,13 @@ int edge_count = 0;
 
 // Function to add a directed edge to the graph
 void add_edge(int u, int v, int w) {
-  if (edge_count < MAX_EDGES) {
+  if(edge_count < MAX_EDGES){
     to[edge_count] = v;
     weight[edge_count] = w;
     next_edge[edge_count] = head_edge[u];
     head_edge[u] = edge_count++;
   }
+  return;
 }
 
 // Graph initialization: Creates a dense, quasi-random graph
@@ -43,6 +44,7 @@ void init_graph() {
       }
     }
   }
+  return;
 }
 
 // Core Dijkstra's Algorithm with inserted CPU load
@@ -92,6 +94,7 @@ void dijkstra(int start) {
       }
     }
   }
+  return;
 }
 
 int main() {

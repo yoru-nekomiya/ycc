@@ -10,6 +10,7 @@ void swap(int* a, int* b) {
   int t = *a;
   *a = *b;
   *b = t;
+  return;
 }
 
 int partition(int* arr, int low, int high) {
@@ -32,6 +33,7 @@ void quicksort(int* arr, int low, int high) {
     quicksort(arr, low, pi - 1);
     quicksort(arr, pi + 1, high);
   }
+  return;
 }
 
 int main() {

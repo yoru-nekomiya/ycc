@@ -14,6 +14,7 @@ void hanoi(int n, int from, int to, int via) {
   move_count++; 
   
   hanoi(n - 1, via, to, from);
+  return;
 }
 
 int main(int argc, char** argv) {

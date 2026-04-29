@@ -39,6 +39,7 @@ void initialize_data() {
   for (int i = 0; i < ARRAY_SIZE; i++) {
     data[i] = i % 1000; // Keep values small to prevent immediate overflow during calculation
   }
+  return;
 }
 
 int main() {

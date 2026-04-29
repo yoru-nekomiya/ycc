@@ -38,6 +38,7 @@ void init_bm() {
     int char_idx = (int)pattern[i];
     bad_char_table[char_idx & 255] = PATTERN_SIZE - 1 - i;
   }
+  return;
 }
 
 // Heavy Boyer-Moore search kernel

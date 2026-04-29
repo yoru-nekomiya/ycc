@@ -5,34 +5,39 @@ namespace myLIR::opt {
   void optimize(std::unique_ptr<Program>& prog,
 		const std::string& filename,
 		bool opt,
-		bool emit_cfg){    
-    if(opt){
-      for(auto& fn: prog->fns){
-	//local optimization
-	for(auto& bb: fn->bbs){
-	  bool optimized = false;
+		bool emit_cfg){
+    bool optimized = false;
+    do {
+      optimized = false;
+      bool local_optimized = false;
+      bool global_optimized = false;      
+      if(opt){
+	for(auto& fn: prog->fns){
+	  //local optimization
+	  for(auto& bb: fn->bbs){
+	    local_optimized = false;
+	    do {
+	      local_optimized = optimize_bb(bb);
+	    } while(local_optimized && (optimized = true));
+	  } //for bb	
+	} //for fn
+      } //if opt        
+      
+      constructCFGs(prog);
+      
+      if(opt){
+	for(auto& fn: prog->fns){
+	  //global optimization	  
 	  do {
-	    optimized = optimize_bb(bb);
-	  } while(optimized);
-	} //for bb	
-      } //for fn
-    } //if opt        
-
-    constructCFGs(prog);
+	    global_optimized = false;
+	    global_optimized = global_optimized || merge_basic_block(fn);
+	    global_optimized = global_optimized || optimize_fn(fn);
+	  } while(global_optimized && (optimized = true));
+	  
+	} //for fn
+      } //if opt
+    } while(optimized);
     
-    if(opt){
-      for(auto& fn: prog->fns){
-	//global optimization
-	bool optimized = false;
-	do {
-	  optimized = false;
-	  optimized = optimized || merge_basic_block(fn);
-	  optimized = optimized || optimize_fn(fn);
-	} while(optimized);
-	
-      } //for fn
-    } //if opt
-
     constructCFGs(prog);
     if(emit_cfg) printCFGs(prog, filename);
   }

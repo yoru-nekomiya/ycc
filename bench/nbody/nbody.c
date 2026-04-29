@@ -68,6 +68,7 @@ void init_particles() {
     force[i].y = 0;
     force[i].z = 0;
   }
+  return;
 }
 
 // ----------------------------------------------------
@@ -119,6 +120,7 @@ void calculate_forces(int n) {
       force[j].z -= fz;
     }
   }
+  return;
 }
 
 // Updates particle positions and velocities (using Euler integration)
@@ -136,6 +138,7 @@ void integrate(int n) {
     position[i].y += fp_mul(velocity[i].y, dt);
     position[i].z += fp_mul(velocity[i].z, dt);
   }
+  return;
 }
 
 // ----------------------------------------------------

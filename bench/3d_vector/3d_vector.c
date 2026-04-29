@@ -38,6 +38,7 @@ void vector_op(int n) {
       vectors[i].z += dot_prod;
     }
   }
+  return;
 }
 
 // Approximate calculation of the norm (length) for checksum

@@ -22,6 +22,7 @@ void init_tea() {
   key[1] = 23456;
   key[2] = 34567;
   key[3] = 45678;
+  return;
 }
 
 // --- Core TEA Encryption Kernel ---
@@ -46,6 +47,7 @@ void tea_encrypt(int *v) {
   
   v[0] = v0;
   v[1] = v1;
+  return;
 }
 
 int main() {

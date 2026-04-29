@@ -41,10 +41,20 @@ namespace myLIR::opt {
 	    bb->insts.insert(bb->insts.end(), i);
 	  }
 
-	  //Change edges
-	  std::copy(succ->succ.begin(), succ->succ.end(), std::back_inserter(bb->succ));
-	  bb->succ.remove(succ);
-	  fn->bbs.remove(succ);
+	  //Change edges	  
+	  bb->succ = succ->succ;
+	  for(auto& succ_succ: succ->succ){	    
+	    for(auto it_pred = succ_succ->pred.begin(); it_pred != succ_succ->pred.end(); ++it_pred){
+	      auto p = *it_pred;
+	      if(p->label == succ->label){
+		it_pred = succ_succ->pred.erase(it_pred);
+		--it_pred;
+	      }
+	    } //for it_pred
+	    succ_succ->pred.insert(succ_succ->pred.end(), bb);
+	  } //for succ_succ
+	  succ->pred.clear();
+	  succ->succ.clear();
 	  changed = true;
 	} //if(!succ->is_end_node && succ->pred.size() == 1)
       } //if(bb->succ.size() == 1)

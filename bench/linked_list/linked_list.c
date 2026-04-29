@@ -43,6 +43,7 @@ void insert_random(struct Node* head, int value) {
   // Perform insertion
   new_node->next = current->next;
   current->next = new_node;
+  return;
 }
 
 // Calculates the sum of all elements in the list for a checksum.

@@ -89,6 +89,7 @@ void initialize_scene_data() {
     
     long r3 = 4 * SCALE;
     scene[2].radius_sq = fp_mul(r3, r3);
+    return;
 }
 
 // ----------------------------------------------------
@@ -100,6 +101,7 @@ void vec_sub(struct Vec3 *a, struct Vec3 *b, struct Vec3 *out) {
   out->x = a->x - b->x;
   out->y = a->y - b->y;
   out->z = a->z - b->z;
+  return;
 }
 
 // Vector Dot Product: A . B
@@ -213,6 +215,7 @@ void render_scene() {
       image_buffer[pixel_index + 2] = b;
     }
   }
+  return;
 }
 
 // ----------------------------------------------------

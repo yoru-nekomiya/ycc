@@ -34,6 +34,7 @@ void solve_queens(int row) {
       solve_queens(row + 1);
     }
   }
+  return;
 }
 
 int main() {

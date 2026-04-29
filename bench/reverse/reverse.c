@@ -40,6 +40,7 @@ void init_list() {
   }
   
   head = &nodes[0];
+  return;
 }
 
 // --- Core Linked Reversal and COMPLEX Update ---
@@ -86,6 +87,7 @@ void complex_reverse_and_update() {
   }
   
   head = prev;
+  return;
 }
 
 // ----------------------------------------------------

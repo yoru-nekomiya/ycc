@@ -19,15 +19,16 @@ int output[SIGNAL_SIZE/*100000*/];
 
 // --- Initialization ---
 void init_data() {
-    int i;
-    // Initialize signal with a simple repeating pattern
-    for (i = 0; i < SIGNAL_SIZE + COEFF_SIZE; i++) {
-        signal[i] = (i % 100) - 50;
-    }
-    // Initialize coefficients (e.g., a simple low-pass filter pattern)
-    for (i = 0; i < COEFF_SIZE; i++) {
-        coeffs[i] = (i % 5) + 1;
-    }
+  int i;
+  // Initialize signal with a simple repeating pattern
+  for (i = 0; i < SIGNAL_SIZE + COEFF_SIZE; i++) {
+    signal[i] = (i % 100) - 50;
+  }
+  // Initialize coefficients (e.g., a simple low-pass filter pattern)
+  for (i = 0; i < COEFF_SIZE; i++) {
+    coeffs[i] = (i % 5) + 1;
+  }
+  return;
 }
 
 // --- Core FIR Filter Calculation ---
@@ -35,22 +36,23 @@ void init_data() {
 void apply_fir_filter() {
   int i;
   int j;
+  
+  // Process the signal
+  for (i = 0; i < SIGNAL_SIZE; i++) {
+    long sum = 0;
     
-    // Process the signal
-    for (i = 0; i < SIGNAL_SIZE; i++) {
-        long sum = 0;
-        
-        // Inner loop: This is the hotspot for optimization.
-        // It's a "Multiply-Accumulate" (MAC) operation.
-        for (j = 0; j < COEFF_SIZE; j++) {
-            // sum += signal[i + j] * coeffs[j]
-            // We use long long for sum to prevent overflow during accumulation.
-            sum += (long)signal[i + j] * coeffs[j];
-        }
-        
-        // Store the lower 31 bits of the result (simple scaling/clamping simulation)
-        output[i] = (int)(sum % 2147483647);
+    // Inner loop: This is the hotspot for optimization.
+    // It's a "Multiply-Accumulate" (MAC) operation.
+    for (j = 0; j < COEFF_SIZE; j++) {
+      // sum += signal[i + j] * coeffs[j]
+      // We use long long for sum to prevent overflow during accumulation.
+      sum += (long)signal[i + j] * coeffs[j];
     }
+    
+    // Store the lower 31 bits of the result (simple scaling/clamping simulation)
+    output[i] = (int)(sum % 2147483647);
+  }
+  return;
 }
 
 int main() {

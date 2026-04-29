@@ -45,6 +45,7 @@ void init_hash_table() {
   for (int i = 0; i < HASH_TABLE_SIZE; i++) {
     table[i] = /*NULL*/0;
   }
+  return;
 }
 
 // Insert a key-value pair
@@ -70,6 +71,7 @@ void insert(int key, int value) {
   new_node->value = value;
   new_node->next = table[index];
   table[index] = new_node;
+  return;
 }
 
 // Search for a key (returns value or -1 if not found)
@@ -110,6 +112,7 @@ void delete_key(int key) {
     prev = current;
     current = current->next;
   }
+  return;
 }
 
 // Calculate the checksum (Sum of all keys + values)

@@ -38,6 +38,7 @@ void init_sparse_matrix(int n, int max_nnz) {
     X[i] = (i * 3 + 1) % 5 + 1; 
     Y[i] = 0;
   }
+  return;
 }
 
 // Y = A * X
@@ -57,6 +58,7 @@ void spmv(int n) {
       Y[i] = sum;
     }
   }
+  return;
 }
 
 int main() {

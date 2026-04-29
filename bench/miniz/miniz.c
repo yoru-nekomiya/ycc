@@ -72,6 +72,7 @@ void calculate_frequency(int *data, int len, int *freq) {
       freq[symbol]++; 
     }
   }
+  return;
 }
 
 // --- Main Logic ---
@@ -85,6 +86,7 @@ void initialize_data() {
   for (i = 0; i < DATA_SIZE; i++) {
     input_data[i] = (i * 37 + (i >> 5)) % 256; 
   }
+  return;
 }
 
 void benchmark_miniz_core() {
@@ -108,6 +110,7 @@ void benchmark_miniz_core() {
     }
     total_adler_checksum += freq_sum;
   }
+  return;
 }
 
 int main() {

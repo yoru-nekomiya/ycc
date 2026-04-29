@@ -55,6 +55,7 @@ void convolve(int size) {
       image[i] = output[i];
     }
   }
+  return;
 }
 
 int main() {

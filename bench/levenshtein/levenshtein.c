@@ -43,6 +43,7 @@ void init_strings(int len) {
   }
   s1[len] = 0; // Null-terminate
   s2[len] = 0;
+  return;
 }
 
 // Calculates the Levenshtein distance using Dynamic Programming.
