@@ -118,6 +118,9 @@ namespace Lunaria {
         return a->id == b->id;
     }
   };
+
+  bool is_int32(int64_t v);
+  std::shared_ptr<Lunaria::Type> get_larger_type(const std::shared_ptr<Lunaria::Type>& t1, const std::shared_ptr<Lunaria::Type>& t2);
 } //namespace Lunaria
 
 //--------------------
@@ -303,7 +306,6 @@ struct Function {
   std::string name;
   std::list<std::shared_ptr<Lunaria::Var>> params;
   std::list<std::unique_ptr<AstNode>> body;
-  //std::unordered_map<std::string, std::shared_ptr<Lunaria::Var>> localVars;
   std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
 };
 
@@ -570,7 +572,7 @@ struct LirNode {
     std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
   };
 
-  std::shared_ptr<LirNode> new_reg(const std::string& varName);
+  std::shared_ptr<LirNode> new_reg(const std::string& varName = "", int type_size = 0);
   std::unique_ptr<Program>
   generateLirNode(const std::unique_ptr<myHIR::Program>&);
   std::string print_lir(const std::shared_ptr<LirNode>& i);

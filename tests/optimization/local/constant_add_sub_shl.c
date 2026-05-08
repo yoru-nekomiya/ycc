@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 int add_0l(int x){
   return 0 + x;

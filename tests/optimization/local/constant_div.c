@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 int div_8(int x){
   return x / 8;

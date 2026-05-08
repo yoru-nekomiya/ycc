@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 long g;
 

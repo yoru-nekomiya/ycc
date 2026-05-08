@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 int inc(int* a){
   *a = *a + 1;

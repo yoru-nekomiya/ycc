@@ -65,7 +65,12 @@ int search_bm() {
       int bc_skip = bad_char_table[mismatch_char & 255];
       
       int shift = bc_skip - (PATTERN_SIZE - 1 - j);
-      s += (shift > 1) ? shift : 1;
+      //s += (shift > 1) ? shift : 1;      
+      if(shift > 1){
+	s += shift;
+      } else {
+	s += 1;
+      }      
     }
   }
   return count;

@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 struct TEST_G {
   char a;

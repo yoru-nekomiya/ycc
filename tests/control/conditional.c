@@ -1,3 +1,6 @@
+void assert(long expected, long actual, char* desc);
+int printf();
+
 int main(){
    assert(1, 1 ? 1 : 2, "1 ? 1 : 2");
    assert(2, 0 ? 1 : 2, "0 ? 1 : 2");

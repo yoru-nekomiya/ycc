@@ -17,11 +17,7 @@ std::shared_ptr<HirNode>
 new_binary(HirKind kind,
 	   std::shared_ptr<HirNode>& lhs,
 	   std::shared_ptr<HirNode>& rhs){
-  auto hirNode = new_node(kind);
-  /*
-  hirNode->lhs = std::move(lhs);
-  hirNode->rhs = std::move(rhs);
-  */
+  auto hirNode = new_node(kind);  
   hirNode->lhs = lhs;
   hirNode->rhs = rhs;
   return hirNode;
@@ -31,7 +27,7 @@ static std::shared_ptr<HirNode>
 new_num(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = astNode->val;
-  hirNode->type = Lunaria::int_type;
+  hirNode->type = Lunaria::is_int32(hirNode->val) ? Lunaria::int_type : Lunaria::long_type;
   return hirNode;
 }
 
@@ -39,15 +35,16 @@ std::shared_ptr<HirNode>
 new_num(long long i){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = i;
-  hirNode->type = Lunaria::int_type;
+  add_type(hirNode);
   return hirNode;
 }
 
 static std::shared_ptr<HirNode>
 new_var(const std::unique_ptr<myParser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_VAR);
-  hirNode->type = astNode->var->type;
+  //hirNode->type = astNode->var->type;
   hirNode->var = std::move(astNode->var);
+  add_type(hirNode);
   return hirNode;
 }
 
@@ -109,7 +106,8 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_MEMBER);
     hirNode->lhs = program(astNode->lhs);
     hirNode->member = astNode->member;
-    hirNode->type = hirNode->member->type;
+    //hirNode->type = hirNode->member->type;
+    add_type(hirNode);
     return hirNode;
   } else if(astNode->kind == myParser::AstKind::AST_CAST){
     auto hirNode = new_node(HirKind::HIR_CAST);
@@ -120,6 +118,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     if(astNode->lhs){
       auto lhs = program(astNode->lhs);
+      add_type(lhs);
       hirNode->lhs = std::move(lhs);
       return hirNode;
     }
@@ -133,59 +132,69 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       std::cerr << "invalid pointer reference" << std::endl;
       exit(1);
     }
-    hirNode->type = lhs->type->base;
+    //hirNode->type = lhs->type->base;
     hirNode->lhs = std::move(lhs);
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_ADDR){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_ADDR);
+    /*
     if(lhs->type->kind == Lunaria::TypeKind::ARRAY){
       hirNode->type = Lunaria::pointer_to(lhs->type->base);
     } else {
       hirNode->type = Lunaria::pointer_to(lhs->type);
     }
+    */
     hirNode->lhs = std::move(lhs);
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_NOT){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_NOT);
     hirNode->lhs = std::move(lhs);
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_BITNOT){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_BITNOT);
     hirNode->lhs = std::move(lhs);
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_PRE_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_INC);
     hirNode->lhs = std::move(lhs);
-    hirNode->type = hirNode->lhs->type;
+    //hirNode->type = hirNode->lhs->type;
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_PRE_DEC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_DEC);
     hirNode->lhs = std::move(lhs);
-    hirNode->type = hirNode->lhs->type;
+    //hirNode->type = hirNode->lhs->type;
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_POST_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_POST_INC);
     hirNode->lhs = std::move(lhs);
-    hirNode->type = hirNode->lhs->type;
+    //hirNode->type = hirNode->lhs->type;
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_POST_DEC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_POST_DEC);
     hirNode->lhs = std::move(lhs);
-    hirNode->type = hirNode->lhs->type;
+    //hirNode->type = hirNode->lhs->type;
+    add_type(hirNode);
     return hirNode;
   }
   else if(astNode->kind == myParser::AstKind::AST_BLOCK){
@@ -197,6 +206,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
   } else if(astNode->kind == myParser::AstKind::AST_FUNCALL){
     auto hirNode = new_node(HirKind::HIR_FUNCALL);
     hirNode->funcName = astNode->funcName;
+    hirNode->type = astNode->type;
     for(const auto& an: astNode->args){
       hirNode->args.push_back(program(an));
     }
@@ -296,128 +306,152 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     switch(astNode->kind){
     case myParser::AstKind::AST_ADD: {
       auto node = new_binary(HirKind::HIR_ADD, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_SUB: {
       auto node = new_binary(HirKind::HIR_SUB, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_MUL: {
       auto node = new_binary(HirKind::HIR_MUL, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_DIV: {
       auto node = new_binary(HirKind::HIR_DIV, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_REM: {
       auto node = new_binary(HirKind::HIR_REM, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_LT: {
       auto node = new_binary(HirKind::HIR_LT, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_LE: {
       auto node = new_binary(HirKind::HIR_LE, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_EQ: {
       auto node = new_binary(HirKind::HIR_EQ, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_NE: {
       auto node = new_binary(HirKind::HIR_NE, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_ASSIGN: {
       auto node = new_binary(HirKind::HIR_ASSIGN, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_ADD_ASSIGN: {
       auto node = new_binary(HirKind::HIR_ADD_ASSIGN, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_SUB_ASSIGN: {
       auto node = new_binary(HirKind::HIR_SUB_ASSIGN, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_MUL_ASSIGN: {
       auto node = new_binary(HirKind::HIR_MUL_ASSIGN, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_DIV_ASSIGN: {
       auto node = new_binary(HirKind::HIR_DIV_ASSIGN, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_PTR_ADD: {
       auto node = new_binary(HirKind::HIR_PTR_ADD, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_PTR_SUB: {
       auto node = new_binary(HirKind::HIR_PTR_SUB, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_PTR_DIFF: {
-      auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);
-      //node->type = Lunaria::int_type;
-      node->type = node->lhs->type;
+      auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);      
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_SUBSCRIPTED: {
       auto node = new_binary(HirKind::HIR_SUBSCRIPTED, lhs, rhs);
-      node->type = node->lhs->type->base;
+      //node->type = node->lhs->type->base;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_LOGOR: {
       auto node = new_binary(HirKind::HIR_LOGOR, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_LOGAND: {
       auto node = new_binary(HirKind::HIR_LOGAND, lhs, rhs);
-      node->type = Lunaria::int_type;
+      //node->type = Lunaria::int_type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_SHL: {
       auto node = new_binary(HirKind::HIR_SHL, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_SAR: {
       auto node = new_binary(HirKind::HIR_SAR, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_BITOR: {
       auto node = new_binary(HirKind::HIR_BITOR, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_BITXOR: {
       auto node = new_binary(HirKind::HIR_BITXOR, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     case myParser::AstKind::AST_BITAND: {
       auto node = new_binary(HirKind::HIR_BITAND, lhs, rhs);
-      node->type = node->lhs->type;
+      //node->type = node->lhs->type;
+      add_type(node);
       return node;
     }
     } //switch

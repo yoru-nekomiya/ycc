@@ -45,7 +45,8 @@ namespace myLIR::opt {
 	} //if is_binary_opcode
 	
 	if(inst->opcode == LirKind::LIR_MOV
-	   || inst->opcode == LirKind::LIR_LOAD){
+	   || inst->opcode == LirKind::LIR_LOAD
+	   || inst->opcode == LirKind::LIR_CAST){
 	  gen.erase(inst->d);
 	  kill.insert(inst->d);
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
@@ -157,7 +158,7 @@ namespace myLIR::opt {
 	   && inst->opcode != LirKind::LIR_BR
 	   && inst->opcode != LirKind::LIR_JMP
 	   && inst->opcode != LirKind::LIR_FUNCALL
-	   && inst->opcode != LirKind::LIR_CAST
+	   //&& inst->opcode != LirKind::LIR_CAST
 	   && !live.contains(inst->d)){
 	  iter = std::make_reverse_iterator(bb->insts.erase(std::next(iter).base()));
 	  iter--;
@@ -179,7 +180,8 @@ namespace myLIR::opt {
 	} //if is_binary_opcode
 	
 	if(inst->opcode == LirKind::LIR_MOV
-	   || inst->opcode == LirKind::LIR_LOAD){
+	   || inst->opcode == LirKind::LIR_LOAD
+	   || inst->opcode == LirKind::LIR_CAST){
 	  live.erase(inst->d);
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
 	  continue;

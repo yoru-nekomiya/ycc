@@ -1,5 +1,6 @@
 #include "ycc.hpp"
 #include "util.hpp"
+#include "optimization/opt_utils.hpp"
 
 namespace myRegAlloc {
   const int num_reg = 7;
@@ -10,7 +11,7 @@ namespace myRegAlloc {
     //If so, insert the MOV instruction to load the value in 64-bit register
     if(!(*iter)->b) return;
     if(myLIR::is_imm((*iter)->b) && !myLIR::is_int32((*iter)->b)){
-      auto d = myLIR::new_reg("");
+      auto d = myLIR::new_reg("", 8);
       auto imm_node = std::make_shared<myLIR::LirNode>();
       imm_node->opcode = myLIR::LirKind::LIR_IMM;
       imm_node->d = std::move(d);
@@ -31,7 +32,7 @@ namespace myRegAlloc {
     if((*iter)->opcode == myLIR::LirKind::LIR_DIV
        || (*iter)->opcode == myLIR::LirKind::LIR_REM){     
       if(myLIR::is_imm((*iter)->b) && myLIR::is_int32((*iter)->b)){
-	auto d = myLIR::new_reg("");
+	auto d = myLIR::new_reg("", 4);
 	auto imm_node = std::make_shared<myLIR::LirNode>();
 	imm_node->opcode = myLIR::LirKind::LIR_IMM;
 	imm_node->d = std::move(d);
@@ -42,6 +43,45 @@ namespace myRegAlloc {
 	iter++;
       } //if b
     } //if DIV or REM
+  }
+
+  static void
+  decompose_ptr_add_and_sub(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
+			    std::shared_ptr<myLIR::BasicBlock>& bb){
+    //Decompose PTR_ADD and PTR_SUB because they need two destination registers.
+    auto inst = *iter;
+    if(inst->opcode == myLIR::LirKind::LIR_PTR_ADD
+       || inst->opcode == myLIR::LirKind::LIR_PTR_SUB){
+      const int s = inst->type_base_size;
+      if(s != 1 && s != 2 && s != 4 && s != 8){
+	if(!(is_imm(inst->b) && is_int32(inst->b))){
+	  auto d = myLIR::new_reg("", 8);
+	  auto mul_node = myLIR::opt::make_node(myLIR::LirKind::LIR_MUL,
+						d,
+						inst->b,
+						myLIR::opt::make_imm_node(s));
+	  std::shared_ptr<myLIR::LirNode> node = nullptr;
+	  if(inst->opcode == myLIR::LirKind::LIR_PTR_ADD){
+	    node = myLIR::opt::make_node(myLIR::LirKind::LIR_ADD,
+					 inst->d,
+					 inst->a,
+					 mul_node->d);
+	  }
+	  else if(inst->opcode == myLIR::LirKind::LIR_PTR_SUB){
+	    node = myLIR::opt::make_node(myLIR::LirKind::LIR_SUB,
+					 inst->d,
+					 inst->a,
+					 mul_node->d);
+	  }
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mul_node);
+	  ++iter;
+	  iter = bb->insts.insert(iter, node);
+	  --iter;
+	}
+      }
+    }
+    
   }
   
   static void convert_3ac_to_2ac(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
@@ -71,32 +111,30 @@ static std::list<std::shared_ptr<myLIR::LirNode>>
 collectReg(std::shared_ptr<myLIR::Function>& fn){
   std::list<std::shared_ptr<myLIR::LirNode>> listReg;
   int instCount = 1;
-  //for(auto& fn: prog->fns){
-    for(auto& bb: fn->bbs){
-      if(bb->param){
-	bb->param->def = instCount;
-	listReg.push_back(bb->param);
-	instCount++;
+  for(auto& bb: fn->bbs){
+    if(bb->param){
+      bb->param->def = instCount;
+      listReg.push_back(bb->param);
+      instCount++;
+    }
+    for(auto& lirNode: bb->insts){
+      if(lirNode->d && !lirNode->d->def){
+	lirNode->d->def = instCount;
+	listReg.push_back(lirNode->d);
       }
-      for(auto& lirNode: bb->insts){
-	if(lirNode->d && !lirNode->d->def){
-	  lirNode->d->def = instCount;
-	  listReg.push_back(lirNode->d);
+      setLastUse(lirNode->a, instCount);
+      setLastUse(lirNode->b, instCount);
+      setLastUse(lirNode->bbarg, instCount);
+      
+      if(lirNode->opcode == myLIR::LirKind::LIR_FUNCALL){
+	for(auto& n: lirNode->args){
+	  setLastUse(n, instCount);
 	}
-	setLastUse(lirNode->a, instCount);
-	setLastUse(lirNode->b, instCount);
-	setLastUse(lirNode->bbarg, instCount);
-	
-	if(lirNode->opcode == myLIR::LirKind::LIR_FUNCALL){
-	  for(auto& n: lirNode->args){
-	    setLastUse(n, instCount);
-	  }
-	}
-	
-	instCount++;
       }
-    } //for bb
-    //} //for fn
+      
+      instCount++;
+    }
+  } //for bb
   return listReg;
 } 
   
@@ -191,6 +229,7 @@ static void allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
 	for(std::list<std::shared_ptr<myLIR::LirNode>>::iterator iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
 	  insert_64bit_imm_mov(iter, bb);
 	  insert_32bit_imm_mov_for_idiv(iter, bb);
+	  decompose_ptr_add_and_sub(iter, bb);
 	  convert_3ac_to_2ac(iter, bb);
 	}
       }

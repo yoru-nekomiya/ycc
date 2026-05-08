@@ -1,3 +1,6 @@
+void assert(long expected, long actual, char* desc);
+int printf();
+
 int main(){
    assert(131585, (int)8590066177, "(int)8590066177");
    assert(513, (short)8590066177, "(short)8590066177");

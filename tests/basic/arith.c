@@ -1,4 +1,7 @@
 
+void assert(long expected, long actual, char* desc);
+int printf();
+
 int func(){
   return 1 || 0;
 }

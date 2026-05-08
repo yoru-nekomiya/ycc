@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 int main(){
   assert(1, 1<2, "1<2");

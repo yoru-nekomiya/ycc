@@ -29,6 +29,13 @@ static std::string funcname = "";
     assert(size == 8);
     return argregs[r];
   }
+
+  static std::string get_reg(int r, int size){
+    if(size == 8) return regs[r];
+    std::cerr << "size: " << size << std::endl;
+    assert(size == 1 || size == 2 || size == 4);
+    return regs32[r];
+  }
   
 static void print_cmp(const std::string& cmp,
 		      const std::shared_ptr<myLIR::LirNode>& lirNode){
@@ -74,17 +81,50 @@ static void print_cmp(const std::string& cmp,
 
   static void truncate(const std::shared_ptr<myLIR::LirNode>& lirNode){
     const int size = lirNode->type_size;
-    const int a = lirNode->a ? lirNode->a->rn : 0;
+    const int d = lirNode->d ? lirNode->d->rn : 0;
+    const int b = lirNode->b ? lirNode->b->rn : 0;
     //signed trancate (type extension)
     if(size == 1){
-      std::cout << std::format("  movsx {}, {}\n", regs[a], regs8[a]);
+      if(is_imm(lirNode->b)){
+	int8_t truncated_val = (int8_t)lirNode->b->imm;
+	std::cout << std::format("  mov {}, {}\n", regs[d], (int64_t)truncated_val);
+	/*
+	std::cout << std::format("  mov {}, {}\n", regs8[d], lirNode->b->imm);
+	std::cout << std::format("  movsx {}, {}\n", regs[d], regs8[d]);
+	*/
+      } else {
+	std::cout << std::format("  movsx {}, {}\n", regs[d], regs8[b]);
+      }
     } else if(size == 2){
-      std::cout << std::format("  movsx {}, {}\n", regs[a], regs16[a]);
+      if(is_imm(lirNode->b)){
+	int16_t truncated_val = (int16_t)lirNode->b->imm;
+	std::cout << std::format("  mov {}, {}\n", regs[d], (int64_t)truncated_val);
+	/*
+	std::cout << std::format("  mov {}, {}\n", regs16[d], lirNode->b->imm);
+	std::cout << std::format("  movsx {}, {}\n", regs[d], regs16[d]);
+	*/
+      } else {
+	std::cout << std::format("  movsx {}, {}\n", regs[d], regs16[b]);
+      }
     } else if(size == 4){
-      std::cout << std::format("  movsxd {}, {}\n", regs[a], regs32[a]);
+      if(is_imm(lirNode->b)){
+	int32_t truncated_val = (int32_t)lirNode->b->imm;
+	std::cout << std::format("  mov {}, {}\n", regs[d], (int64_t)truncated_val);
+	/*
+	std::cout << std::format("  mov {}, {}\n", regs32[d], lirNode->b->imm);
+	std::cout << std::format("  movsxd {}, {}\n", regs[d], regs32[d]);
+	*/
+      } else {
+	std::cout << std::format("  movsxd {}, {}\n", regs[d], regs32[b]);
+      }
     } else {
       assert(size == 8);
-      std::cout << std::format("  mov {}, {}\n", regs[a], regs[a]);
+      if(is_imm(lirNode->b)){
+	std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
+      } else {
+	if(d != b)
+	  std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
+      }
     }
   }
 
@@ -98,16 +138,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     if(is_imm(lirNode->b)){
       if(is_int32(lirNode->b)){
 	if(lirNode->b->imm == 0){
-	  std::cout << std::format("  xor {}, {}\n", regs[d], regs[d]);
+	  std::cout << std::format("  xor {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, regs[d]/*get_reg(d, lirNode->d->type_size)*/);
 	} else {
-	  std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
+	  std::cout << std::format("  mov {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, lirNode->b->imm);
 	}
       } else {
 	std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->b->imm);
       }
     } else {
       if(d != b)
-	std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
+	std::cout << std::format("  mov {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, regs[b]/*get_reg(b, lirNode->b->type_size)*/);
     }
     break;
   case myLIR::LirKind::LIR_IMM:
@@ -115,7 +155,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       if(lirNode->imm == 0){
 	std::cout << std::format("  xor {}, {}\n", regs[d], regs[d]);
       } else {
-	std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->imm);
+	std::cout << std::format("  mov {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, lirNode->imm);
       }
     } else {
       std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->imm);
@@ -125,9 +165,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     //64-bits immediate value is assumed to be stored in a register by movabsq before this instruction.
     // The instructions that can take 32-bits immediate value as its input are also assumed that.
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
-      std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm);
+      std::cout << std::format("  add {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, lirNode->b->imm);
     } else {
-      std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+      std::cout << std::format("  add {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, regs[b]/*get_reg(b, lirNode->b->type_size)*/);
     }
     break;
   case myLIR::LirKind::LIR_SUB:
@@ -194,7 +234,6 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_SHR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      //std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
       std::cout << std::format("  shr {}, {}\n", regs[d], lirNode->b->imm);
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
@@ -204,7 +243,6 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   case myLIR::LirKind::LIR_SAR:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
-      //std::cout << std::format("  mov cl, {}\n", lirNode->b->imm);
       std::cout << std::format("  sar {}, {}\n", regs[d], lirNode->b->imm);
     } else {
       std::cout << std::format("  mov cl, {}\n", regs8[b]);
@@ -293,11 +331,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << "  pop r10\n"
 	      << "  mov " << regs[d] << ", rax\n";
     break;
-  case myLIR::LirKind::LIR_PTR_ADD: {
-    /*
-    std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-    std::cout << "  add " << regs[d] << ", " << regs[b] << std::endl;
-    */
+  case myLIR::LirKind::LIR_PTR_ADD: {    
     const int size = lirNode->type_base_size;
     if(size == 1){
       if(is_imm(lirNode->b) && is_int32(lirNode->b)){
@@ -322,11 +356,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     }
     break;
   }
-  case myLIR::LirKind::LIR_PTR_SUB: {
-    /*
-    std::cout << "  imul " << regs[b] << ", " << lirNode->type_base_size << std::endl;
-    std::cout << "  sub " << regs[d] << ", " << regs[b] << std::endl;
-    */
+  case myLIR::LirKind::LIR_PTR_SUB: {    
     const int size = lirNode->type_base_size;
     if(size == 1){
       if(is_imm(lirNode->b) && is_int32(lirNode->b)){
@@ -341,6 +371,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << std::format("  neg {}\n", regs[b]);
 	std::cout << std::format("  lea {}, [{}+{}*{}]\n",
 				 regs[d], regs[d], regs[b], size);
+	std::cout << std::format("  neg {}\n", regs[b]);
       }
     } else {
       if(is_imm(lirNode->b) && is_int32(lirNode->b)){
@@ -366,8 +397,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     } else {
       std::cout << std::format("  mov rax, {}\n", regs[d]);
       std::cout << "  cqo\n";
-      std::cout << std::format("  mov {}, {}\n", regs[b], lirNode->type_base_size);
-      std::cout << std::format("  idiv {}\n", regs[b]);
+      std::cout << std::format("  mov {}, {}\n", regs[/*b*/d], lirNode->type_base_size);
+      std::cout << std::format("  idiv {}\n", regs[/*b*/d]);
       std::cout << std::format("  mov {}, rax\n", regs[d]);
     }
     break;

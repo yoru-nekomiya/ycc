@@ -1,3 +1,5 @@
+void assert(long expected, long actual, char* desc);
+int printf();
 
 int foo(int x, int* y){
   assert(4, sizeof(x), "sizeof(x) in function");

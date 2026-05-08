@@ -29,21 +29,25 @@ namespace myLIR::opt {
     for(auto inst: bb->insts){
       //generation-------------------
       if(is_imm(inst)){
-	table.insert(std::make_pair(inst->d, inst->imm));
+	table.insert_or_assign(inst->d, inst->imm);
       }
       if(inst->opcode == LirKind::LIR_MOV
 	 && is_imm(inst->b)){
-	table.insert(std::make_pair(inst->d, inst->b->imm));
-      }
-      //-----------------------------
-
-      //kill-------------------------
-      if(inst->opcode == LirKind::LIR_CAST){
-	table.erase(inst->a);
+	table.insert_or_assign(inst->d, inst->b->imm);
       }
       //-----------------------------
 
       //replace----------------------
+      //cast
+      if(inst->opcode == LirKind::LIR_CAST){
+	//table.erase(inst->d);
+	if(table.contains(inst->b) && !is_imm(inst->b)){
+	  inst->b->opcode = LirKind::LIR_IMM;
+	  inst->b->imm = table.find(inst->b)->second;
+	  changed = true;
+	}
+      }
+
       //binary opcode
       if(is_binary_opcode(inst->opcode)){
 	if(table.contains(inst->a) && !is_imm(inst->a)){
@@ -109,7 +113,7 @@ namespace myLIR::opt {
       //generation and kill-------------------
       if(inst->opcode == LirKind::LIR_MOV
 	 && !is_imm(inst->b)){
-	table.insert(std::make_pair(inst->d, inst->b));
+	table.insert_or_assign(inst->d, inst->b);
       }
       //-----------------------------
 
@@ -117,7 +121,8 @@ namespace myLIR::opt {
       //replace a and b if they are registered in table,
       //and kill d in table
       //binary opcode----------
-      if(is_binary_opcode(inst->opcode)){
+      if(is_binary_opcode(inst->opcode)
+	 || inst->opcode == LirKind::LIR_MULHIGH){
 	if(table.contains(inst->a) && !is_imm(inst->a)){
 	  inst->a = table.find(inst->a)->second;
 	  changed = true;
@@ -142,7 +147,8 @@ namespace myLIR::opt {
 	}	
       }
 
-      if(inst->opcode == LirKind::LIR_LOAD){
+      if(inst->opcode == LirKind::LIR_LOAD
+	 || inst->opcode == LirKind::LIR_CAST){
 	if(table.contains(inst->b)){
 	  inst->b = table.find(inst->b)->second;
 	  changed = true;
@@ -150,8 +156,7 @@ namespace myLIR::opt {
 	table.erase(inst->d);
       }
 
-      if(inst->opcode == LirKind::LIR_RETURN
-	 || inst->opcode == LirKind::LIR_CAST){
+      if(inst->opcode == LirKind::LIR_RETURN){
 	if(inst->a != nullptr
 	   && !is_imm(inst->a)
 	   && table.contains(inst->a)){
@@ -194,7 +199,7 @@ namespace myLIR::opt {
   }
 
   int64_t calc_constant(const std::shared_ptr<LirNode>& inst){
-    int64_t c;
+    int64_t c = 0;
     switch(inst->opcode){
     case LirKind::LIR_ADD:
       c = inst->a->imm + inst->b->imm; break;
@@ -202,6 +207,8 @@ namespace myLIR::opt {
       c = inst->a->imm - inst->b->imm; break;
     case LirKind::LIR_MUL:
       c = inst->a->imm * inst->b->imm; break;
+    case LirKind::LIR_MAD:
+      c = inst->a->imm + inst->b->imm * inst->scale; break;
     case LirKind::LIR_DIV:
       c = inst->a->imm / inst->b->imm; break;
     case LirKind::LIR_REM:
@@ -226,6 +233,8 @@ namespace myLIR::opt {
       c = inst->a->imm & inst->b->imm; break;
     case LirKind::LIR_BITXOR:
       c = inst->a->imm ^ inst->b->imm; break;
+    default:
+      std::cerr << "unknown opcode (constant_folding)\n"; exit(1);
     }
     return c;
   }
@@ -348,8 +357,7 @@ namespace myLIR::opt {
 	iter = bb->insts.insert(iter, jmp_node);
 	changed = true;
 	continue;
-      } //if LIR_BR
-      
+      } //if LIR_BR      
     } //for inst
     return changed;
   }
@@ -371,11 +379,7 @@ namespace myLIR::opt {
 	  auto mov_node = make_node(LirKind::LIR_MOV,
 				    inst->d,
 				    nullptr,
-				    table.find(inst->lvar->offset)->second);
-	  /*
-	  mov_node->d = inst->d;
-	  mov_node->b = table.find(inst->lvar->offset)->second;
-	  */
+				    table.find(inst->lvar->offset)->second);	  
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, mov_node);
 	  changed = true;
@@ -385,6 +389,88 @@ namespace myLIR::opt {
 	}
       } //if LIR_LVAR
     } //for
+    return changed;
+  }
+
+  static bool
+  redundant_load_elimination(std::shared_ptr<BasicBlock>& bb){
+    //redundant load
+    //v1 <- [rbp-4]
+    //v2 <- [v1]
+    //v3 <- [v1] ==> v3 <- v2
+
+    //store-to-load forwarding
+    //[v4] <- v5
+    //v6 <- [v4] ==> v6 <- v5 (or Cast: v7(64bit) <- v5(32bit); v6 <- v7; if store to v4 is 32bit)
+
+    bool changed = false;
+    std::unordered_map<std::shared_ptr<LirNode>, int, LirSharedPtrHash> st_offset_table; //vn --> stack_offset
+    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> value_table; //[vn] --> vn (Load)
+    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> store_table; //[vn] --> inst (Store)
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
+      auto inst = *iter;
+      if(inst->opcode == LirKind::LIR_LVAR){
+	st_offset_table.insert_or_assign(inst->d, inst->lvar->offset);
+      }
+
+      if(inst->opcode == LirKind::LIR_LOAD){
+	if(value_table.contains(inst->b)){
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    value_table.find(inst->b)->second);
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	}
+	else if(store_table.contains(inst->b)){
+	  
+	  auto store_inst = store_table.find(inst->b)->second;
+	  std::shared_ptr<LirNode> node = make_node(LirKind::LIR_CAST,
+						    new_reg("", 8),
+						    nullptr,
+						    store_inst->b);
+	  node->type_size = store_inst->type_size;
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    node->d);
+	  
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  ++iter;
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	  
+	}
+	else {
+	  value_table.insert(std::make_pair(inst->b, inst->d));
+	}
+      }
+
+      if(inst->opcode == LirKind::LIR_STORE){
+	
+	if(st_offset_table.contains(inst->a)){
+	  store_table.insert_or_assign(inst->a, inst);
+	  value_table.erase(inst->a);
+	} else {
+	  value_table.clear();
+	  store_table.clear();
+	  store_table.insert(std::make_pair(inst->a, inst));
+	}	
+      }
+      /*
+      if(inst->opcode == LirKind::LIR_STORE_SPILL){
+	st_offset_table.clear();
+	value_table.clear();
+      }
+      */
+      if(inst->opcode == LirKind::LIR_FUNCALL){
+	value_table.clear();
+	store_table.clear();
+      }
+    } //for iter
+    
     return changed;
   }
   
@@ -403,6 +489,7 @@ namespace myLIR::opt {
     } while(cp || cf);
     changed = changed || peephole(bb);
     changed = changed || eliminate_redundant_load_from_stack(bb);
+    changed = changed || redundant_load_elimination(bb);
     return changed;
   }
 }

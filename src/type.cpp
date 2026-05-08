@@ -45,7 +45,23 @@ namespace Lunaria {
     type->is_incomplete = true;
     return type;
   }
+
+  bool is_int32(int64_t v){
+    if(v >= (int64_t)INT32_MIN && v <= (int64_t)INT32_MAX){
+      return true;
+    }
+    return false;
+  }
+
+  std::shared_ptr<Lunaria::Type>
+  get_larger_type(const std::shared_ptr<Lunaria::Type>& t1, const std::shared_ptr<Lunaria::Type>& t2){
+    if(t1->kind == Lunaria::TypeKind::LONG || t2->kind == Lunaria::TypeKind::LONG){
+      return Lunaria::long_type;
+    }
+    return Lunaria::int_type;
+  }
 } //namespace Lunaria
+
 
 namespace myParser {
   void add_type(std::unique_ptr<AstNode>& node) {
@@ -69,6 +85,7 @@ namespace myParser {
     }
     
     switch (node->kind) {
+      /*
     case AstKind::AST_ADD:
     case AstKind::AST_SUB:
     case AstKind::AST_PTR_DIFF:
@@ -89,6 +106,36 @@ namespace myParser {
     case AstKind::AST_BITAND:
       node->type = Lunaria::int_type;
       return;
+      */
+    case AstKind::AST_ADD:
+    case AstKind::AST_SUB:
+    case AstKind::AST_MUL:
+    case AstKind::AST_DIV:
+    case AstKind::AST_REM:
+    case AstKind::AST_BITOR:
+    case AstKind::AST_BITXOR:
+    case AstKind::AST_BITAND:
+      node->type = Lunaria::get_larger_type(node->lhs->type, node->rhs->type);
+      return;
+    case AstKind::AST_EQ:
+    case AstKind::AST_NE:
+    case AstKind::AST_LT:
+    case AstKind::AST_LE:
+    case AstKind::AST_LOGOR:
+    case AstKind::AST_LOGAND:
+    case AstKind::AST_NOT:
+      node->type = Lunaria::int_type;
+      return;
+    case AstKind::AST_PTR_DIFF:
+      //node->type = Lunaria::long_type;
+      node->type = node->lhs->type;
+      return;
+    case AstKind::AST_FUNCALL:
+      node->type = node->type;
+      return;
+    case AstKind::AST_NUM:
+      node->type = Lunaria::is_int32(node->val) ? Lunaria::int_type : Lunaria::long_type;
+      return;
     case AstKind::AST_PTR_ADD:
     case AstKind::AST_PTR_SUB:
     case AstKind::AST_ASSIGN:
@@ -105,7 +152,7 @@ namespace myParser {
     case AstKind::AST_MUL_ASSIGN:
     case AstKind::AST_DIV_ASSIGN:
       node->type = node->lhs->type;
-      return;
+      return;      
     case AstKind::AST_VAR:
       node->type = node->var->type;
       return;
@@ -165,6 +212,7 @@ namespace myHIR {
     }
     
     switch (node->kind) {
+      /*
     case HirKind::HIR_ADD:
     case HirKind::HIR_SUB:
     case HirKind::HIR_PTR_DIFF:
@@ -185,6 +233,36 @@ namespace myHIR {
     case HirKind::HIR_BITAND:
       node->type = Lunaria::int_type;
       return;
+      */
+    case HirKind::HIR_ADD:
+    case HirKind::HIR_SUB:
+    case HirKind::HIR_MUL:
+    case HirKind::HIR_DIV:
+    case HirKind::HIR_REM:
+    case HirKind::HIR_BITOR:
+    case HirKind::HIR_BITXOR:
+    case HirKind::HIR_BITAND:
+      node->type = Lunaria::get_larger_type(node->lhs->type, node->rhs->type);
+      return;
+    case HirKind::HIR_EQ:
+    case HirKind::HIR_NE:
+    case HirKind::HIR_LT:
+    case HirKind::HIR_LE:
+    case HirKind::HIR_LOGOR:
+    case HirKind::HIR_LOGAND:
+    case HirKind::HIR_NOT:
+      node->type = Lunaria::int_type;
+      return;
+    case HirKind::HIR_PTR_DIFF:
+      //node->type = Lunaria::long_type;
+      node->type = node->lhs->type;
+      return;
+    case HirKind::HIR_FUNCALL:
+      node->type = node->type;
+      return;
+    case HirKind::HIR_IMM:
+      node->type = Lunaria::is_int32(node->val) ? Lunaria::int_type : Lunaria::long_type;
+      return;      
     case HirKind::HIR_PTR_ADD:
     case HirKind::HIR_PTR_SUB:
     case HirKind::HIR_ASSIGN:

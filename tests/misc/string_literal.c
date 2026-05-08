@@ -1,4 +1,7 @@
 
+void assert(long expected, long actual, char* desc);
+int printf();
+
 int main(){
   char* s; s = "Hello";
   assert('H', s[0], "\'H\'");

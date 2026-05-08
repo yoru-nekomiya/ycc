@@ -6,6 +6,7 @@ namespace myParser {
   static std::stack<int> breaks = {};
   static std::stack<int> continues = {};
   static std::stack<int> switches = {};
+  static std::unordered_map<std::string, std::shared_ptr<Lunaria::Type>> map_funcname_to_return_type;
 
   //scope for local/global variable
   struct VarScope{
@@ -531,6 +532,7 @@ static std::unique_ptr<Function> function(){
   const auto funcName = myTokenizer::expect_ident();
   auto fn = std::make_unique<Function>();
   fn->name = funcName;
+  map_funcname_to_return_type.insert(std::make_pair(funcName, type));
 
   //TODO: add function name to the current scope
   //new_gvar(funcName);
@@ -967,6 +969,7 @@ static std::unique_ptr<AstNode> stmt2(){
     }
     auto node_expr = expr();
     node->lhs = std::move(node_expr);
+    add_type(node->lhs);
     myTokenizer::expect(myTokenizer::TokenType::SEMICOLON);
     return node;
   }
@@ -1590,24 +1593,12 @@ static std::unique_ptr<AstNode> primary(){
       auto node = new_node(AstKind::AST_FUNCALL);
       node->funcName = token->str;
       node->args = funcArgs();
+      node->type = map_funcname_to_return_type.find(token->str)->second;
       add_type(node);
       return node;
     }
 
-    //variable
-    /*
-    auto node = new_node(AstKind::AST_VAR);
-    auto lvar = findLvar(token);
-    auto gvar = findGvar(token);
-    if(lvar){
-      node->var = lvar;
-    } else if(gvar){
-      node->var = gvar;
-    } else {      
-      std::cerr << "undefined variable" << std::endl;
-      exit(1);
-    }
-    */
+    //variable    
     auto vsc = find_var_scope(token);
     if(vsc){
       if(vsc->var){
