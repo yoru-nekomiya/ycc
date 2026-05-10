@@ -550,6 +550,7 @@ struct LirNode {
     std::list<std::shared_ptr<BasicBlock>> bbs;
     std::shared_ptr<BasicBlock> start_node;
     std::shared_ptr<BasicBlock> end_node;
+    int max_reg_pressure;
 
     std::list<std::shared_ptr<BasicBlock>> get_topological_sort();
     std::list<std::shared_ptr<BasicBlock>> get_reverse_topological_sort();

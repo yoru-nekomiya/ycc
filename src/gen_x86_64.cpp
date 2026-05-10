@@ -515,19 +515,31 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
       offset += lvar->type->size;
       lvar->offset = offset;
     }
+
+    const int need_push = (fn->max_reg_pressure-2 < 0) ? 0 : fn->max_reg_pressure-1;
+    
     //16 byte alignment
     fn->stackSize = Lunaria::align_to(offset, 16);
-    fn->stackSize += 8;
+    if(need_push % 2 == 1){
+      fn->stackSize += 8;
+    }
     
     //prologue
     std::cout << "  push rbp\n"
 	      << "  mov rbp, rsp\n"
 	      << "  sub rsp, " << fn->stackSize << '\n';
-    std::cout << "  push r12\n"
+    /*
+    std::cout << "  push rbx\n"
+	      << "  push r12\n"
 	      << "  push r13\n"
 	      << "  push r14\n"
-	      << "  push r15\n"
-	      << "  push rbx\n";
+	      << "  push r15\n";
+    */
+    std::stack<std::string> pushed_reg;
+    for(int i = 2; i < 2+need_push; i++){
+      std::cout << std::format("  push {}\n", regs[i]);
+      pushed_reg.push(regs[i]);
+    }
 
     //generate code
     for(const auto& bb: fn->bbs){
@@ -539,13 +551,17 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     
     //epilogue
     std::cout << ".L.return." << funcname << ":\n";
-    std::cout << "  pop rbx\n"
-	      << "  pop r15\n"
+    /*
+    std::cout << "  pop r15\n"
 	      << "  pop r14\n"
 	      << "  pop r13\n"
-	      << "  pop r12\n";
+	      << "  pop r12\n"
+	      << "  pop rbx\n";
+    */
+    for(; !pushed_reg.empty(); pushed_reg.pop()){
+      std::cout << std::format("  pop {}\n", pushed_reg.top());
+    }
     std::cout << "  mov rsp, rbp\n"
-    //std::cout << "  add rsp, " << fn->stackSize << std::endl
 	      << "  pop rbp\n"
 	      << "  ret\n";
   } //for fn

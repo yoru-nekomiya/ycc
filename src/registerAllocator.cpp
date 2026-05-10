@@ -148,9 +148,8 @@ static std::unordered_map<int, std::shared_ptr<myLIR::LirNode>> used;
     return k;
   }
   
-static void allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
-  //const auto listReg = collectReg(prog);
-
+static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
+  int max_reg_pressure = INT_MIN;
   for(int i = 0; i < num_reg; i++){
     used[i] = nullptr;
   }
@@ -164,22 +163,21 @@ static void allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
       reg->rn = i;
       used[i] = reg;
       found = true;
+      max_reg_pressure = std::max(max_reg_pressure, i);
       break;
     }
     if(found) continue;
 
-    //spill code
-    /*
-    std::cerr << "reg alloc failed! spill code" << std::endl;
-    exit(1);
-    */
+    //spill code    
     used[num_reg-1] = reg;
     const int k = choose_to_spill();
     reg->rn = k;
     used[k]->rn = num_reg-1;
     used[k]->spill = true;
     used[k] = reg;
+    max_reg_pressure = num_reg-1;
   } //for
+  return max_reg_pressure;
 }
   
   static void spill_store(std::list<std::shared_ptr<myLIR::LirNode>>& insts,
@@ -241,7 +239,7 @@ void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
   preprocess_x86_64(prog);
   for(auto& fn: prog->fns){
     auto listReg = collectReg(fn);
-    allocate(listReg);
+    fn->max_reg_pressure = allocate(listReg);
     for(auto& reg: listReg){
       if(!reg->spill){
 	continue;
