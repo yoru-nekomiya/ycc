@@ -240,6 +240,7 @@ void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
   for(auto& fn: prog->fns){
     auto listReg = collectReg(fn);
     fn->max_reg_pressure = allocate(listReg);
+    prog->funcname_to_reg_pressure.insert(std::make_pair(fn->name, fn->max_reg_pressure));
     for(auto& reg: listReg){
       if(!reg->spill){
 	continue;

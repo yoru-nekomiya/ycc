@@ -121,8 +121,7 @@ namespace myLIR::opt {
       //replace a and b if they are registered in table,
       //and kill d in table
       //binary opcode----------
-      if(is_binary_opcode(inst->opcode)
-	 || inst->opcode == LirKind::LIR_MULHIGH){
+      if(is_binary_opcode(inst->opcode)){
 	if(table.contains(inst->a) && !is_imm(inst->a)){
 	  inst->a = table.find(inst->a)->second;
 	  changed = true;
@@ -207,6 +206,11 @@ namespace myLIR::opt {
       c = inst->a->imm - inst->b->imm; break;
     case LirKind::LIR_MUL:
       c = inst->a->imm * inst->b->imm; break;
+    case LirKind::LIR_MULHIGH:{
+      const __int128 res = (__int128)inst->a->imm * inst->b->imm;
+      c = (int64_t)(res >> 64);
+      break;
+    }
     case LirKind::LIR_MAD:
       c = inst->a->imm + inst->b->imm * inst->scale; break;
     case LirKind::LIR_DIV:

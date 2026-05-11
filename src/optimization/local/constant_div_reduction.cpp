@@ -181,12 +181,7 @@ namespace myLIR::opt {
     auto mulhigh_node = make_node(LirKind::LIR_MULHIGH,
 				  q,
 				  inst->a,
-				  make_imm_node(magic.M));
-    /*
-    mulhigh_node->d = q;
-    mulhigh_node->a = inst->a;
-    mulhigh_node->b = make_imm_node(magic.M);
-    */
+				  make_imm_node(magic.M));    
     iter = bb->insts.erase(iter);
     iter = bb->insts.insert(iter, mulhigh_node);
     ++iter;

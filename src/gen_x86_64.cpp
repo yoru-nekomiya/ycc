@@ -12,7 +12,8 @@ namespace myCodeGen {
   static const std::string argregs32[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"}; 
   static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
   
-static std::string funcname = "";
+  static std::string funcname = "";
+  std::unordered_map<std::string, int> funcname_to_reg_pressure;
 
   static std::string reg(int r, int size){
     if(size == 1) return regs8[r];    
@@ -315,7 +316,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     } //if(lirNode->bbarg)
     std::cout << std::format("  jmp .L{}\n", lirNode->bb1->label);
     break;
-  case myLIR::LirKind::LIR_FUNCALL:
+  case myLIR::LirKind::LIR_FUNCALL: {
     for(int i = 0; i < lirNode->args.size(); i++){
       if(is_imm(lirNode->args[i]) && is_int32(lirNode->args[i])){
 	std::cout << std::format("  mov {}, {}\n", argregs[i], lirNode->args[i]->imm);
@@ -323,6 +324,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	std::cout << std::format("  mov {}, {}\n", argregs[i], regs[lirNode->args[i]->rn]);
       }
     }
+    /*
     std::cout << "  push r10\n" 
 	      << "  push r11\n" 
 	      << "  xor rax, rax\n"
@@ -330,7 +332,44 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 	      << "  pop r11\n"
 	      << "  pop r10\n"
 	      << "  mov " << regs[d] << ", rax\n";
+    */
+    /*
+    if(!funcname_to_reg_pressure.contains(lirNode->funcName)){
+      std::cerr << "lirNode->funcName is " << lirNode->funcName << std::endl;
+      exit(1);
+    }
+    */
+    const bool is_contained = funcname_to_reg_pressure.contains(lirNode->funcName);
+    std::stack<std::string> pushed_reg;
+    if(is_contained){
+      const int reg_pressure = funcname_to_reg_pressure[lirNode->funcName];      
+      if(reg_pressure == 0){
+	std::cout << "  push r10\n";
+	pushed_reg.push("r10");
+      } else if(reg_pressure >= 1){
+	std::cout << "  push r10\n";
+	std::cout << "  push r11\n";
+	pushed_reg.push("r10");
+	pushed_reg.push("r11");
+      }
+    } else {
+      std::cout << "  push r10\n";
+      std::cout << "  push r11\n";
+      pushed_reg.push("r10");
+      pushed_reg.push("r11");
+    }
+
+    std::cout << "  xor rax, rax\n";
+    std::cout << std::format("  call {}\n", lirNode->funcName);
+
+    for(; !pushed_reg.empty(); pushed_reg.pop()){
+      std::cout << std::format("  pop {}\n", pushed_reg.top());
+    }
+
+    std::cout << std::format("  mov {}, rax\n", regs[d]);
+    
     break;
+  }
   case myLIR::LirKind::LIR_PTR_ADD: {    
     const int size = lirNode->type_base_size;
     if(size == 1){
@@ -503,7 +542,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   
 static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
   std::cout << ".text\n";
-
+  funcname_to_reg_pressure = prog->funcname_to_reg_pressure;
   for(const auto& fn: prog->fns){    
     std::cout << std::format(".global {}\n{}:\n", fn->name, fn->name);
     funcname = fn->name;
@@ -528,13 +567,7 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     std::cout << "  push rbp\n"
 	      << "  mov rbp, rsp\n"
 	      << "  sub rsp, " << fn->stackSize << '\n';
-    /*
-    std::cout << "  push rbx\n"
-	      << "  push r12\n"
-	      << "  push r13\n"
-	      << "  push r14\n"
-	      << "  push r15\n";
-    */
+    
     std::stack<std::string> pushed_reg;
     for(int i = 2; i < 2+need_push; i++){
       std::cout << std::format("  push {}\n", regs[i]);
@@ -550,14 +583,7 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     }
     
     //epilogue
-    std::cout << ".L.return." << funcname << ":\n";
-    /*
-    std::cout << "  pop r15\n"
-	      << "  pop r14\n"
-	      << "  pop r13\n"
-	      << "  pop r12\n"
-	      << "  pop rbx\n";
-    */
+    std::cout << ".L.return." << funcname << ":\n";    
     for(; !pushed_reg.empty(); pushed_reg.pop()){
       std::cout << std::format("  pop {}\n", pushed_reg.top());
     }

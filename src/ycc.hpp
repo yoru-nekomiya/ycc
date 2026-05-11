@@ -571,6 +571,7 @@ struct LirNode {
   struct Program {
     std::list<std::shared_ptr<Function>> fns;
     std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> globalVars;
+    std::unordered_map<std::string, int> funcname_to_reg_pressure;
   };
 
   std::shared_ptr<LirNode> new_reg(const std::string& varName = "", int type_size = 0);
