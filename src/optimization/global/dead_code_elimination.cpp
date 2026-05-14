@@ -52,8 +52,15 @@ namespace myLIR::opt {
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
 	  continue;
 	}
+
+	if(inst->opcode == LirKind::LIR_LOAD_STACK){
+	  gen.erase(inst->d);
+	  kill.insert(inst->d);
+	  continue;
+	}
 	
-	if(inst->opcode == LirKind::LIR_BR){
+	if(inst->opcode == LirKind::LIR_BR
+	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
 	  continue;
 	}
@@ -154,6 +161,7 @@ namespace myLIR::opt {
 	if(inst->opcode != LirKind::LIR_STORE
 	   && inst->opcode != LirKind::LIR_STORE_SPILL
 	   && inst->opcode != LirKind::LIR_STORE_ARG
+	   && inst->opcode != LirKind::LIR_STORE_STACK
 	   && inst->opcode != LirKind::LIR_RETURN
 	   && inst->opcode != LirKind::LIR_BR
 	   && inst->opcode != LirKind::LIR_JMP
@@ -186,8 +194,14 @@ namespace myLIR::opt {
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
 	  continue;
 	}
+
+	if(inst->opcode == LirKind::LIR_LOAD_STACK){
+	  live.erase(inst->d);
+	  continue;
+	}
 	
-	if(inst->opcode == LirKind::LIR_BR){
+	if(inst->opcode == LirKind::LIR_BR
+	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
 	  continue;
 	}

@@ -815,6 +815,9 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     case LirKind::LIR_LOAD_SPILL:
       ret = std::format("Load_spill: v{} <- [rbp-{}]", d, i->lvar->offset);
       break;
+    case LirKind::LIR_LOAD_STACK:
+      ret = std::format("Load_stack: v{} <- [rbp-{}]", d, i->lvar->offset);
+      break;
     case LirKind::LIR_STORE:
       if(is_imm(i->b)){
 	ret = std::format("Store: [v{}] <- {}", a, i->b->imm);
@@ -827,6 +830,13 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       break;
     case LirKind::LIR_STORE_ARG:
       ret = std::format("Store_arg: [rbp-{}] <- argreg({})", i->lvar->offset, i->imm);
+      break;
+    case LirKind::LIR_STORE_STACK:
+      if(is_imm(i->b)){
+	ret = std::format("Store_stack: [rbp-{}] <- {}", i->lvar->offset, i->b->imm);
+      } else {
+	ret = std::format("Store_stack: [rbp-{}] <- v{}", i->lvar->offset, b);
+      }
       break;
     case LirKind::LIR_RETURN:
       if(i->a != nullptr){

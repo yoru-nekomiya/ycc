@@ -80,6 +80,23 @@ static void print_cmp(const std::string& cmp,
     }
   }
 
+  static void load_from_stack(const std::shared_ptr<myLIR::LirNode>& lirNode){
+    const int d = lirNode->d ? lirNode->d->rn : 0;
+    const int size = lirNode->type_size;
+    const int os = lirNode->lvar->offset;
+    //signed extension
+    if(size == 1){
+      std::cout << std::format("  movsx {}, byte ptr [rbp-{}]\n", regs[d], os);
+    } else if(size == 2){
+      std::cout << std::format("  movsx {}, word ptr [rbp-{}]\n", regs[d], os);
+    } else if(size == 4){
+      std::cout << std::format("  movsxd {}, dword ptr [rbp-{}]\n", regs[d], os);
+    } else {
+      assert(size == 8);
+      std::cout << std::format("  mov {}, [rbp-{}]\n", regs[d], os);
+    }
+  }
+
   static void truncate(const std::shared_ptr<myLIR::LirNode>& lirNode){
     const int size = lirNode->type_size;
     const int d = lirNode->d ? lirNode->d->rn : 0;
@@ -263,6 +280,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   case myLIR::LirKind::LIR_LOAD_SPILL:
     std::cout << std::format("  mov {}, [rbp-{}]\n", regs[d], lirNode->lvar->offset);
     break;
+  case myLIR::LirKind::LIR_LOAD_STACK:
+    load_from_stack(lirNode);
+    break;
   case myLIR::LirKind::LIR_STORE:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
       const auto q = get_size_qualifier(lirNode->type_size);
@@ -279,6 +299,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 			     lirNode->lvar->offset,
 			     argreg(lirNode->imm, lirNode->type_size));
     break;
+  case myLIR::LirKind::LIR_STORE_STACK:{
+    const int os = lirNode->lvar->offset;
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
+      const auto q = get_size_qualifier(lirNode->type_size);
+      std::cout << std::format("  mov {} [rbp-{}], {}\n", q, os, lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov [rbp-{}], {}\n", os, reg(b, lirNode->type_size));
+    }
+    break;
+  }
   case myLIR::LirKind::LIR_RETURN:
     if(lirNode->a){
       if(is_imm(lirNode->a) && is_int32(lirNode->a)){

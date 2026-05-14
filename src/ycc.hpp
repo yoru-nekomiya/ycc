@@ -472,9 +472,11 @@ enum class LirKind {
   LIR_LVAR,
   LIR_LOAD,
   LIR_LOAD_SPILL,
+  LIR_LOAD_STACK,
   LIR_STORE,
-  LIR_STORE_SPILL,
+  LIR_STORE_SPILL,  
   LIR_STORE_ARG,
+  LIR_STORE_STACK,
   LIR_RETURN,
   LIR_BR, //branch
   LIR_JMP, //jump
@@ -510,7 +512,7 @@ struct LirNode {
   std::shared_ptr<LirNode> d; //destination operand
   std::shared_ptr<LirNode> a; //left source operand
   std::shared_ptr<LirNode> b; //right source operand
-  long long imm;
+  /*long long*/int64_t imm;
   int scale;
 
   int vn; //virtual register number

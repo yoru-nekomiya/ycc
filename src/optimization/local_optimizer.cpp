@@ -17,6 +17,7 @@ namespace myLIR::opt {
   static bool is_unary_opcode(LirKind k){
     return k == LirKind::LIR_MOV
       || k == LirKind::LIR_STORE
+      || k == LirKind::LIR_STORE_STACK
       //|| k == LirKind::LIR_LOAD
       //|| k == LirKind::LIR_RETURN
       || k == LirKind::LIR_BR;
@@ -164,7 +165,8 @@ namespace myLIR::opt {
 	}
       }
 
-      if(inst->opcode == LirKind::LIR_BR){
+      if(inst->opcode == LirKind::LIR_BR
+	 || inst->opcode == LirKind::LIR_STORE_STACK){
 	if(table.contains(inst->b) && !is_imm(inst->b)){
 	  inst->b = table.find(inst->b)->second;
 	  changed = true;
@@ -397,6 +399,53 @@ namespace myLIR::opt {
   }
 
   static bool
+  propagate_stack_address(std::shared_ptr<BasicBlock>& bb){
+    //v1 <- [rbp-4]
+    //v2 <- [v1]
+    //-->
+    //v2 <- [rbp-4]
+
+    bool changed = false;
+    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<Lunaria::Var>, LirSharedPtrHash> st_offset_table; //vn --> lvar
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
+      auto inst = *iter;
+      if(inst->opcode == LirKind::LIR_LVAR){
+	st_offset_table.insert_or_assign(inst->d, inst->lvar);
+      }
+
+      if(inst->opcode == LirKind::LIR_LOAD){
+	if(st_offset_table.contains(inst->b)){
+	  auto node = make_node(LirKind::LIR_LOAD_STACK,
+				inst->d,
+				nullptr,
+				nullptr);
+	  node->lvar = st_offset_table.find(inst->b)->second;
+	  node->type_size = inst->type_size;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  changed = true;
+	}
+      }
+
+      if(inst->opcode == LirKind::LIR_STORE){
+	if(st_offset_table.contains(inst->a)){
+	  auto node = make_node(LirKind::LIR_STORE_STACK,
+				nullptr,
+				nullptr,
+				inst->b);
+	  node->lvar = st_offset_table.find(inst->a)->second;
+	  node->type_size = inst->type_size;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  changed = true;
+	}
+      }
+    }
+    return changed;
+  }
+
+  /*
+  static bool
   redundant_load_elimination(std::shared_ptr<BasicBlock>& bb){
     //redundant load
     //v1 <- [rbp-4]
@@ -463,14 +512,75 @@ namespace myLIR::opt {
 	  store_table.insert(std::make_pair(inst->a, inst));
 	}	
       }
-      /*
-      if(inst->opcode == LirKind::LIR_STORE_SPILL){
-	st_offset_table.clear();
-	value_table.clear();
-      }
-      */
+      
       if(inst->opcode == LirKind::LIR_FUNCALL){
 	value_table.clear();
+	store_table.clear();
+      }
+    } //for iter
+    
+    return changed;
+  }
+  */
+
+  static bool
+  redundant_load_elimination(std::shared_ptr<BasicBlock>& bb){
+    //redundant load
+    //Load_stack: v1 <- [rbp-4]
+    //Load_stack: v2 <- [rbp-4] ==> v2 <- v1
+
+    //store-to-load forwarding
+    //[rbp-8] <- v3
+    //v4 <- [rbp-8] ==> v4 <- v3 (or Cast: v5(64bit) <- v3(32bit); v4 <- v5; if store to rbp-8 is 32bit)
+
+    bool changed = false;
+    std::unordered_map<int, std::shared_ptr<LirNode>> st_offset_table; //stack_offset --> vn (Load)
+    std::unordered_map<int, std::shared_ptr<LirNode>> store_table; //stack_offset --> inst (Store)
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
+      auto inst = *iter;
+      if(inst->opcode == LirKind::LIR_LOAD_STACK){
+	if(st_offset_table.contains(inst->lvar->offset)){
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    st_offset_table.find(inst->lvar->offset)->second);
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	}
+	else if(store_table.contains(inst->lvar->offset)){
+	  
+	  auto store_inst = store_table.find(inst->lvar->offset)->second;
+	  std::shared_ptr<LirNode> node = make_node(LirKind::LIR_CAST,
+						    new_reg("", 8),
+						    nullptr,
+						    store_inst->b);
+	  node->type_size = store_inst->type_size;
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    node->d);
+	  
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  ++iter;
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	  
+	}
+	else {
+	  st_offset_table.insert(std::make_pair(inst->lvar->offset, inst->d));
+	}
+      }
+
+      if(inst->opcode == LirKind::LIR_STORE_STACK){	
+	  store_table.insert_or_assign(inst->lvar->offset, inst);
+	  st_offset_table.erase(inst->lvar->offset);
+      }
+      
+      if(inst->opcode == LirKind::LIR_FUNCALL
+	 || inst->opcode == LirKind::LIR_STORE){
+	st_offset_table.clear();
 	store_table.clear();
       }
     } //for iter
@@ -492,8 +602,9 @@ namespace myLIR::opt {
       changed = changed || cp || cf || copy_prop;
     } while(cp || cf);
     changed = changed || peephole(bb);
-    changed = changed || eliminate_redundant_load_from_stack(bb);
+    //changed = changed || eliminate_redundant_load_from_stack(bb);
     changed = changed || redundant_load_elimination(bb);
+    changed = changed || propagate_stack_address(bb);
     return changed;
   }
 }
