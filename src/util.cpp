@@ -8,10 +8,14 @@ namespace myLIR {
     return false;
   }
 
-  bool is_int32(const std::shared_ptr<myLIR::LirNode>& lirNode){
+  bool is_int32(const std::shared_ptr<LirNode>& lirNode){
     if(lirNode->imm >= (int64_t)INT32_MIN && lirNode->imm <= (int64_t)INT32_MAX){
       return true;
     }
     return false;
+  }
+
+  bool is_imm_int32(const std::shared_ptr<LirNode>& n){
+    return is_imm(n) && is_int32(n);
   }
 } //namespace myLIR

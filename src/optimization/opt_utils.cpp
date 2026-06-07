@@ -120,7 +120,7 @@ namespace myLIR::opt {
 	f << std::format("\tNode_BB{} [shape=record, color=\"#3d50c3ff\", style=filled, fillcolor=\"#e36c5570\",label=\"{{BB_{}:\\l", bb->label, bb->label);
 	
 	for(const auto& inst: bb->insts){
-	  f << escape_for_dot(myLIR::print_lir(inst));
+	  f << escape_for_dot(myLIR::print_lir(inst, true));
 	  f << "\\l";
 	} //for inst
 	f << "}\"];\n";

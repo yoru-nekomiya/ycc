@@ -37,6 +37,15 @@ emit_lir(LirKind opcode,
     return std::move(lirNode);
   }
 
+  std::shared_ptr<LirNode> new_fixed_reg(int fixed_reg_num, int type_size){
+    auto lirNode = std::make_shared<LirNode>();
+    lirNode->opcode = LirKind::LIR_REG;
+    lirNode->type_size = type_size;
+    lirNode->is_fixed_reg = true;
+    lirNode->frn = fixed_reg_num;
+    return std::move(lirNode);
+  }
+
 static std::shared_ptr<LirNode>
 new_imm(long long imm){
   const int type_size = Lunaria::is_int32(imm) ? 4 : 8;
@@ -336,13 +345,19 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   }
   case myHIR::HirKind::HIR_RETURN: {
     std::shared_ptr<LirNode> a = nullptr;
+    std::shared_ptr<LirNode> mov = nullptr;
     if(hirNode->lhs){
       a = gen_expr_lir(hirNode->lhs);
+      mov = new_lir(LirKind::LIR_MOV);
+      mov->d = new_fixed_reg(0, 8);
+      mov->b = a;
     }
+    
     auto lirNode = new_lir(LirKind::LIR_RETURN);
-    lirNode->a = a;
+    lirNode->a = /*a*/mov ? mov->d : nullptr;
     outBB = new_bb();
-    return std::move(a);
+    //return std::move(a);
+    return lirNode->a;
   }
   case myHIR::HirKind::HIR_IF: {
     /*
@@ -515,10 +530,17 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
       args.push_back(d);
     }
     auto lirNode = new_lir(LirKind::LIR_FUNCALL);
-    lirNode->d = new_reg("", hirNode->type->size);
+    //lirNode->d = new_reg("", hirNode->type->size);
+    lirNode->d = new_fixed_reg(0, hirNode->type->size);
     lirNode->funcName = hirNode->funcName;
     lirNode->args = std::move(args);
-    return lirNode->d;
+
+    auto mov = new_lir(LirKind::LIR_MOV);
+    //mov->d = lirNode->d;
+    //mov->b = new_fixed_reg(0, hirNode->type->size);
+    mov->d = new_reg("", hirNode->type->size);
+    mov->b = lirNode->d;
+    return /*lirNode->d*/mov->d;
   }
   case myHIR::HirKind::HIR_DEREF: {
     if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
@@ -700,7 +722,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
     f.close();
   }
 
-  std::string print_lir(const std::shared_ptr<LirNode>& i){
+  std::string print_lir(const std::shared_ptr<LirNode>& i, bool is_cfg_mode){
     const int d = i->d ? i->d->vn : 0;
     const int a = i->a ? i->a->vn : 0;
     const int b = i->b ? i->b->vn : 0;
@@ -711,7 +733,14 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       if(is_imm(i->b)){
 	ret = std::format("v{} <- {}", d, i->b->imm);
       } else {
-	ret = std::format("v{} <- v{}", d, b);
+	if(i->b->is_fixed_reg){
+	  ret = std::format("v{} <- fix_reg_{}", d, i->b->frn);
+	} else if(i->d->is_fixed_reg){
+	  ret = std::format("fix_reg_{} <- v{}", i->d->frn, b);
+	}
+	else {
+	  ret = std::format("v{} <- v{}", d, b);
+	}
       }
       break;
     case LirKind::LIR_IMM:
@@ -860,16 +889,24 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
       std::string s;
       if(i->bbarg){
 	if(is_imm(i->bbarg)){
-	  s = std::format("BBARG: v{} <- {}\\l", i->bb1->param->vn, i->bbarg->imm);
+	  if(is_cfg_mode){
+	    s = std::format("BBARG: v{} <- {}\\l", i->bb1->param->vn, i->bbarg->imm);
+	  } else {
+	    s = std::format("BBARG: v{} <- {}\n", i->bb1->param->vn, i->bbarg->imm);
+	  }
 	} else {
-	  s = std::format("BBARG: v{} <- v{}\\l", i->bb1->param->vn, i->bbarg->vn);
+	  if(is_cfg_mode){
+	    s = std::format("BBARG: v{} <- v{}\\l", i->bb1->param->vn, i->bbarg->vn);
+	  } else {
+	    s = std::format("BBARG: v{} <- v{}\n", i->bb1->param->vn, i->bbarg->vn);
+	  }
 	}
       }
-      ret = s + std::format("jmp BB_{}", i->bb1->label);
+      ret = s + std::format("  jmp BB_{}", i->bb1->label);
       break;
     }
     case LirKind::LIR_FUNCALL: {
-      std::string s = std::format("v{} <- call {}(", d, i->funcName);
+      std::string s = std::format("fix_reg_{} <- call {}(", /*d*/i->d->frn, i->funcName);
       if(i->args.size() != 0){
 	if(is_imm(i->args[0])){
 	  s += std::format("{}", i->args[0]->imm);
@@ -993,7 +1030,7 @@ generateLirNode(const std::unique_ptr<myHIR::Program>& prog){
 
   static void print_lir_formatted(std::ofstream& f, const std::shared_ptr<LirNode>& i){
     f << "  ";
-    f << print_lir(i);
+    f << print_lir(i, false);
     f << "\n";
   }
 } //namespace myLIR

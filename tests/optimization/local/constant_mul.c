@@ -168,4 +168,5 @@ int main(){
   assert(132, mul_33r(4), "mul_33r(4)");
   assert(238, mul_34r(7), "mul_34r(7)");
   assert(-238, mul_m34r(7), "mul_m34r(7)");
+  return 0;
 }

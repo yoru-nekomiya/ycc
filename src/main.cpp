@@ -1,4 +1,5 @@
 #include "ycc.hpp"
+#include "optimization/graph_coloring_reg_alloc.hpp"
 
 struct Config {
   bool opt = false;
@@ -73,9 +74,13 @@ int main(int argc, char* argv[]){
     auto progHir = myHIR::generateHirNode(prog);
     
     auto progLir = myLIR::generateLirNode(progHir);
-    myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);    
-    myRegAlloc::allocateRegister_x86_64(progLir);    
-    myCodeGen::gen_x86_64(progLir);
+    myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);
+    if(config.opt){
+      myRegAlloc::graph_coloring_register_allocation_x86_64(progLir);
+    } else {
+      myRegAlloc::allocateRegister_x86_64(progLir);
+    }
+    myCodeGen::gen_x86_64(progLir, config.opt);
     if(config.emit_lir){
       dumpLIR(progLir, replace_file_extension(config.input_file, "lir"));
     }

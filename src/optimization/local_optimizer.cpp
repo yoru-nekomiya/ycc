@@ -113,7 +113,8 @@ namespace myLIR::opt {
     for(auto inst: bb->insts){
       //generation and kill-------------------
       if(inst->opcode == LirKind::LIR_MOV
-	 && !is_imm(inst->b)){
+	 && !is_imm(inst->b)
+	 && !inst->b->is_fixed_reg){
 	table.insert_or_assign(inst->d, inst->b);
       }
       //-----------------------------
@@ -304,6 +305,23 @@ namespace myLIR::opt {
 	}
       } //if LIR_ADD
 
+      if(inst->opcode == LirKind::LIR_PTR_ADD
+	 || inst->opcode == LirKind::LIR_PTR_SUB){
+	if(is_imm(inst->b)
+	   && inst->b->imm == 0){
+	  //d=a+0 --> d=a
+	  //d=a-0 --> d=a
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    inst->a);
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	  continue;
+	}
+      } //if LIR_PTR_ADD
+
       if(inst->opcode == LirKind::LIR_SUB){
 	if(is_imm(inst->b)
 	   && inst->b->imm == 0
@@ -367,7 +385,7 @@ namespace myLIR::opt {
     } //for inst
     return changed;
   }
-
+  /*
   static bool
   eliminate_redundant_load_from_stack(std::shared_ptr<BasicBlock>& bb){
     //Lunaria assumes that rbp keeps the same value during the execution of a function.
@@ -397,7 +415,7 @@ namespace myLIR::opt {
     } //for
     return changed;
   }
-
+  */
   static bool
   propagate_stack_address(std::shared_ptr<BasicBlock>& bb){
     //v1 <- [rbp-4]

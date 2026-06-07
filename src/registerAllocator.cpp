@@ -3,7 +3,7 @@
 #include "optimization/opt_utils.hpp"
 
 namespace myRegAlloc {
-  const int num_reg = 7;
+  const int num_reg = 7; //"r10", "r11", "rbx", "r12", "r13", "r14", "r15"
 
   static void insert_64bit_imm_mov(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
 				   std::shared_ptr<myLIR::BasicBlock>& bb){
@@ -92,9 +92,11 @@ namespace myRegAlloc {
   auto movNode = std::make_shared<myLIR::LirNode>();
   movNode->opcode = myLIR::LirKind::LIR_MOV;
   movNode->d = (*iter)->d;
+  //movNode->d = myLIR::new_reg("", 8);
   movNode->b = (*iter)->a;
   
   (*iter)->a = (*iter)->d;
+  //(*iter)->a = movNode->d;
   iter = bb->insts.insert(iter, std::move(movNode));
   //Now, iter points movNode, so increment iter
   iter++;
@@ -221,7 +223,7 @@ static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
     std::copy(insts.begin(), insts.end(), bb->insts.begin());
   }
 
-  static void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog){
+  void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog){
     for(auto& fn: prog->fns){
       for(auto& bb: fn->bbs){
 	for(std::list<std::shared_ptr<myLIR::LirNode>>::iterator iter = bb->insts.begin(); iter != bb->insts.end(); iter++){

@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <bit>     // std::has_single_bit
 #include <concepts> // std::integral
+#include <array>
 
 //---------------------------
 //Lunaria Utility
@@ -520,6 +521,8 @@ struct LirNode {
   int def;
   int lastUse;
   bool spill;
+  bool is_fixed_reg;
+  int frn; //fixed register number
 
   std::shared_ptr<Lunaria::Var> lvar;
   std::string name; //for global variable
@@ -537,6 +540,7 @@ struct LirNode {
   LirNode(): opcode(LirKind::LIR_NULL), d(nullptr),
 	     a(nullptr), b(nullptr), imm(-1), scale(0),
 	     vn(-1), rn(-1), def(0), lastUse(0), spill(false),
+	     is_fixed_reg(false), frn(-1),
 	     lvar(nullptr), name(""),
 	     bb1(nullptr), bb2(nullptr), bbarg(nullptr),
 	     funcName(""), args({}),
@@ -579,7 +583,7 @@ struct LirNode {
   std::shared_ptr<LirNode> new_reg(const std::string& varName = "", int type_size = 0);
   std::unique_ptr<Program>
   generateLirNode(const std::unique_ptr<myHIR::Program>&);
-  std::string print_lir(const std::shared_ptr<LirNode>& i);
+  std::string print_lir(const std::shared_ptr<LirNode>& i, bool is_cfg_mode);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename);
 
   namespace opt {
@@ -594,13 +598,14 @@ struct LirNode {
 //---------------------------
 //Register Allocation
 namespace myRegAlloc {
-void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>&);
+  void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog);
+  void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog);
 }
 
 //---------------------------
 //Code Generation
 namespace myCodeGen {
-void gen_x86_64(const std::unique_ptr<myLIR::Program>&);
+  void gen_x86_64(const std::unique_ptr<myLIR::Program>&, bool opt);
 }
 
 #endif

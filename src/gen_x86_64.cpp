@@ -2,25 +2,43 @@
 #include "util.hpp"
 
 namespace myCodeGen {
+  static std::array<std::string, 14> regs8;
+  static std::array<std::string, 14> regs16;
+  static std::array<std::string, 14> regs32;
+  static std::array<std::string, 14> regs;
+
+  /*
   static const std::string regs8[] = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
   static const std::string regs16[] = {"r10w", "r11w", "bx", "r12w", "r13w", "r14w", "r15w"};
   static const std::string regs32[] = {"r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
   static const std::string regs[] = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
-
+  */
+  /*
+  static const std::string regs8[] = {"al", "dil", "sil", "dl", "cl", "r8b", "r9b",
+				      "r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+  static const std::string regs16[] = {"ax", "di", "si", "dx", "cx", "r8w", "r9w",
+				       "r10w", "r11w", "bx", "r12w", "r13w", "r14w", "r15w"};
+  static const std::string regs32[] = {"eax", "edi", "esi", "edx", "ecx", "r8d", "r9d",
+				       "r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
+  static const std::string regs[] = {"rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9",
+				     "r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
+  */
   static const std::string argregs8[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
   static const std::string argregs16[] = {"di", "si", "dx", "cx", "r8w", "r9w"};
   static const std::string argregs32[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"}; 
   static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+  static const std::string fixed_regs[] = {"rax"};
   
   static std::string funcname = "";
   std::unordered_map<std::string, int> funcname_to_reg_pressure;
 
-  static std::string reg(int r, int size){
+  static std::string reg(int r, int size){    
     if(size == 1) return regs8[r];    
     if(size == 2) return regs16[r];    
     if(size == 4) return regs32[r];
     assert(size == 8);
-    return regs[r];
+    return regs[r];       
   }
 
   static std::string argreg(int r, int size){
@@ -153,19 +171,26 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 
   switch(lirNode->opcode){
   case myLIR::LirKind::LIR_MOV:
-    if(is_imm(lirNode->b)){
+    if(lirNode->d->is_fixed_reg){
+      std::cout << std::format("  mov {}, {}\n", fixed_regs[lirNode->d->frn], regs[b]);
+    }
+    else if(is_imm(lirNode->b)){
       if(is_int32(lirNode->b)){
 	if(lirNode->b->imm == 0){
-	  std::cout << std::format("  xor {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, regs[d]/*get_reg(d, lirNode->d->type_size)*/);
+	  std::cout << std::format("  xor {}, {}\n", regs[d], regs[d]);
 	} else {
-	  std::cout << std::format("  mov {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, lirNode->b->imm);
+	  std::cout << std::format("  mov {}, {}\n", regs[d], lirNode->b->imm);
 	}
       } else {
 	std::cout << std::format("  movabsq {}, {}\n", regs[d], lirNode->b->imm);
       }
-    } else {
+    }
+    else if(lirNode->b->is_fixed_reg){
+      std::cout << std::format("  mov {}, {}\n", regs[d], fixed_regs[lirNode->b->frn]);
+    }
+    else {
       if(d != b)
-	std::cout << std::format("  mov {}, {}\n", regs[d]/*get_reg(d, lirNode->d->type_size)*/, regs[b]/*get_reg(b, lirNode->b->type_size)*/);
+	std::cout << std::format("  mov {}, {}\n", regs[d], regs[b]);
     }
     break;
   case myLIR::LirKind::LIR_IMM:
@@ -272,7 +297,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << std::format("  lea {}, [rbp-{}]\n", regs[d], lirNode->lvar->offset);
     break;
   case myLIR::LirKind::LIR_LABEL_ADDR:
-    std::cout << std::format("  lea {}, {}\n", regs[d], lirNode->name);
+    std::cout << std::format("  lea {}, {}\n", regs[d], lirNode->name);    
     break;
   case myLIR::LirKind::LIR_LOAD:
     load(lirNode);
@@ -310,13 +335,15 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     break;
   }
   case myLIR::LirKind::LIR_RETURN:
+    
     if(lirNode->a){
       if(is_imm(lirNode->a) && is_int32(lirNode->a)){
 	std::cout << std::format("  mov rax, {}\n", lirNode->a->imm);
-      } else {
+      } else if(!lirNode->a->is_fixed_reg){
 	std::cout << std::format("  mov rax, {}\n", regs[a]);
       }
     } //if(lirNode->a)
+    
     std::cout << std::format("  jmp .L.return.{}\n", funcname);
     break;
   case myLIR::LirKind::LIR_BR:
@@ -396,7 +423,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       std::cout << std::format("  pop {}\n", pushed_reg.top());
     }
 
-    std::cout << std::format("  mov {}, rax\n", regs[d]);
+    //std::cout << std::format("  mov {}, rax\n", regs[d]);
     
     break;
   }
@@ -419,8 +446,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       if(is_imm(lirNode->b) && is_int32(lirNode->b)){
 	std::cout << std::format("  add {}, {}\n", regs[d], lirNode->b->imm * lirNode->type_base_size);
       } else {
+	/*
 	std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
 	std::cout << std::format("  add {}, {}\n", regs[d], regs[b]);
+	*/
+	assert(false && "This case should not be reached. PTR_ADD must be decompose in this case.");
       }
     }
     break;
@@ -446,8 +476,11 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       if(is_imm(lirNode->b) && is_int32(lirNode->b)){
 	std::cout << std::format("  sub {}, {}\n", regs[d], lirNode->b->imm * lirNode->type_base_size);
       } else {
+	/*
 	std::cout << std::format("  imul {}, {}\n", regs[b], lirNode->type_base_size);
 	std::cout << std::format("  sub {}, {}\n", regs[d], regs[b]);
+	*/
+	assert(false && "This case should not be reached. PTR_SUB must be decompose in this case.");
       }
     }
     break;
@@ -570,7 +603,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     } //for [name, gvar]
   }
   
-static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
+  static void emit_text(const std::unique_ptr<myLIR::Program>& prog, bool opt){
   std::cout << ".text\n";
   funcname_to_reg_pressure = prog->funcname_to_reg_pressure;
   for(const auto& fn: prog->fns){    
@@ -600,8 +633,13 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
     
     std::stack<std::string> pushed_reg;
     for(int i = 2; i < 2+need_push; i++){
-      std::cout << std::format("  push {}\n", regs[i]);
-      pushed_reg.push(regs[i]);
+      if(opt){
+	std::cout << std::format("  push {}\n", regs[i+7]);
+	pushed_reg.push(regs[i+7]);
+      } else {
+	std::cout << std::format("  push {}\n", regs[i]);
+	pushed_reg.push(regs[i]);
+      }
     }
 
     //generate code
@@ -623,10 +661,29 @@ static void emit_text(const std::unique_ptr<myLIR::Program>& prog){
   } //for fn
 }
 
-void gen_x86_64(const std::unique_ptr<myLIR::Program>& prog){
-  std::cout << ".intel_syntax noprefix\n";
-  emit_data(prog);
-  emit_text(prog);
-}
+  void set_registers(bool opt){
+    if(opt){
+      regs8 = {"al", "dil", "sil", "dl", "cl", "r8b", "r9b",
+	      "r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+      regs16 = {"ax", "di", "si", "dx", "cx", "r8w", "r9w",
+		"r10w", "r11w", "bx", "r12w", "r13w", "r14w", "r15w"};
+      regs32 = {"eax", "edi", "esi", "edx", "ecx", "r8d", "r9d",
+		"r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
+      regs = {"rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9",
+	      "r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
+    } else {
+      regs8 = {"r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"};
+      regs16 = {"r10w", "r11w", "bx", "r12w", "r13w", "r14w", "r15w"};
+      regs32 = {"r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"};
+      regs = {"r10", "r11", "rbx", "r12", "r13", "r14", "r15"};
+    }
+  }
+
+  void gen_x86_64(const std::unique_ptr<myLIR::Program>& prog, bool opt){
+    set_registers(opt);
+    std::cout << ".intel_syntax noprefix\n";
+    emit_data(prog);
+    emit_text(prog, opt);
+  }
 
 } //namespace myCodeGen

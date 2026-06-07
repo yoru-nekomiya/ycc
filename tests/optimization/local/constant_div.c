@@ -86,4 +86,5 @@ int main(){
   assert(3, rem_m7(10), "rem_m7(10)");
   assert(-3, rem_7(-10), "rem_7(-10)");
   assert(-3, rem_m7(-10), "rem_m7(-10)");
+  return 0;
 }

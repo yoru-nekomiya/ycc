@@ -15,11 +15,7 @@ namespace myLIR {
   };
 }
 
-namespace myLIR::opt {
-  static bool is_imm_int32(const std::shared_ptr<LirNode>& n){
-    return is_imm(n) && is_int32(n);
-  }
-  
+namespace myLIR::opt {  
   using PredSet = std::unordered_set<std::shared_ptr<LirNode>, LirSharedPtrHash>;
   std::unordered_map<int, PredSet> bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
   
