@@ -26,7 +26,10 @@ namespace myLIR::opt {
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
 	auto& inst = *iter;
 	if(inst->opcode == LirKind::LIR_IMM
-	   || inst->opcode == LirKind::LIR_LABEL_ADDR){
+	   || inst->opcode == LirKind::LIR_LABEL_ADDR
+	   || inst->opcode == LirKind::LIR_LOAD_STACK
+	   || inst->opcode == LirKind::LIR_LVAR
+	   || inst->opcode == LirKind::LIR_LOAD_SPILL){
 	  gen.erase(inst->d);
 	  kill.insert(inst->d);
 	  continue;
@@ -48,13 +51,13 @@ namespace myLIR::opt {
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
 	  continue;
 	}
-
+	/*
 	if(inst->opcode == LirKind::LIR_LOAD_STACK){
 	  gen.erase(inst->d);
 	  kill.insert(inst->d);
 	  continue;
 	}
-	
+	*/
 	if(inst->opcode == LirKind::LIR_BR
 	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
@@ -63,7 +66,7 @@ namespace myLIR::opt {
 
 	if(inst->opcode == LirKind::LIR_JMP){
 	  if(inst->bbarg)
-	    if(!is_imm_int32(inst->bbarg)) gen.insert(inst->bbarg);	  
+	    if(!is_imm_int32(inst->bbarg)) gen.insert(inst->bbarg);
 	  continue;
 	}
 	
@@ -171,7 +174,10 @@ namespace myLIR::opt {
 	}
 	
 	if(inst->opcode == LirKind::LIR_IMM
-	   || inst->opcode == LirKind::LIR_LABEL_ADDR){
+	   || inst->opcode == LirKind::LIR_LABEL_ADDR
+	   || inst->opcode == LirKind::LIR_LOAD_STACK
+	   || inst->opcode == LirKind::LIR_LVAR
+	   || inst->opcode == LirKind::LIR_LOAD_SPILL){
 	  live.erase(inst->d);
 	  continue;
 	}
@@ -190,12 +196,12 @@ namespace myLIR::opt {
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
 	  continue;
 	}
-
+	/*
 	if(inst->opcode == LirKind::LIR_LOAD_STACK){
 	  live.erase(inst->d);
 	  continue;
 	}
-	
+	*/
 	if(inst->opcode == LirKind::LIR_BR
 	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);

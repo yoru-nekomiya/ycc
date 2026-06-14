@@ -354,9 +354,8 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
     }
     
     auto lirNode = new_lir(LirKind::LIR_RETURN);
-    lirNode->a = /*a*/mov ? mov->d : nullptr;
+    lirNode->a = mov ? mov->d : nullptr;
     outBB = new_bb();
-    //return std::move(a);
     return lirNode->a;
   }
   case myHIR::HirKind::HIR_IF: {

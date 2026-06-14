@@ -172,7 +172,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
   switch(lirNode->opcode){
   case myLIR::LirKind::LIR_MOV:
     if(lirNode->d->is_fixed_reg){
-      std::cout << std::format("  mov {}, {}\n", fixed_regs[lirNode->d->frn], regs[b]);
+      if(fixed_regs[lirNode->d->frn] != regs[b])
+	std::cout << std::format("  mov {}, {}\n", fixed_regs[lirNode->d->frn], regs[b]);
     }
     else if(is_imm(lirNode->b)){
       if(is_int32(lirNode->b)){
@@ -186,7 +187,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
       }
     }
     else if(lirNode->b->is_fixed_reg){
-      std::cout << std::format("  mov {}, {}\n", regs[d], fixed_regs[lirNode->b->frn]);
+      if(regs[d] != fixed_regs[lirNode->b->frn])
+	std::cout << std::format("  mov {}, {}\n", regs[d], fixed_regs[lirNode->b->frn]);
     }
     else {
       if(d != b)
@@ -339,7 +341,8 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     if(lirNode->a){
       if(is_imm(lirNode->a) && is_int32(lirNode->a)){
 	std::cout << std::format("  mov rax, {}\n", lirNode->a->imm);
-      } else if(!lirNode->a->is_fixed_reg){
+      } else if(!lirNode->a->is_fixed_reg
+		&& regs[a] != "rax"){
 	std::cout << std::format("  mov rax, {}\n", regs[a]);
       }
     } //if(lirNode->a)
@@ -628,8 +631,9 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     
     //prologue
     std::cout << "  push rbp\n"
-	      << "  mov rbp, rsp\n"
-	      << "  sub rsp, " << fn->stackSize << '\n';
+	      << "  mov rbp, rsp\n";
+    if(fn->stackSize != 0)
+      std::cout << "  sub rsp, " << fn->stackSize << '\n';
     
     std::stack<std::string> pushed_reg;
     for(int i = 2; i < 2+need_push; i++){
