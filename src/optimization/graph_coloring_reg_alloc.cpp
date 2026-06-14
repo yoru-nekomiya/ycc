@@ -480,10 +480,12 @@ namespace myRegAlloc {
 	    for(int i = 0; i <= 6; i++)
 	      add_edge(i, r); //rax, rdi - r9
 	  }
+	  
 	  for(int i = 0; i < inst->args.size(); i++){
 	    if(!myLIR::is_imm_int32(inst->args[i])){
 	      for(int p = 0; p <= 6; p++){
-		add_edge(p, lirnode_to_id.at(inst->args[i]));
+		if(p == 0 || (p != 0 && i != (p-1)) )
+		  add_edge(p, lirnode_to_id.at(inst->args[i]));
 	      }
 	    }
 	  }
@@ -710,7 +712,7 @@ namespace myRegAlloc {
       }
       if(graph.nodes[id/*alias*/].color == -1){
 	graph.nodes[id/*alias*/].is_actual_spill = true;
-	assert(false && "spilled!!!");
+	assert(false && "spilled register in graph coloring register allocation!");
       }
       
     } //while

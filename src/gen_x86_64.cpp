@@ -28,7 +28,7 @@ namespace myCodeGen {
   static const std::string argregs32[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"}; 
   static const std::string argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-  static const std::string fixed_regs[] = {"rax"};
+  static const std::string fixed_regs[] = {"rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9"};
   
   static std::string funcname = "";
   std::unordered_map<std::string, int> funcname_to_reg_pressure;
@@ -377,28 +377,16 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
     std::cout << std::format("  jmp .L{}\n", lirNode->bb1->label);
     break;
   case myLIR::LirKind::LIR_FUNCALL: {
+    
     for(int i = 0; i < lirNode->args.size(); i++){
       if(is_imm(lirNode->args[i]) && is_int32(lirNode->args[i])){
 	std::cout << std::format("  mov {}, {}\n", argregs[i], lirNode->args[i]->imm);
-      } else {	
-	std::cout << std::format("  mov {}, {}\n", argregs[i], regs[lirNode->args[i]->rn]);
+      } else {
+	if(argregs[i] != regs[lirNode->args[i]->rn])
+	  std::cout << std::format("  mov {}, {}\n", argregs[i], regs[lirNode->args[i]->rn]);
       }
     }
-    /*
-    std::cout << "  push r10\n" 
-	      << "  push r11\n" 
-	      << "  xor rax, rax\n"
-	      << "  call " << lirNode->funcName << '\n'
-	      << "  pop r11\n"
-	      << "  pop r10\n"
-	      << "  mov " << regs[d] << ", rax\n";
-    */
-    /*
-    if(!funcname_to_reg_pressure.contains(lirNode->funcName)){
-      std::cerr << "lirNode->funcName is " << lirNode->funcName << std::endl;
-      exit(1);
-    }
-    */
+    
     const bool is_contained = funcname_to_reg_pressure.contains(lirNode->funcName);
     std::stack<std::string> pushed_reg;
     if(is_contained){
@@ -424,10 +412,7 @@ static void gen(const std::shared_ptr<myLIR::LirNode>& lirNode){
 
     for(; !pushed_reg.empty(); pushed_reg.pop()){
       std::cout << std::format("  pop {}\n", pushed_reg.top());
-    }
-
-    //std::cout << std::format("  mov {}, rax\n", regs[d]);
-    
+    }    
     break;
   }
   case myLIR::LirKind::LIR_PTR_ADD: {    

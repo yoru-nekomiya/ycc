@@ -524,22 +524,24 @@ gen_expr_lir(const std::shared_ptr<myHIR::HirNode>& hirNode){
   }
   case myHIR::HirKind::HIR_FUNCALL: {
     std::vector<std::shared_ptr<LirNode>> args;
+    int i = 1;
     for(const auto& n: hirNode->args){
       auto d = gen_expr_lir(n);
       args.push_back(d);
+
+      auto mov = new_lir(LirKind::LIR_MOV);
+      mov->d = new_fixed_reg(i++, 8);
+      mov->b = d;
     }
     auto lirNode = new_lir(LirKind::LIR_FUNCALL);
-    //lirNode->d = new_reg("", hirNode->type->size);
     lirNode->d = new_fixed_reg(0, hirNode->type->size);
     lirNode->funcName = hirNode->funcName;
     lirNode->args = std::move(args);
 
     auto mov = new_lir(LirKind::LIR_MOV);
-    //mov->d = lirNode->d;
-    //mov->b = new_fixed_reg(0, hirNode->type->size);
     mov->d = new_reg("", hirNode->type->size);
     mov->b = lirNode->d;
-    return /*lirNode->d*/mov->d;
+    return mov->d;
   }
   case myHIR::HirKind::HIR_DEREF: {
     if(hirNode->type->kind == Lunaria::TypeKind::ARRAY){
