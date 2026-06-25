@@ -1,11 +1,11 @@
 #include "constant_mul_reduction.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
 
   static void convert_mul_to_shift(std::shared_ptr<LirNode>& node,
 				   int64_t c,
-				   std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				   std::shared_ptr<myLIR::BasicBlock>& bb){
+				   std::list<std::shared_ptr<LirNode>>::iterator& iter,
+				   std::shared_ptr<BasicBlock>& bb){
     const int num_shift = get_log2(c);
     /*
     auto shift_node = std::make_shared<LirNode>();
@@ -31,13 +31,7 @@ namespace myLIR::opt {
       //d2 <- a << log2(c)
       //d <- 0 - d2
       shift_node->d = new_reg("");
-      /*
-      auto sub_node = std::make_shared<LirNode>();
-      sub_node->opcode = LirKind::LIR_SUB;
-      sub_node->d = (*iter)->d;
-      sub_node->a = make_imm_node(0); 
-      sub_node->b = shift_node->d;
-      */
+      
       auto sub_node = make_node(LirKind::LIR_SUB,
 				(*iter)->d,
 				make_imm_node(0),
@@ -51,8 +45,8 @@ namespace myLIR::opt {
   
   static bool convert_optimized_mul(std::shared_ptr<LirNode>& n,
 				    int64_t k,
-				    std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				    std::shared_ptr<myLIR::BasicBlock>& bb){
+				    std::list<std::shared_ptr<LirNode>>::iterator& iter,
+				    std::shared_ptr<BasicBlock>& bb){
     //convert "n * k" to optimized instruction sequence using lea and shl
     assert(k != 1);
     assert(k != -1);
@@ -85,11 +79,7 @@ namespace myLIR::opt {
 			     inst->d,
 			     n,
 			     n);
-	/*
-	mad_node->d = inst->d;
-	mad_node->a = n;
-	mad_node->b = n;
-	*/
+	
 	mad_node->scale = (1ULL << num);
 	inst_count++;
       } else {
@@ -98,22 +88,12 @@ namespace myLIR::opt {
 	shl_node = make_node(LirKind::LIR_SHL,
 			     new_reg(""),
 			     n,
-			     make_imm_node(num));
-	/*
-	shl_node->d = new_reg("");
-	shl_node->a = n;
-	shl_node->b = make_imm_node(num);
-	*/
+			     make_imm_node(num));	
 	
 	add_node = make_node(LirKind::LIR_ADD,
 			     inst->d,
 			     shl_node->d,
-			     n);
-	/*
-	add_node->d = inst->d;
-	add_node->a = shl_node->d;
-	add_node->b = n;
-	*/
+			     n);	
 	inst_count += 2;
       }
     } else if(is_abs_power_of_two(odd_k + 1)){
@@ -123,22 +103,12 @@ namespace myLIR::opt {
       shl_node = make_node(LirKind::LIR_SHL,
 			   new_reg(""),
 			   n,
-			   make_imm_node(num));
-      /*
-      shl_node->d = new_reg("");
-      shl_node->a = n;
-      shl_node->b = make_imm_node(num);
-      */
+			   make_imm_node(num));      
       
       sub_node = make_node(LirKind::LIR_SUB,
 			   inst->d,
 			   shl_node->d,
-			   n);
-      /*
-      sub_node->d = inst->d;
-      sub_node->a = shl_node->d;
-      sub_node->b = n;
-      */
+			   n);      
       inst_count += 2;
     } else {
       //mul
@@ -149,12 +119,7 @@ namespace myLIR::opt {
       s_node = make_node(LirKind::LIR_SHL,
 			 inst->d,
 			 inst->d,
-			 make_imm_node(s));
-      /*
-      s_node->d = inst->d;
-      s_node->a = inst->d;
-      s_node->b = make_imm_node(s);
-      */
+			 make_imm_node(s));      
       inst_count++;
     }
 
@@ -162,22 +127,13 @@ namespace myLIR::opt {
       neg_node = make_node(LirKind::LIR_SUB,
 			   new_reg(""),
 			   make_imm_node(0),
-			   inst->d);
-      /*
-      neg_node->d = new_reg("");
-      neg_node->a = make_imm_node(0);
-      neg_node->b = inst->d;
-      */
+			   inst->d);      
       inst_count++;
 
       mov_node = make_node(LirKind::LIR_MOV,
 			   inst->d,
 			   nullptr,
-			   neg_node->d);
-      /*
-      mov_node->d = inst->d;
-      mov_node->b = neg_node->d;
-      */
+			   neg_node->d);      
     }
 
     if(inst_count > 3){
@@ -218,8 +174,8 @@ namespace myLIR::opt {
     return true;
   }
   
-  bool reduce_mul(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-			 std::shared_ptr<myLIR::BasicBlock>& bb){
+  bool reduce_mul(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+			 std::shared_ptr<BasicBlock>& bb){
     auto inst = *iter;
     bool changed = false;
     if(is_imm(inst->a) && !is_imm(inst->b)){
@@ -228,11 +184,7 @@ namespace myLIR::opt {
 	auto mov_node = make_node(LirKind::LIR_MOV,
 				  inst->d,
 				  nullptr,
-				  inst->b);
-	/*
-	mov_node->d = inst->d;
-	mov_node->b = inst->b;
-	*/
+				  inst->b);	
 	iter = bb->insts.erase(iter);
 	iter = bb->insts.insert(iter, mov_node);
 	changed = true;
@@ -242,12 +194,7 @@ namespace myLIR::opt {
 	auto sub_node = make_node(LirKind::LIR_SUB,
 				  new_reg(""),
 				  make_imm_node(0),
-				  inst->b);
-	/*
-	sub_node->d = new_reg("");
-	sub_node->a = make_imm_node(0);
-	sub_node->b = inst->b;
-	*/
+				  inst->b);	
 	iter = bb->insts.erase(iter);
 	iter = bb->insts.insert(iter, sub_node);
 	++iter;
@@ -255,11 +202,7 @@ namespace myLIR::opt {
 	auto mov_node = make_node(LirKind::LIR_MOV,
 				  inst->d,
 				  nullptr,
-				  sub_node->d);
-	/*
-	mov_node->d = inst->d;
-	mov_node->b = sub_node->d;
-	*/
+				  sub_node->d);	
 	iter = bb->insts.insert(iter, mov_node);	
 	changed = true;
       }
@@ -285,11 +228,7 @@ namespace myLIR::opt {
 	auto mov_node = make_node(LirKind::LIR_MOV,
 				  inst->d,
 				  nullptr,
-				  inst->a);
-	/*
-	mov_node->d = inst->d;
-	mov_node->b = inst->a;
-	*/
+				  inst->a);	
 	iter = bb->insts.erase(iter);
 	iter = bb->insts.insert(iter, mov_node);
 	changed = true;
@@ -299,12 +238,7 @@ namespace myLIR::opt {
 	auto sub_node = make_node(LirKind::LIR_SUB,
 				  new_reg(""),
 				  make_imm_node(0),
-				  inst->a);
-	/*
-	sub_node->d = new_reg("");
-	sub_node->a = make_imm_node(0);
-	sub_node->b = inst->a;
-	*/
+				  inst->a);	
 	iter = bb->insts.erase(iter);
 	iter = bb->insts.insert(iter, sub_node);
 	++iter;
@@ -312,11 +246,7 @@ namespace myLIR::opt {
 	auto mov_node = make_node(LirKind::LIR_MOV,
 				  inst->d,
 				  nullptr,
-				  sub_node->d);
-	/*
-	mov_node->d = inst->d;
-	mov_node->b = sub_node->d;
-	*/
+				  sub_node->d);	
 	iter = bb->insts.insert(iter, mov_node);
 	changed = true;
       }
@@ -339,4 +269,4 @@ namespace myLIR::opt {
     return changed;
   }
   
-}
+} //namespace Lunaria::LIR::Optimizer

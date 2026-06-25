@@ -1,6 +1,6 @@
 #include "unreachable_code_elimination.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   static void depth_first_search(const std::shared_ptr<BasicBlock>& bb,
 				 std::unordered_set<int>& mark){
     if(!mark.contains(bb->label)){
@@ -56,4 +56,4 @@ namespace myLIR::opt {
     } //for
     return changed;
   }
-}
+} //namespace Lunaria::LIR::Optimizer

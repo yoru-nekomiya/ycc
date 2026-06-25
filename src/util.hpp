@@ -3,11 +3,11 @@
 
 #include "ycc.hpp"
 
-namespace myLIR {
+namespace Lunaria::LIR {
   bool is_imm(const std::shared_ptr<LirNode>& lirNode);
   bool is_int32(const std::shared_ptr<LirNode>& lirNode);
   bool is_imm_int32(const std::shared_ptr<LirNode>& n);
-} //namespace myLIR
+} //namespace Lunaria::LIR
 
 #endif
 

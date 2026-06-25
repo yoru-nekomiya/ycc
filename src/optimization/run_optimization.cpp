@@ -1,7 +1,7 @@
 #include "opt_utils.hpp"
 #include "../ycc.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   void optimize(std::unique_ptr<Program>& prog,
 		const std::string& filename,
 		bool opt,
@@ -41,4 +41,4 @@ namespace myLIR::opt {
     constructCFGs(prog);
     if(emit_cfg) printCFGs(prog, filename);
   }
-} //namespace myLIR::opt
+} //namespace Lunaria::LIR::Optimizer

@@ -2,14 +2,14 @@
 
 set -e
 
-YCC=./build/ycc
-YCC_OPT="-opt -emit-lir -emit-cfg"
+SLCC=./build/slcc
+SLCC_OPT="-opt -emit-lir -emit-cfg"
 GCC=gcc
 CLANG=clang
 BENCH_DIR=./bench
 GLOBAL_REPORT="$BENCH_DIR/report.txt"
-YCC_OUT="/tmp/ycc_out.txt"
-YCC_OPT_OUT="/tmp/ycc_opt_out.txt"
+SLCC_OUT="/tmp/slcc_out.txt"
+SLCC_OPT_OUT="/tmp/slcc_opt_out.txt"
 GCC_OUT="/tmp/gcc_out.txt"
 CLANG_OUT="/tmp/clang_out.txt"
 #TTY_DEVICE=/dev/tty
@@ -57,18 +57,18 @@ for t in $TARGETS; do
     mkdir -p "$OUT_DIR"
     
     asm="$OUT_DIR/${t}.s"
-    exe_ycc="$OUT_DIR/${t}_ycc.out"
+    exe_slcc="$OUT_DIR/${t}_slcc.out"
     asm_opt="$OUT_DIR/${t}_opt.s"
-    exe_ycc_opt="$OUT_DIR/${t}_ycc_opt.out"
+    exe_slcc_opt="$OUT_DIR/${t}_slcc_opt.out"
     
     exe_gcc="$OUT_DIR/${t}_gcc.out"
     exe_clang="$OUT_DIR/${t}_clang.out"
     
     echo "Compiling benchmark: $t"
-    $YCC "$src" > "$asm"
-    $GCC -z noexecstack -fno-pie -no-pie -o "$exe_ycc" "$asm"
-    $YCC $YCC_OPT "$src" > "$asm_opt"
-    $GCC -z noexecstack -fno-pie -no-pie -o "$exe_ycc_opt" "$asm_opt"
+    $SLCC "$src" > "$asm"
+    $GCC -z noexecstack -fno-pie -no-pie -o "$exe_slcc" "$asm"
+    $SLCC $SLCC_OPT "$src" > "$asm_opt"
+    $GCC -z noexecstack -fno-pie -no-pie -o "$exe_slcc_opt" "$asm_opt"
     
     #compile by gcc and clang
     $GCC -O2 "$src" -o "$exe_gcc"
@@ -91,8 +91,8 @@ echo "=== Running benchmarks ==="
 for t in $TARGETS; do
     OUT_DIR="$BENCH_DIR/$t/out"
     
-    exe_ycc="$OUT_DIR/${t}_ycc.out"
-    exe_ycc_opt="$OUT_DIR/${t}_ycc_opt.out"
+    exe_slcc="$OUT_DIR/${t}_slcc.out"
+    exe_slcc_opt="$OUT_DIR/${t}_slcc_opt.out"
     exe_gcc="$OUT_DIR/${t}_gcc.out"
     exe_clang="$OUT_DIR/${t}_clang.out"
 
@@ -103,13 +103,13 @@ for t in $TARGETS; do
     echo "=================" >> "$LOCAL_REPORT"
     echo "" >> "$LOCAL_REPORT"
 
-    #echo -n "YCC: "
-    #ycc_time=$( { /usr/bin/time -p "$exe_ycc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
-    ycc_time=$( { /usr/bin/time -p "$exe_ycc" 1> "$YCC_OUT"; } 2>&1 | awk '/real/ {print $2}' )
-    YCC_CHECKSUM=$(grep "Checksum" "$YCC_OUT" | awk '{print $NF}' | tr -d '\n')
+    #echo -n "SLCC: "
+    #slcc_time=$( { /usr/bin/time -p "$exe_slcc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
+    slcc_time=$( { /usr/bin/time -p "$exe_slcc" 1> "$SLCC_OUT"; } 2>&1 | awk '/real/ {print $2}' )
+    SLCC_CHECKSUM=$(grep "Checksum" "$SLCC_OUT" | awk '{print $NF}' | tr -d '\n')
 
-    ycc_opt_time=$( { /usr/bin/time -p "$exe_ycc_opt" 1> "$YCC_OPT_OUT"; } 2>&1 | awk '/real/ {print $2}' )
-    YCC_OPT_CHECKSUM=$(grep "Checksum" "$YCC_OPT_OUT" | awk '{print $NF}' | tr -d '\n')
+    slcc_opt_time=$( { /usr/bin/time -p "$exe_slcc_opt" 1> "$SLCC_OPT_OUT"; } 2>&1 | awk '/real/ {print $2}' )
+    SLCC_OPT_CHECKSUM=$(grep "Checksum" "$SLCC_OPT_OUT" | awk '{print $NF}' | tr -d '\n')
 
     #echo -n "GCC(-O2): "
     #gcc_time=$( { /usr/bin/time -p "$exe_gcc" 1> $TTY_DEVICE; } 2>&1 | awk '/real/ {print $2}' )
@@ -127,76 +127,76 @@ for t in $TARGETS; do
         CHECKSUM_STATUS="FAIL (Reference Checksum Mismatch: GCC=$GCC_CHECKSUM, Clang=$CLANG_CHECKSUM)"
 	CHECKSUM_FAILURES="$CHECKSUM_FAILURES $t (Ref)"
 	COLOR_CODE="$RED"
-    elif [ "$YCC_CHECKSUM" = "$GCC_CHECKSUM" ]; then
-	if [ "$YCC_OPT_CHECKSUM" = "$YCC_CHECKSUM" ]; then	    
-            CHECKSUM_STATUS="PASS (Checksum: $YCC_CHECKSUM)"
+    elif [ "$SLCC_CHECKSUM" = "$GCC_CHECKSUM" ]; then
+	if [ "$SLCC_OPT_CHECKSUM" = "$SLCC_CHECKSUM" ]; then	    
+            CHECKSUM_STATUS="PASS (Checksum: $SLCC_CHECKSUM)"
 	    COLOR_CODE="$GREEN"
 	else
-	    CHECKSUM_STATUS="FAIL (YCC=$YCC_CHECKSUM, YCC_OPT=$YCC_OPT_CHECKSUM)"
+	    CHECKSUM_STATUS="FAIL (SLCC=$SLCC_CHECKSUM, SLCC_OPT=$SLCC_OPT_CHECKSUM)"
 	    CHECKSUM_FAILURES="$CHECKSUM_FAILURES $t"
 	    COLOR_CODE="$RED"
 	fi
     else
-        CHECKSUM_STATUS="FAIL (YCC=$YCC_CHECKSUM, Reference=$GCC_CHECKSUM)"
+        CHECKSUM_STATUS="FAIL (SLCC=$SLCC_CHECKSUM, Reference=$GCC_CHECKSUM)"
 	CHECKSUM_FAILURES="$CHECKSUM_FAILURES $t"
 	COLOR_CODE="$RED"
     fi    
     # ---------------------
     
     # output report-----
-    ratio_gcc=$(awk "BEGIN { printf \"%.2f\", $gcc_time / $ycc_time }")
-    ratio_clang=$(awk "BEGIN { printf \"%.2f\", $clang_time / $ycc_time }")
-    ratio_gcc_opt=$(awk "BEGIN { printf \"%.2f\", $gcc_time / $ycc_opt_time }")
-    ratio_clang_opt=$(awk "BEGIN { printf \"%.2f\", $clang_time / $ycc_opt_time }")
+    ratio_gcc=$(awk "BEGIN { printf \"%.2f\", $gcc_time / $slcc_time }")
+    ratio_clang=$(awk "BEGIN { printf \"%.2f\", $clang_time / $slcc_time }")
+    ratio_gcc_opt=$(awk "BEGIN { printf \"%.2f\", $gcc_time / $slcc_opt_time }")
+    ratio_clang_opt=$(awk "BEGIN { printf \"%.2f\", $clang_time / $slcc_opt_time }")
 
-    echo "  YCC Checksum       : $YCC_CHECKSUM"
-    echo "  YCC_OPT Checksum   : $YCC_OPT_CHECKSUM"
+    echo "  SLCC Checksum       : $SLCC_CHECKSUM"
+    echo "  SLCC_OPT Checksum   : $SLCC_OPT_CHECKSUM"
     echo "  GCC Checksum       : $GCC_CHECKSUM"
     echo "  Clang Checksum     : $CLANG_CHECKSUM"
     echo "  Checksum Check : ${COLOR_CODE}${CHECKSUM_STATUS}${RESET}"
-    echo "  YCC            : $ycc_time sec"
-    echo "  YCC_OPT        : $ycc_opt_time sec"
+    echo "  SLCC            : $slcc_time sec"
+    echo "  SLCC_OPT        : $slcc_opt_time sec"
     echo "  GCC(-O2)       : $gcc_time sec"
     echo "  Clang(-O2)     : $clang_time sec"
-    echo "  Ratio (GCC(-O2)/YCC)       : $ratio_gcc x"
-    echo "  Ratio (Clang(-O2)/YCC)     : $ratio_clang x"
-    echo "  Ratio (GCC(-O2)/YCC_OPT)   : $ratio_gcc_opt x"
-    echo "  Ratio (Clang(-O2)/YCC_OPT) : $ratio_clang_opt x"
+    echo "  Ratio (GCC(-O2)/SLCC)       : $ratio_gcc x"
+    echo "  Ratio (Clang(-O2)/SLCC)     : $ratio_clang x"
+    echo "  Ratio (GCC(-O2)/SLCC_OPT)   : $ratio_gcc_opt x"
+    echo "  Ratio (Clang(-O2)/SLCC_OPT) : $ratio_clang_opt x"
     echo ""
 
     {
-	echo "  YCC Checksum       : $YCC_CHECKSUM"
-	echo "  YCC_OPT Checksum   : $YCC_CHECKSUM"
+	echo "  SLCC Checksum       : $SLCC_CHECKSUM"
+	echo "  SLCC_OPT Checksum   : $SLCC_CHECKSUM"
 	echo "  GCC Checksum       : $GCC_CHECKSUM"
 	echo "  Clang Checksum     : $CLANG_CHECKSUM"
 	echo "  Checksum Check : $CHECKSUM_STATUS"
-	echo "  YCC            : $ycc_time sec"
-	echo "  YCC_OPT        : $ycc_opt_time sec"
+	echo "  SLCC            : $slcc_time sec"
+	echo "  SLCC_OPT        : $slcc_opt_time sec"
 	echo "  GCC(-O2)       : $gcc_time sec"
 	echo "  Clang(-O2)     : $clang_time sec"
-	echo "  Ratio (GCC(-O2)/YCC)       : $ratio_gcc x"
-	echo "  Ratio (Clang(-O2)/YCC)     : $ratio_clang x"
-	echo "  Ratio (GCC(-O2)/YCC_OPT)   : $ratio_gcc_opt x"
-	echo "  Ratio (Clang(-O2)/YCC_OPT) : $ratio_clang_opt x"
+	echo "  Ratio (GCC(-O2)/SLCC)       : $ratio_gcc x"
+	echo "  Ratio (Clang(-O2)/SLCC)     : $ratio_clang x"
+	echo "  Ratio (GCC(-O2)/SLCC_OPT)   : $ratio_gcc_opt x"
+	echo "  Ratio (Clang(-O2)/SLCC_OPT) : $ratio_clang_opt x"
 	echo ""
     } >> "$LOCAL_REPORT"
     
     {
         echo "Benchmark: $t"
 	echo "  Checksum Check : $CHECKSUM_STATUS"
-        echo "  YCC            : $ycc_time sec"
-	echo "  YCC_OPT        : $ycc_opt_time sec"
+        echo "  SLCC            : $slcc_time sec"
+	echo "  SLCC_OPT        : $slcc_opt_time sec"
         echo "  GCC(-O2)       : $gcc_time sec"
         echo "  Clang(-O2)     : $clang_time sec"
-        echo "  Ratio (GCC(-O2)/YCC)   : $ratio_gcc x"
-        echo "  Ratio (Clang(-O2)/YCC) : $ratio_clang x"
-	echo "  Ratio (GCC(-O2)/YCC_OPT)   : $ratio_gcc_opt x"
-	echo "  Ratio (Clang(-O2)/YCC_OPT) : $ratio_clang_opt x"
+        echo "  Ratio (GCC(-O2)/SLCC)   : $ratio_gcc x"
+        echo "  Ratio (Clang(-O2)/SLCC) : $ratio_clang x"
+	echo "  Ratio (GCC(-O2)/SLCC_OPT)   : $ratio_gcc_opt x"
+	echo "  Ratio (Clang(-O2)/SLCC_OPT) : $ratio_clang_opt x"
         echo ""
     } >> "$GLOBAL_REPORT"
 done
 
-rm -f "$YCC_OUT" "$YCC_OPT_OUT" "$GCC_OUT" "$CLANG_OUT"
+rm -f "$SLCC_OUT" "$SLCC_OPT_OUT" "$GCC_OUT" "$CLANG_OUT"
 
 echo ""
 echo "========================================="

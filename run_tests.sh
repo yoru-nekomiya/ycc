@@ -1,8 +1,8 @@
 #!/bin/sh
 
-YCC=./build/ycc
-YCC_OPT="-opt -emit-lir -emit-cfg"
-#YCC_OPT="-emit-lir -emit-cfg"
+SLCC=./build/slcc
+SLCC_OPT="-opt -emit-lir -emit-cfg"
+#SLCC_OPT="-emit-lir -emit-cfg"
 TEST_DIR=./tests
 LIB="$TEST_DIR"/testlib.s
 PASS=0
@@ -19,7 +19,7 @@ RED="\033[1;31m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
 
-$YCC "$TEST_DIR"/testlib.c > $LIB
+$SLCC "$TEST_DIR"/testlib.c > $LIB
 
 for file in $(find "$TEST_DIR" -name "*.c"); do
     #skip testlib.c
@@ -40,7 +40,7 @@ for file in $(find "$TEST_DIR" -name "*.c"); do
     #echo "=== Testing $file ==="
 
     #compile by ycc
-    $YCC $YCC_OPT "$file" > "$asm"
+    $SLCC $SLCC_OPT "$file" > "$asm"
     if [ $? -ne 0 ]; then
 	printf "[${RED}FAIL${RESET}] %s (compile error)\n" "$rel_path"
 	FAIL=$((FAIL+1))

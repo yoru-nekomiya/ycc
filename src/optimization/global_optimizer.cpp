@@ -4,7 +4,7 @@
 #include "global/dead_code_elimination.hpp"
 #include "global/unreachable_code_elimination.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   bool optimize_fn(std::shared_ptr<Function>& fn){
     bool changed = false;
     changed = changed || unreachable_code_elimination(fn);
@@ -63,4 +63,4 @@ namespace myLIR::opt {
     return changed;
   }
   
-} //namespace myLIR::opt
+} //namespace Lunaria::LIR::Optimizer

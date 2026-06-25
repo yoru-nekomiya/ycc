@@ -1,8 +1,8 @@
 #include "util.hpp"
 
-namespace myLIR {
-  bool is_imm(const std::shared_ptr<myLIR::LirNode>& lirNode){
-    if(lirNode->opcode == myLIR::LirKind::LIR_IMM){
+namespace Lunaria::LIR {
+  bool is_imm(const std::shared_ptr<LirNode>& lirNode){
+    if(lirNode->opcode == LirKind::LIR_IMM){
       return true;
     }
     return false;
@@ -18,4 +18,4 @@ namespace myLIR {
   bool is_imm_int32(const std::shared_ptr<LirNode>& n){
     return is_imm(n) && is_int32(n);
   }
-} //namespace myLIR
+} //namespace Lunaria::LIR

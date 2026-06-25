@@ -126,7 +126,8 @@ namespace Lunaria {
 
 //--------------------
 //Tokenizer
-namespace myTokenizer {
+//namespace myTokenizer {
+namespace Selene::Tokenizer {
 enum class TokenType {
   NUM, //number
   PLUS, //+
@@ -212,11 +213,12 @@ std::unique_ptr<Token> consume_str();
 bool look(TokenType tk_type);
 bool at_eof();
 void tokenize(const std::string& input);
-} //namespace myTokenizer
+} //namespace Selene::Tokenizer
 
 //-------------------
 //Parser
-namespace myParser {
+//namespace myParser {
+namespace Selene::Parser {
 enum class AstKind {
   AST_NUM,
   AST_ADD,
@@ -327,15 +329,17 @@ struct Program {
 
   std::unique_ptr<Program> program();
   void add_type(std::unique_ptr<AstNode>& node);
-} //namespace myParser
+} //namespace Selene::Parser
 
 //---------------------------
 //HIR
-namespace myLIR {
+//namespace myLIR {
+namespace Lunaria::LIR {
     struct BasicBlock;
   }
 
-namespace myHIR {
+//namespace myHIR {
+namespace Lunaria::HIR {
 enum class HirKind {
   HIR_IMM,
   HIR_ADD,
@@ -407,12 +411,12 @@ struct HirNode {
 
   //break and continue
   std::shared_ptr<HirNode> target; 
-  std::shared_ptr<myLIR::BasicBlock> _break;
-  std::shared_ptr<myLIR::BasicBlock> _continue;
+  std::shared_ptr<LIR::BasicBlock> _break;
+  std::shared_ptr<LIR::BasicBlock> _continue;
 
   std::vector<std::shared_ptr<HirNode>> cases;
   std::shared_ptr<HirNode> _default;
-  std::shared_ptr<myLIR::BasicBlock> _case_bb;
+  std::shared_ptr<LIR::BasicBlock> _case_bb;
 
   std::list<std::shared_ptr<HirNode>> body;
 
@@ -449,12 +453,13 @@ struct HirNode {
   std::shared_ptr<HirNode> new_sub(std::shared_ptr<HirNode>& lhs,
 				   std::shared_ptr<HirNode>& rhs);
 std::unique_ptr<Program>
-  generateHirNode(const std::unique_ptr<myParser::Program>&);
+generateHirNode(const std::unique_ptr<Selene::Parser::Program>&);
   void add_type(std::shared_ptr<HirNode>& node);
-} //namespace myHIR
+} //namespace Lunaria::HIR
 //---------------------------
 //LIR
-namespace myLIR {
+//namespace myLIR {
+namespace Lunaria::LIR {
 enum class LirKind {
   LIR_REG,
   LIR_MOV,
@@ -582,30 +587,32 @@ struct LirNode {
 
   std::shared_ptr<LirNode> new_reg(const std::string& varName = "", int type_size = 0);
   std::unique_ptr<Program>
-  generateLirNode(const std::unique_ptr<myHIR::Program>&);
+  generateLirNode(const std::unique_ptr<HIR::Program>&);
   std::string print_lir(const std::shared_ptr<LirNode>& i, bool is_cfg_mode);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename);
 
-  namespace opt {
+  namespace Optimizer {
     void optimize(std::unique_ptr<Program>& prog,
 		  const std::string& filename,
 		  bool opt,
 		  bool emit_cfg);
-  } //namespace opt
+  } //namespace Optimizer
   
-} //namespace myLIR
+} //namespace Lunaria::LIR
 
 //---------------------------
 //Register Allocation
-namespace myRegAlloc {
-  void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog);
-  void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog);
+//namespace myRegAlloc {
+namespace Lunaria::RegAlloc {
+  void preprocess_x86_64(std::unique_ptr<LIR::Program>& prog);
+  void allocateRegister_x86_64(std::unique_ptr<LIR::Program>& prog);
 }
 
 //---------------------------
 //Code Generation
-namespace myCodeGen {
-  void gen_x86_64(const std::unique_ptr<myLIR::Program>&, bool opt);
+//namespace myCodeGen {
+namespace Lunaria::CodeGen {
+  void gen_x86_64(const std::unique_ptr<LIR::Program>&, bool opt);
 }
 
 #endif

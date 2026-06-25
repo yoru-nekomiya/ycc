@@ -5,9 +5,9 @@
 #include "../../util.hpp"
 #include "../opt_utils.hpp"
 
-namespace myLIR::opt {
-  bool reduce_mul(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-		  std::shared_ptr<myLIR::BasicBlock>& bb);
+namespace Lunaria::LIR::Optimizer {
+  bool reduce_mul(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+		  std::shared_ptr<BasicBlock>& bb);
 }
 
 #endif

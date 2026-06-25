@@ -1,6 +1,6 @@
 #include "opt_utils.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   static void cleanCFGs(std::unique_ptr<Program>& prog){
     for(auto& fn: prog->fns){
       fn->start_node = nullptr;
@@ -120,7 +120,7 @@ namespace myLIR::opt {
 	f << std::format("\tNode_BB{} [shape=record, color=\"#3d50c3ff\", style=filled, fillcolor=\"#e36c5570\",label=\"{{BB_{}:\\l", bb->label, bb->label);
 	
 	for(const auto& inst: bb->insts){
-	  f << escape_for_dot(myLIR::print_lir(inst, true));
+	  f << escape_for_dot(LIR::print_lir(inst, true));
 	  f << "\\l";
 	} //for inst
 	f << "}\"];\n";
@@ -181,9 +181,9 @@ namespace myLIR::opt {
       || k == LirKind::LIR_BITXOR;
   }
   
-} //namespace myLIR::opt
+} //namespace Lunaria::LIR::Optimizer
 
-namespace myLIR {
+namespace Lunaria::LIR {
   void Function::depth_first_search(const std::shared_ptr<BasicBlock>& bb,
 				    std::list<std::shared_ptr<BasicBlock>>& order,
 				    std::unordered_set<int>& mark){
@@ -238,4 +238,4 @@ namespace myLIR {
     return this->reverse_topo_order;
   }
   
-} //namespace myLIR
+} //namespace Lunaria::LIR

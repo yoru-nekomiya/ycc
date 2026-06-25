@@ -55,15 +55,15 @@ namespace Lunaria {
 
   std::shared_ptr<Lunaria::Type>
   get_larger_type(const std::shared_ptr<Lunaria::Type>& t1, const std::shared_ptr<Lunaria::Type>& t2){
-    if(t1->kind == Lunaria::TypeKind::LONG || t2->kind == Lunaria::TypeKind::LONG){
-      return Lunaria::long_type;
+    if(t1->kind == TypeKind::LONG || t2->kind == TypeKind::LONG){
+      return long_type;
     }
-    return Lunaria::int_type;
+    return int_type;
   }
 } //namespace Lunaria
 
 
-namespace myParser {
+namespace Selene::Parser {
   void add_type(std::unique_ptr<AstNode>& node) {
     if (!node || node->type){
       return;
@@ -188,9 +188,9 @@ namespace myParser {
     } //switch()
   } //add_type()
   
-} //namespace myParser
+} //namespace Selene::Parser
 
-namespace myHIR {
+namespace Lunaria::HIR {
   void add_type(std::shared_ptr<HirNode>& node){
     if (!node || node->type){
       return;
@@ -314,4 +314,4 @@ namespace myHIR {
     } //switch()
   } //add_type()
   
-} //namespace myHIR
+} //namespace Lunaria::HIR

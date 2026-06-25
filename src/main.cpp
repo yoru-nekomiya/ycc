@@ -69,18 +69,18 @@ int main(int argc, char* argv[]){
   try{
     //const std::string filename = argv[1];
     const std::string input = readFileToString(config.input_file);
-    myTokenizer::tokenize(input);
-    auto prog = myParser::program();
-    auto progHir = myHIR::generateHirNode(prog);
+    Selene::Tokenizer::tokenize(input);
+    auto prog = Selene::Parser::program();
+    auto progHir = Lunaria::HIR::generateHirNode(prog);
     
-    auto progLir = myLIR::generateLirNode(progHir);
-    myLIR::opt::optimize(progLir, config.input_file, config.opt, config.emit_cfg);
+    auto progLir = Lunaria::LIR::generateLirNode(progHir);
+    Lunaria::LIR::Optimizer::optimize(progLir, config.input_file, config.opt, config.emit_cfg);
     if(config.opt){
-      myRegAlloc::graph_coloring_register_allocation_x86_64(progLir);
+      Lunaria::RegAlloc::graph_coloring_register_allocation_x86_64(progLir);
     } else {
-      myRegAlloc::allocateRegister_x86_64(progLir);
+      Lunaria::RegAlloc::allocateRegister_x86_64(progLir);
     }
-    myCodeGen::gen_x86_64(progLir, config.opt);
+    Lunaria::CodeGen::gen_x86_64(progLir, config.opt);
     if(config.emit_lir){
       dumpLIR(progLir, replace_file_extension(config.input_file, "lir"));
     }

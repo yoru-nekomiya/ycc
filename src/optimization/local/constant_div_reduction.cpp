@@ -1,6 +1,6 @@
 #include "constant_div_reduction.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   struct MagicS64 {
     int64_t M;      // magic number
     int32_t s;      // additional shift
@@ -9,8 +9,8 @@ namespace myLIR::opt {
   
   static void convert_div_and_rem_to_shift(std::shared_ptr<LirNode>& x,
 					   int64_t c,
-					   std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-					   std::shared_ptr<myLIR::BasicBlock>& bb){
+					   std::list<std::shared_ptr<LirNode>>::iterator& iter,
+					   std::shared_ptr<BasicBlock>& bb){
     //d = x / c
     //-->
     //k = log2(|c|)
@@ -36,38 +36,23 @@ namespace myLIR::opt {
 				new_reg(""),
 				x,
 				make_imm_node(63));
-    /*
-    sar_node_1->d = new_reg("");
-    sar_node_1->a = x;
-    sar_node_1->b = make_imm_node(63);
-    */
+    
     auto shr_node = make_node(LirKind::LIR_SHR,
 			      new_reg(""),
 			      sar_node_1->d,
 			      make_imm_node(64-k));
-    /*
-    shr_node->d = new_reg("");
-    shr_node->a = sar_node_1->d;
-    shr_node->b = make_imm_node(64-k);
-    */
+    
     auto add_node = make_node(LirKind::LIR_ADD,
 			      new_reg(""),
 			      x,
 			      shr_node->d);
-    /*
-    add_node->d = new_reg("");
-    add_node->a = x;
-    add_node->b = shr_node->d;
-    */
+    
     if(kind == LirKind::LIR_DIV){
       auto sar_node_2 = make_node(LirKind::LIR_SAR,
 				  nullptr,
 				  add_node->d,
 				  make_imm_node(k));
-      /*
-      sar_node_2->a = add_node->d;
-      sar_node_2->b = make_imm_node(k);
-      */
+      
       if(c >= 0){
 	sar_node_2->d = (*iter)->d;
 	
@@ -86,11 +71,7 @@ namespace myLIR::opt {
 				  (*iter)->d,
 				  make_imm_node(0),
 				  sar_node_2->d);
-	/*
-	sub_node->d = (*iter)->d;
-	sub_node->a = make_imm_node(0);
-	sub_node->b = sar_node_2->d;
-	*/
+	
 	iter = bb->insts.erase(iter);
 	iter = bb->insts.insert(iter, sub_node);
 	iter = bb->insts.insert(iter, sar_node_2);
@@ -105,20 +86,12 @@ namespace myLIR::opt {
 				new_reg(""),
 				add_node->d,
 				make_imm_node(mask));
-      /*
-      and_node->d = new_reg("");
-      and_node->a = add_node->d;
-      and_node->b = make_imm_node(mask);
-      */
+      
       auto sub_node = make_node(LirKind::LIR_SUB,
 				(*iter)->d,
 				and_node->d,
 				shr_node->d);
-      /*
-      sub_node->d = (*iter)->d;
-      sub_node->a = and_node->d;
-      sub_node->b = shr_node->d;
-      */
+      
       iter = bb->insts.erase(iter);
       iter = bb->insts.insert(iter, sub_node);
       iter = bb->insts.insert(iter, and_node);
@@ -168,8 +141,8 @@ namespace myLIR::opt {
     return {magic_M, p - 64, use_add};
   }
 
-  static void reduce_div_using_magic(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				     std::shared_ptr<myLIR::BasicBlock>& bb){
+  static void reduce_div_using_magic(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+				     std::shared_ptr<BasicBlock>& bb){
     //inst is a division "x = n / d" where d is constant
     auto inst = *iter;
 
@@ -193,11 +166,7 @@ namespace myLIR::opt {
 				q,
 				q,
 				inst->a);
-      /*
-      add_node->d = q; 
-      add_node->a = q; 
-      add_node->b = inst->a;
-      */
+      
       iter = bb->insts.insert(iter, add_node);
       ++iter;
     }
@@ -207,11 +176,7 @@ namespace myLIR::opt {
 			      q,
 			      q,
 			      make_imm_node(magic.s));
-    /*
-    sar_node->d = q; 
-    sar_node->a = q; 
-    sar_node->b = make_imm_node(magic.s);
-    */
+    
     iter = bb->insts.insert(iter, sar_node);
     ++iter;
 
@@ -223,11 +188,7 @@ namespace myLIR::opt {
 			      sign,
 			      inst->a,
 			      make_imm_node(63));
-    /*
-    shr_node->d = sign; 
-    shr_node->a = inst->a;
-    shr_node->b = make_imm_node(63);
-    */
+    
     iter = bb->insts.insert(iter, shr_node);
     ++iter;
 
@@ -235,11 +196,7 @@ namespace myLIR::opt {
 			      new_reg(""),
 			      q,
 			      sign);
-    /*
-    add_sign->d = new_reg("");
-    add_sign->a = q; 
-    add_sign->b = sign;
-    */
+    
     iter = bb->insts.insert(iter, add_sign);
     ++iter;
     
@@ -249,27 +206,20 @@ namespace myLIR::opt {
 				inst->d,
 				make_imm_node(0),
 				add_sign->d);
-      /*
-      sub_node->d = inst->d;
-      sub_node->a = make_imm_node(0);
-      sub_node->b = add_sign->d;
-      */
+      
       iter = bb->insts.insert(iter, sub_node);
     } else {
       auto mov_node = make_node(LirKind::LIR_MOV,
 				inst->d,
 				nullptr,
 				add_sign->d);
-      /*
-      mov_node->d = inst->d;
-      mov_node->b = add_sign->d;
-      */
+      
       iter = bb->insts.insert(iter, mov_node);
     }
   }
 
-  static void reduce_rem_to_div(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				std::shared_ptr<myLIR::BasicBlock>& bb){
+  static void reduce_rem_to_div(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+				std::shared_ptr<BasicBlock>& bb){
     //inst is a remainder "n % d" where d is constant
     auto inst = *iter;
 
@@ -278,11 +228,7 @@ namespace myLIR::opt {
 			      new_reg(""),
 			      inst->a,
 			      inst->b);
-    /*
-    div_node->d = new_reg("");
-    div_node->a = inst->a;
-    div_node->b = inst->b;
-    */
+    
     iter = bb->insts.erase(iter);
     iter = bb->insts.insert(iter, div_node);
     ++iter;
@@ -291,11 +237,7 @@ namespace myLIR::opt {
 			      new_reg(""),
 			      div_node->d,
 			      inst->b);
-    /*
-    mul_node->d = new_reg("");
-    mul_node->a = div_node->d;
-    mul_node->b = inst->b;
-    */
+    
     iter = bb->insts.insert(iter, mul_node);
     ++iter;
 
@@ -303,16 +245,12 @@ namespace myLIR::opt {
 			      inst->d,
 			      inst->a,
 			      mul_node->d);
-    /*
-    sub_node->d = inst->d;
-    sub_node->a = inst->a;
-    sub_node->b = mul_node->d;
-    */
+    
     iter = bb->insts.insert(iter, sub_node);
   }
   
-  bool reduce_div_and_rem(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-			  std::shared_ptr<myLIR::BasicBlock>& bb){
+  bool reduce_div_and_rem(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+			  std::shared_ptr<BasicBlock>& bb){
     auto inst = *iter;
     bool changed = false;
     if(!is_imm(inst->a) && is_imm(inst->b)){
@@ -325,10 +263,7 @@ namespace myLIR::opt {
 				      inst->d,
 				      nullptr,
 				      inst->a);
-	    /*
-	    mov_node->d = inst->d;
-	    mov_node->b = inst->a;
-	    */
+	    
 	    iter = bb->insts.erase(iter);
 	    iter = bb->insts.insert(iter, mov_node);
 	  } else if(inst->b->imm == -1){
@@ -336,11 +271,7 @@ namespace myLIR::opt {
 				      new_reg(""),
 				      make_imm_node(0),
 				      inst->a);
-	    /*
-	    sub_node->d = new_reg("");
-	    sub_node->a = make_imm_node(0);
-	    sub_node->b = inst->a;
-	    */
+	    
 	    iter = bb->insts.erase(iter);
 	    iter = bb->insts.insert(iter, sub_node);
 	    ++iter;
@@ -349,10 +280,7 @@ namespace myLIR::opt {
 				      inst->d,
 				      nullptr,
 				      sub_node->d);
-	    /*
-	    mov_node->d = inst->d;
-	    mov_node->b = sub_node->d;
-	    */
+	    
 	    iter = bb->insts.insert(iter, mov_node);
 	    
 	  }
@@ -382,4 +310,4 @@ namespace myLIR::opt {
     return changed;
   }
   
-}
+} //namespace Lunaria::LIR::Optimizer

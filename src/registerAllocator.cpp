@@ -2,18 +2,18 @@
 #include "util.hpp"
 #include "optimization/opt_utils.hpp"
 
-namespace myRegAlloc {
+namespace Lunaria::RegAlloc {
   const int num_reg = 7; //"r10", "r11", "rbx", "r12", "r13", "r14", "r15"
 
-  static void insert_64bit_imm_mov(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				   std::shared_ptr<myLIR::BasicBlock>& bb){
+  static void insert_64bit_imm_mov(std::list<std::shared_ptr<LIR::LirNode>>::iterator& iter,
+				   std::shared_ptr<LIR::BasicBlock>& bb){
     //Check if operand "b" is 64-bit immediate value.
     //If so, insert the MOV instruction to load the value in 64-bit register
     if(!(*iter)->b) return;
-    if(myLIR::is_imm((*iter)->b) && !myLIR::is_int32((*iter)->b)){
-      auto d = myLIR::new_reg("", 8);
-      auto imm_node = std::make_shared<myLIR::LirNode>();
-      imm_node->opcode = myLIR::LirKind::LIR_IMM;
+    if(LIR::is_imm((*iter)->b) && !LIR::is_int32((*iter)->b)){
+      auto d = LIR::new_reg("", 8);
+      auto imm_node = std::make_shared<LIR::LirNode>();
+      imm_node->opcode = LIR::LirKind::LIR_IMM;
       imm_node->d = std::move(d);
       imm_node->imm = (*iter)->b->imm;
       
@@ -24,17 +24,17 @@ namespace myRegAlloc {
   }
 
   static void
-  insert_32bit_imm_mov_for_idiv(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				std::shared_ptr<myLIR::BasicBlock>& bb){
+  insert_32bit_imm_mov_for_idiv(std::list<std::shared_ptr<LIR::LirNode>>::iterator& iter,
+				std::shared_ptr<LIR::BasicBlock>& bb){
     //Check if an instruction is LIR_DIV or LIR_REM,
     //and check if operand "b" is 32-bit immediate value.
     //If so, insert the MOV instruction to load the value in register
-    if((*iter)->opcode == myLIR::LirKind::LIR_DIV
-       || (*iter)->opcode == myLIR::LirKind::LIR_REM){     
-      if(myLIR::is_imm((*iter)->b) && myLIR::is_int32((*iter)->b)){
-	auto d = myLIR::new_reg("", 4);
-	auto imm_node = std::make_shared<myLIR::LirNode>();
-	imm_node->opcode = myLIR::LirKind::LIR_IMM;
+    if((*iter)->opcode == LIR::LirKind::LIR_DIV
+       || (*iter)->opcode == LIR::LirKind::LIR_REM){     
+      if(LIR::is_imm((*iter)->b) && LIR::is_int32((*iter)->b)){
+	auto d = LIR::new_reg("", 4);
+	auto imm_node = std::make_shared<LIR::LirNode>();
+	imm_node->opcode = LIR::LirKind::LIR_IMM;
 	imm_node->d = std::move(d);
 	imm_node->imm = (*iter)->b->imm;
       
@@ -46,29 +46,29 @@ namespace myRegAlloc {
   }
 
   static void
-  decompose_ptr_add_and_sub(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-			    std::shared_ptr<myLIR::BasicBlock>& bb){
+  decompose_ptr_add_and_sub(std::list<std::shared_ptr<LIR::LirNode>>::iterator& iter,
+			    std::shared_ptr<LIR::BasicBlock>& bb){
     //Decompose PTR_ADD and PTR_SUB because they need two destination registers.
     auto inst = *iter;
-    if(inst->opcode == myLIR::LirKind::LIR_PTR_ADD
-       || inst->opcode == myLIR::LirKind::LIR_PTR_SUB){
+    if(inst->opcode == LIR::LirKind::LIR_PTR_ADD
+       || inst->opcode == LIR::LirKind::LIR_PTR_SUB){
       const int s = inst->type_base_size;
       if(s != 1 && s != 2 && s != 4 && s != 8){
 	if(!(is_imm(inst->b) && is_int32(inst->b))){
-	  auto d = myLIR::new_reg("", 8);
-	  auto mul_node = myLIR::opt::make_node(myLIR::LirKind::LIR_MUL,
+	  auto d = LIR::new_reg("", 8);
+	  auto mul_node = LIR::Optimizer::make_node(LIR::LirKind::LIR_MUL,
 						d,
 						inst->b,
-						myLIR::opt::make_imm_node(s));
-	  std::shared_ptr<myLIR::LirNode> node = nullptr;
-	  if(inst->opcode == myLIR::LirKind::LIR_PTR_ADD){
-	    node = myLIR::opt::make_node(myLIR::LirKind::LIR_ADD,
+						LIR::Optimizer::make_imm_node(s));
+	  std::shared_ptr<LIR::LirNode> node = nullptr;
+	  if(inst->opcode == LIR::LirKind::LIR_PTR_ADD){
+	    node = LIR::Optimizer::make_node(LIR::LirKind::LIR_ADD,
 					 inst->d,
 					 inst->a,
 					 mul_node->d);
 	  }
-	  else if(inst->opcode == myLIR::LirKind::LIR_PTR_SUB){
-	    node = myLIR::opt::make_node(myLIR::LirKind::LIR_SUB,
+	  else if(inst->opcode == LIR::LirKind::LIR_PTR_SUB){
+	    node = LIR::Optimizer::make_node(LIR::LirKind::LIR_SUB,
 					 inst->d,
 					 inst->a,
 					 mul_node->d);
@@ -84,15 +84,15 @@ namespace myRegAlloc {
     
   }
   
-  static void convert_3ac_to_2ac(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-				 std::shared_ptr<myLIR::BasicBlock>& bb){
+  static void convert_3ac_to_2ac(std::list<std::shared_ptr<LIR::LirNode>>::iterator& iter,
+				 std::shared_ptr<LIR::BasicBlock>& bb){
   //convert 3-address code to 2-address code
   //d = a op b; --> d = a; d = d op b;
   if(!(*iter)->d || !(*iter)->a) return;	
-  auto movNode = std::make_shared<myLIR::LirNode>();
-  movNode->opcode = myLIR::LirKind::LIR_MOV;
+  auto movNode = std::make_shared<LIR::LirNode>();
+  movNode->opcode = LIR::LirKind::LIR_MOV;
   movNode->d = (*iter)->d;
-  //movNode->d = myLIR::new_reg("", 8);
+  //movNode->d = LIR::new_reg("", 8);
   movNode->b = (*iter)->a;
   
   (*iter)->a = (*iter)->d;
@@ -102,16 +102,16 @@ namespace myRegAlloc {
   iter++;
 }
 
-static void setLastUse(std::shared_ptr<myLIR::LirNode>& lirNode,
+static void setLastUse(std::shared_ptr<LIR::LirNode>& lirNode,
 		       int c){
   if(lirNode && lirNode->lastUse < c){
     lirNode->lastUse = c;
   }
 }
 
-static std::list<std::shared_ptr<myLIR::LirNode>>
-collectReg(std::shared_ptr<myLIR::Function>& fn){
-  std::list<std::shared_ptr<myLIR::LirNode>> listReg;
+static std::list<std::shared_ptr<LIR::LirNode>>
+collectReg(std::shared_ptr<LIR::Function>& fn){
+  std::list<std::shared_ptr<LIR::LirNode>> listReg;
   int instCount = 1;
   for(auto& bb: fn->bbs){
     if(bb->param){
@@ -128,7 +128,7 @@ collectReg(std::shared_ptr<myLIR::Function>& fn){
       setLastUse(lirNode->b, instCount);
       setLastUse(lirNode->bbarg, instCount);
       
-      if(lirNode->opcode == myLIR::LirKind::LIR_FUNCALL){
+      if(lirNode->opcode == LIR::LirKind::LIR_FUNCALL){
 	for(auto& n: lirNode->args){
 	  setLastUse(n, instCount);
 	}
@@ -140,7 +140,7 @@ collectReg(std::shared_ptr<myLIR::Function>& fn){
   return listReg;
 } 
   
-static std::unordered_map<int, std::shared_ptr<myLIR::LirNode>> used;
+static std::unordered_map<int, std::shared_ptr<LIR::LirNode>> used;
 
   static int choose_to_spill() {
     int k = 0;
@@ -150,7 +150,7 @@ static std::unordered_map<int, std::shared_ptr<myLIR::LirNode>> used;
     return k;
   }
   
-static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
+static int allocate(std::list<std::shared_ptr<LIR::LirNode>>& listReg){
   int max_reg_pressure = INT_MIN;
   for(int i = 0; i < num_reg; i++){
     used[i] = nullptr;
@@ -182,35 +182,35 @@ static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
   return max_reg_pressure;
 }
   
-  static void spill_store(std::list<std::shared_ptr<myLIR::LirNode>>& insts,
-			  const std::shared_ptr<myLIR::LirNode>& ir){
+  static void spill_store(std::list<std::shared_ptr<LIR::LirNode>>& insts,
+			  const std::shared_ptr<LIR::LirNode>& ir){
     const auto r = ir->d;
     if(!r || !r->spill){
       return;
     }
 
-    auto ir2 = std::make_shared<myLIR::LirNode>();
-    ir2->opcode = myLIR::LirKind::LIR_STORE_SPILL;
+    auto ir2 = std::make_shared<LIR::LirNode>();
+    ir2->opcode = LIR::LirKind::LIR_STORE_SPILL;
     ir2->a = r;
     ir2->lvar = r->lvar;
     insts.push_back(ir2);
   }
 
-  static void spill_load(std::list<std::shared_ptr<myLIR::LirNode>>& insts,
-			 const std::shared_ptr<myLIR::LirNode>& r){
+  static void spill_load(std::list<std::shared_ptr<LIR::LirNode>>& insts,
+			 const std::shared_ptr<LIR::LirNode>& r){
     if(!r || !r->spill){
       return;
     }
 
-    auto ir2 = std::make_shared<myLIR::LirNode>();
-    ir2->opcode = myLIR::LirKind::LIR_LOAD_SPILL;
+    auto ir2 = std::make_shared<LIR::LirNode>();
+    ir2->opcode = LIR::LirKind::LIR_LOAD_SPILL;
     ir2->d = r;
     ir2->lvar = r->lvar;
     insts.push_back(ir2);
   }
 
-  static void emit_spill_code(std::shared_ptr<myLIR::BasicBlock>& bb){
-    std::list<std::shared_ptr<myLIR::LirNode>> insts;
+  static void emit_spill_code(std::shared_ptr<LIR::BasicBlock>& bb){
+    std::list<std::shared_ptr<LIR::LirNode>> insts;
     for(auto& inst: bb->insts){
       spill_load(insts, inst->a);
       spill_load(insts, inst->b);
@@ -223,10 +223,10 @@ static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
     std::copy(insts.begin(), insts.end(), bb->insts.begin());
   }
 
-  void preprocess_x86_64(std::unique_ptr<myLIR::Program>& prog){
+  void preprocess_x86_64(std::unique_ptr<LIR::Program>& prog){
     for(auto& fn: prog->fns){
       for(auto& bb: fn->bbs){
-	for(std::list<std::shared_ptr<myLIR::LirNode>>::iterator iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
+	for(std::list<std::shared_ptr<LIR::LirNode>>::iterator iter = bb->insts.begin(); iter != bb->insts.end(); iter++){
 	  insert_64bit_imm_mov(iter, bb);
 	  insert_32bit_imm_mov_for_idiv(iter, bb);
 	  decompose_ptr_add_and_sub(iter, bb);
@@ -237,7 +237,7 @@ static int allocate(std::list<std::shared_ptr<myLIR::LirNode>>& listReg){
   }
   
   static int spill_num = 0;
-void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
+void allocateRegister_x86_64(std::unique_ptr<LIR::Program>& prog){
   preprocess_x86_64(prog);
   for(auto& fn: prog->fns){
     auto listReg = collectReg(fn);
@@ -263,4 +263,4 @@ void allocateRegister_x86_64(std::unique_ptr<myLIR::Program>& prog){
   } //for fn
 }
 
-} //namespace myRegAlloc
+} //namespace Lunaria::RegAlloc

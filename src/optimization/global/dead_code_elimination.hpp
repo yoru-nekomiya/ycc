@@ -5,7 +5,7 @@
 #include "../opt_utils.hpp"
 #include "../../util.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   bool dead_code_elimination(std::shared_ptr<Function>& fn);
 }
 

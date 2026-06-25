@@ -1,6 +1,6 @@
 #include "ycc.hpp"
 
-namespace myTokenizer {
+namespace Selene::Tokenizer {
   std::deque<std::unique_ptr<Token>> tokens = {};
   std::unordered_map<std::string, unsigned long long> table_define;
   
@@ -464,4 +464,4 @@ void tokenize(const std::string& input){
   } //while()
   new_token(TokenType::TK_EOF);
 } //tokenize()
-} //namespace myTokenizer
+} //namespace Selene::Tokenizer

@@ -1,7 +1,7 @@
 #include "dead_code_elimination.hpp"
 
 
-namespace myLIR {
+namespace Lunaria::LIR {
   struct LirSharedPtrHash {      
    size_t operator()(const std::shared_ptr<LirNode>& p) const { 
      return std::hash<LirNode*>()(p.get());    
@@ -15,7 +15,7 @@ namespace myLIR {
   };
 }
 
-namespace myLIR::opt {  
+namespace Lunaria::LIR::Optimizer {  
   using PredSet = std::unordered_set<std::shared_ptr<LirNode>, LirSharedPtrHash>;
   std::unordered_map<int, PredSet> bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
   
@@ -258,4 +258,4 @@ namespace myLIR::opt {
     return changed;
   }
 
-} //namespace myLIR::opt
+} //namespace Lunaria::LIR::Optimizer

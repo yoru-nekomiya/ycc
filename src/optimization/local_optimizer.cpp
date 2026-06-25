@@ -5,7 +5,7 @@
 #include "local/constant_mul_reduction.hpp"
 #include <bit>
 
-namespace myLIR {
+namespace Lunaria::LIR {
   struct LirSharedPtrHash {
     size_t operator()(const std::shared_ptr<LirNode>& p) const {
       return std::hash<LirNode*>()(p.get());
@@ -13,7 +13,7 @@ namespace myLIR {
   };
 }
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   static bool is_unary_opcode(LirKind k){
     return k == LirKind::LIR_MOV
       || k == LirKind::LIR_STORE
@@ -246,8 +246,8 @@ namespace myLIR::opt {
     return c;
   }
 
-  static void constant_folding(std::list<std::shared_ptr<myLIR::LirNode>>::iterator& iter,
-			       std::shared_ptr<myLIR::BasicBlock>& bb){
+  static void constant_folding(std::list<std::shared_ptr<LirNode>>::iterator& iter,
+			       std::shared_ptr<BasicBlock>& bb){
     auto& inst = *iter;
     const int64_t c = calc_constant(inst);
     auto imm_node = make_imm_node(c);
@@ -625,4 +625,4 @@ namespace myLIR::opt {
     changed = changed || propagate_stack_address(bb);
     return changed;
   }
-}
+} //namespace Lunaria::LIR::Optimizer

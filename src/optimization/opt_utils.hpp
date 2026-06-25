@@ -3,7 +3,7 @@
 
 #include "../ycc.hpp"
 
-namespace myLIR::opt {
+namespace Lunaria::LIR::Optimizer {
   bool optimize_bb(std::shared_ptr<BasicBlock>& bb);
   bool optimize_fn(std::shared_ptr<Function>& fn);
   bool merge_basic_block(std::shared_ptr<Function>& fn);
@@ -46,6 +46,6 @@ namespace myLIR::opt {
     return std::countr_zero(static_cast<U>(n));
   }
   
-} //namespace myLIR::opt
+} //namespace Lunaria::LIR::Optimizer
 
 #endif

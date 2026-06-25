@@ -7,8 +7,8 @@
 #include <iterator>
 #include <utility>
 
-namespace myRegAlloc {
-  void graph_coloring_register_allocation_x86_64(std::unique_ptr<myLIR::Program>& prog);
+namespace Lunaria::RegAlloc {
+  void graph_coloring_register_allocation_x86_64(std::unique_ptr<LIR::Program>& prog);
   
 }
 

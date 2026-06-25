@@ -1,6 +1,6 @@
 #include "ycc.hpp"
 
-namespace myHIR {
+namespace Lunaria::HIR {
   static std::unordered_map<int, std::shared_ptr<HirNode>> map_astID2hirNode = {};
   
 std::shared_ptr<HirNode>
@@ -24,7 +24,7 @@ new_binary(HirKind kind,
 }
 
 static std::shared_ptr<HirNode>
-new_num(const std::unique_ptr<myParser::AstNode>& astNode){
+new_num(const std::unique_ptr<Selene::Parser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_IMM);
   hirNode->val = astNode->val;
   hirNode->type = Lunaria::is_int32(hirNode->val) ? Lunaria::int_type : Lunaria::long_type;
@@ -40,7 +40,7 @@ new_num(long long i){
 }
 
 static std::shared_ptr<HirNode>
-new_var(const std::unique_ptr<myParser::AstNode>& astNode){
+new_var(const std::unique_ptr<Selene::Parser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_VAR);
   //hirNode->type = astNode->var->type;
   hirNode->var = std::move(astNode->var);
@@ -95,26 +95,26 @@ new_sub(std::shared_ptr<HirNode>& lhs,
 }
 
 std::shared_ptr<HirNode>
-program(const std::unique_ptr<myParser::AstNode>& astNode){
-  if(astNode->kind == myParser::AstKind::AST_NUM){
+program(const std::unique_ptr<Selene::Parser::AstNode>& astNode){
+  if(astNode->kind == Selene::Parser::AstKind::AST_NUM){
     return new_num(astNode);
-  } else if(astNode->kind == myParser::AstKind::AST_NULL){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_NULL){
     return new_node(HirKind::HIR_NULL);
-  } else if(astNode->kind == myParser::AstKind::AST_VAR){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_VAR){
     return new_var(astNode);
-  } else if(astNode->kind == myParser::AstKind::AST_MEMBER){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_MEMBER){
     auto hirNode = new_node(HirKind::HIR_MEMBER);
     hirNode->lhs = program(astNode->lhs);
     hirNode->member = astNode->member;
     //hirNode->type = hirNode->member->type;
     add_type(hirNode);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_CAST){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_CAST){
     auto hirNode = new_node(HirKind::HIR_CAST);
     hirNode->lhs = program(astNode->lhs);
     hirNode->type = astNode->type;
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_RETURN){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_RETURN){
     auto hirNode = new_node(HirKind::HIR_RETURN);
     if(astNode->lhs){
       auto lhs = program(astNode->lhs);
@@ -125,7 +125,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->lhs = nullptr;
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_DEREF){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_DEREF){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_DEREF);
     if(!lhs->type->base){
@@ -137,7 +137,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_ADDR){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_ADDR){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_ADDR);
     /*
@@ -151,21 +151,21 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_NOT){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_NOT){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_NOT);
     hirNode->lhs = std::move(lhs);
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_BITNOT){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_BITNOT){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_BITNOT);
     hirNode->lhs = std::move(lhs);
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_PRE_INC){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_PRE_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_INC);
     hirNode->lhs = std::move(lhs);
@@ -173,7 +173,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_PRE_DEC){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_PRE_DEC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_PRE_DEC);
     hirNode->lhs = std::move(lhs);
@@ -181,7 +181,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_POST_INC){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_POST_INC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_POST_INC);
     hirNode->lhs = std::move(lhs);
@@ -189,7 +189,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_POST_DEC){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_POST_DEC){
     auto lhs = program(astNode->lhs);
     auto hirNode = new_node(HirKind::HIR_POST_DEC);
     hirNode->lhs = std::move(lhs);
@@ -197,13 +197,13 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     add_type(hirNode);
     return hirNode;
   }
-  else if(astNode->kind == myParser::AstKind::AST_BLOCK){
+  else if(astNode->kind == Selene::Parser::AstKind::AST_BLOCK){
     auto hirNode = new_node(HirKind::HIR_BLOCK);
     for(const auto& n: astNode->body){
       hirNode->body.push_back(program(n));
     }
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_FUNCALL){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_FUNCALL){
     auto hirNode = new_node(HirKind::HIR_FUNCALL);
     hirNode->funcName = astNode->funcName;
     hirNode->type = astNode->type;
@@ -211,7 +211,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
       hirNode->args.push_back(program(an));
     }
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_IF){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_IF){
     auto hirNode = new_node(HirKind::HIR_IF);
     auto cond = program(astNode->cond);
     auto then = program(astNode->then);
@@ -223,21 +223,21 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->then = std::move(then);
     hirNode->els = std::move(els);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_WHILE){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_WHILE){
     auto hirNode = new_node(HirKind::HIR_WHILE, astNode->id);
     auto cond = program(astNode->cond);
     auto then = program(astNode->then);
     hirNode->cond = std::move(cond);
     hirNode->then = std::move(then);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_DO_WHILE){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_DO_WHILE){
     auto hirNode = new_node(HirKind::HIR_DO_WHILE, astNode->id);
     auto then = program(astNode->then);
     auto cond = program(astNode->cond);
     hirNode->then = std::move(then);
     hirNode->cond = std::move(cond);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_FOR){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_FOR){
     auto hirNode = new_node(HirKind::HIR_FOR, astNode->id);
     std::shared_ptr<HirNode> init = nullptr;
     std::shared_ptr<HirNode> cond = nullptr;
@@ -258,24 +258,24 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     hirNode->inc = std::move(inc);
     hirNode->then = std::move(then);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_BREAK){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_BREAK){
     auto hirNode = new_node(HirKind::HIR_BREAK);
     assert(map_astID2hirNode.contains(astNode->target));
     hirNode->target = map_astID2hirNode[astNode->target];
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_CONTINUE){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_CONTINUE){
     auto hirNode = new_node(HirKind::HIR_CONTINUE);
     assert(map_astID2hirNode.contains(astNode->target));
     hirNode->target = map_astID2hirNode[astNode->target];
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_SWITCH){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_SWITCH){
     auto hirNode = new_node(HirKind::HIR_SWITCH, astNode->id);
     hirNode->cond = program(astNode->cond);
     for(const auto& n: astNode->body){
       hirNode->body.push_back(program(n));
     }
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_CASE){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_CASE){
     auto hirNode = new_node(HirKind::HIR_CASE);
     for(const auto& n: astNode->body){
       hirNode->body.push_back(program(n));
@@ -284,7 +284,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     assert(map_astID2hirNode.contains(astNode->_switch));
     map_astID2hirNode[astNode->_switch]->cases.push_back(hirNode);
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_DEFAULT){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_DEFAULT){
     auto hirNode = new_node(HirKind::HIR_DEFAULT);
     for(const auto& n: astNode->body){
       hirNode->body.push_back(program(n));
@@ -292,7 +292,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     assert(map_astID2hirNode.contains(astNode->_switch));
     map_astID2hirNode[astNode->_switch]->_default = hirNode;
     return hirNode;
-  } else if(astNode->kind == myParser::AstKind::AST_CONDITIONAL){
+  } else if(astNode->kind == Selene::Parser::AstKind::AST_CONDITIONAL){
     auto hirNode = new_node(HirKind::HIR_CONDITIONAL);
     hirNode->cond = program(astNode->cond);
     hirNode->then = program(astNode->then);
@@ -304,151 +304,151 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
     auto lhs = program(astNode->lhs);
     auto rhs = program(astNode->rhs);
     switch(astNode->kind){
-    case myParser::AstKind::AST_ADD: {
+    case Selene::Parser::AstKind::AST_ADD: {
       auto node = new_binary(HirKind::HIR_ADD, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_SUB: {
+    case Selene::Parser::AstKind::AST_SUB: {
       auto node = new_binary(HirKind::HIR_SUB, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_MUL: {
+    case Selene::Parser::AstKind::AST_MUL: {
       auto node = new_binary(HirKind::HIR_MUL, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_DIV: {
+    case Selene::Parser::AstKind::AST_DIV: {
       auto node = new_binary(HirKind::HIR_DIV, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_REM: {
+    case Selene::Parser::AstKind::AST_REM: {
       auto node = new_binary(HirKind::HIR_REM, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_LT: {
+    case Selene::Parser::AstKind::AST_LT: {
       auto node = new_binary(HirKind::HIR_LT, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_LE: {
+    case Selene::Parser::AstKind::AST_LE: {
       auto node = new_binary(HirKind::HIR_LE, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_EQ: {
+    case Selene::Parser::AstKind::AST_EQ: {
       auto node = new_binary(HirKind::HIR_EQ, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_NE: {
+    case Selene::Parser::AstKind::AST_NE: {
       auto node = new_binary(HirKind::HIR_NE, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_ASSIGN: {
+    case Selene::Parser::AstKind::AST_ASSIGN: {
       auto node = new_binary(HirKind::HIR_ASSIGN, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_ADD_ASSIGN: {
+    case Selene::Parser::AstKind::AST_ADD_ASSIGN: {
       auto node = new_binary(HirKind::HIR_ADD_ASSIGN, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_SUB_ASSIGN: {
+    case Selene::Parser::AstKind::AST_SUB_ASSIGN: {
       auto node = new_binary(HirKind::HIR_SUB_ASSIGN, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_MUL_ASSIGN: {
+    case Selene::Parser::AstKind::AST_MUL_ASSIGN: {
       auto node = new_binary(HirKind::HIR_MUL_ASSIGN, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_DIV_ASSIGN: {
+    case Selene::Parser::AstKind::AST_DIV_ASSIGN: {
       auto node = new_binary(HirKind::HIR_DIV_ASSIGN, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_PTR_ADD: {
+    case Selene::Parser::AstKind::AST_PTR_ADD: {
       auto node = new_binary(HirKind::HIR_PTR_ADD, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_PTR_SUB: {
+    case Selene::Parser::AstKind::AST_PTR_SUB: {
       auto node = new_binary(HirKind::HIR_PTR_SUB, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_PTR_DIFF: {
+    case Selene::Parser::AstKind::AST_PTR_DIFF: {
       auto node = new_binary(HirKind::HIR_PTR_DIFF, lhs, rhs);      
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_SUBSCRIPTED: {
+    case Selene::Parser::AstKind::AST_SUBSCRIPTED: {
       auto node = new_binary(HirKind::HIR_SUBSCRIPTED, lhs, rhs);
       //node->type = node->lhs->type->base;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_LOGOR: {
+    case Selene::Parser::AstKind::AST_LOGOR: {
       auto node = new_binary(HirKind::HIR_LOGOR, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_LOGAND: {
+    case Selene::Parser::AstKind::AST_LOGAND: {
       auto node = new_binary(HirKind::HIR_LOGAND, lhs, rhs);
       //node->type = Lunaria::int_type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_SHL: {
+    case Selene::Parser::AstKind::AST_SHL: {
       auto node = new_binary(HirKind::HIR_SHL, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_SAR: {
+    case Selene::Parser::AstKind::AST_SAR: {
       auto node = new_binary(HirKind::HIR_SAR, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_BITOR: {
+    case Selene::Parser::AstKind::AST_BITOR: {
       auto node = new_binary(HirKind::HIR_BITOR, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_BITXOR: {
+    case Selene::Parser::AstKind::AST_BITXOR: {
       auto node = new_binary(HirKind::HIR_BITXOR, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
       return node;
     }
-    case myParser::AstKind::AST_BITAND: {
+    case Selene::Parser::AstKind::AST_BITAND: {
       auto node = new_binary(HirKind::HIR_BITAND, lhs, rhs);
       //node->type = node->lhs->type;
       add_type(node);
@@ -460,7 +460,7 @@ program(const std::unique_ptr<myParser::AstNode>& astNode){
 }
 
 std::unique_ptr<Program>
-generateHirNode(const std::unique_ptr<myParser::Program>& prog){
+generateHirNode(const std::unique_ptr<Selene::Parser::Program>& prog){
   auto progHir = std::make_unique<Program>();
   progHir->globalVars = prog->globalVars;
   for(auto& fn: prog->fns){
@@ -475,4 +475,4 @@ generateHirNode(const std::unique_ptr<myParser::Program>& prog){
   }
   return progHir;
 }
-} //namespace myHIR
+} //namespace Lunaria::HIR
