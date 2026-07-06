@@ -1,7 +1,8 @@
 #ifndef UNREACHABLE_CODE_ELIMINATION_HPP
 #define UNREACHABLE_CODE_ELIMINATION_HPP
 
-#include "../../ycc.hpp"
+//#include "../../slcc.hpp"
+#include "../../lunaria.hpp"
 #include "../opt_utils.hpp"
 #include "../../util.hpp"
 

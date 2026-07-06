@@ -2,7 +2,7 @@
 *.o
 *tmp*
 *.out
-ycc
+slcc
 tmp
 #*
 *.s

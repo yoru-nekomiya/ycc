@@ -2,10 +2,10 @@
 
 namespace Lunaria::LIR::Optimizer {
 
-  static void convert_mul_to_shift(std::shared_ptr<LirNode>& node,
+  static void convert_mul_to_shift(LirNodePtr& node,
 				   int64_t c,
-				   std::list<std::shared_ptr<LirNode>>::iterator& iter,
-				   std::shared_ptr<BasicBlock>& bb){
+				   std::list<LirNodePtr>::iterator& iter,
+				   BasicBlockPtr& bb){
     const int num_shift = get_log2(c);
     /*
     auto shift_node = std::make_shared<LirNode>();
@@ -43,10 +43,10 @@ namespace Lunaria::LIR::Optimizer {
     }
   }
   
-  static bool convert_optimized_mul(std::shared_ptr<LirNode>& n,
+  static bool convert_optimized_mul(LirNodePtr& n,
 				    int64_t k,
-				    std::list<std::shared_ptr<LirNode>>::iterator& iter,
-				    std::shared_ptr<BasicBlock>& bb){
+				    std::list<LirNodePtr>::iterator& iter,
+				    BasicBlockPtr& bb){
     //convert "n * k" to optimized instruction sequence using lea and shl
     assert(k != 1);
     assert(k != -1);
@@ -61,13 +61,13 @@ namespace Lunaria::LIR::Optimizer {
     const int s = std::countr_zero(abs_k);
     const uint64_t odd_k = abs_k >> s;
 
-    std::shared_ptr<LirNode> mad_node = nullptr;
-    std::shared_ptr<LirNode> shl_node = nullptr;
-    std::shared_ptr<LirNode> add_node = nullptr;
-    std::shared_ptr<LirNode> sub_node = nullptr;
-    std::shared_ptr<LirNode> s_node = nullptr;
-    std::shared_ptr<LirNode> neg_node = nullptr;
-    std::shared_ptr<LirNode> mov_node = nullptr;
+    LirNodePtr mad_node = nullptr;
+    LirNodePtr shl_node = nullptr;
+    LirNodePtr add_node = nullptr;
+    LirNodePtr sub_node = nullptr;
+    LirNodePtr s_node = nullptr;
+    LirNodePtr neg_node = nullptr;
+    LirNodePtr mov_node = nullptr;
     int inst_count = 0;
     if(is_abs_power_of_two(odd_k - 1)){
       const int num = std::countr_zero(odd_k - 1);
@@ -174,8 +174,8 @@ namespace Lunaria::LIR::Optimizer {
     return true;
   }
   
-  bool reduce_mul(std::list<std::shared_ptr<LirNode>>::iterator& iter,
-			 std::shared_ptr<BasicBlock>& bb){
+  bool reduce_mul(std::list<LirNodePtr>::iterator& iter,
+		  BasicBlockPtr& bb){
     auto inst = *iter;
     bool changed = false;
     if(is_imm(inst->a) && !is_imm(inst->b)){

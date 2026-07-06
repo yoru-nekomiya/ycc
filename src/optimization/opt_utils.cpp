@@ -12,7 +12,7 @@ namespace Lunaria::LIR::Optimizer {
     } //for fn
   }
   
-  static void add_edges(std::shared_ptr<BasicBlock>& bb){
+  static void add_edges(BasicBlockPtr& bb){
     if(bb->insts.empty()) return;
     if(!bb->succ.empty()) return;
 
@@ -138,11 +138,10 @@ namespace Lunaria::LIR::Optimizer {
     } //for fn
   }
 
-  std::shared_ptr<LirNode>
-  make_node(LirKind k,
-	    const std::shared_ptr<LirNode>& d,
-	    const std::shared_ptr<LirNode>& a,
-	    const std::shared_ptr<LirNode>& b){
+  LirNodePtr make_node(LirKind k,
+		       const LirNodePtr& d,
+		       const LirNodePtr& a,
+		       const LirNodePtr& b){
     auto n = std::make_shared<LirNode>();
     n->opcode = k;
     n->d = d;
@@ -151,7 +150,7 @@ namespace Lunaria::LIR::Optimizer {
     return n;
   }
 
-  std::shared_ptr<LirNode> make_imm_node(int64_t imm){
+  LirNodePtr make_imm_node(int64_t imm){
     auto n = std::make_shared<LirNode>();
     n->opcode = LirKind::LIR_IMM;
     n->imm = imm;
@@ -180,12 +179,14 @@ namespace Lunaria::LIR::Optimizer {
       || k == LirKind::LIR_BITAND
       || k == LirKind::LIR_BITXOR;
   }
+
+  
   
 } //namespace Lunaria::LIR::Optimizer
 
 namespace Lunaria::LIR {
-  void Function::depth_first_search(const std::shared_ptr<BasicBlock>& bb,
-				    std::list<std::shared_ptr<BasicBlock>>& order,
+  void Function::depth_first_search(const BasicBlockPtr& bb,
+				    std::list<BasicBlockPtr>& order,
 				    std::unordered_set<int>& mark){
     if(!mark.contains(bb->label)){
       mark.insert(bb->label);    
@@ -205,14 +206,14 @@ namespace Lunaria::LIR {
     return; 
   }
 
-  std::list<std::shared_ptr<BasicBlock>> Function::get_topological_sort(){
+  std::list<BasicBlockPtr> Function::get_topological_sort(){
     //TODO: If a CFG has not been changed since it was previously calculated, this function should return the previous value without recalculating.
     calc_topological_sort();
     return this->topo_order;
   }
 
-  void Function::depth_first_search_reverse(const std::shared_ptr<BasicBlock>& bb,
-					    std::list<std::shared_ptr<BasicBlock>>& order,
+  void Function::depth_first_search_reverse(const BasicBlockPtr& bb,
+					    std::list<BasicBlockPtr>& order,
 					    std::unordered_set<int>& mark){
     if(!mark.contains(bb->label)){
       mark.insert(bb->label);
@@ -232,10 +233,62 @@ namespace Lunaria::LIR {
     return;
   }
 
-  std::list<std::shared_ptr<BasicBlock>> Function::get_reverse_topological_sort(){
+  std::list<BasicBlockPtr> Function::get_reverse_topological_sort(){
     //TODO: If a CFG has not been changed since it was previously calculated, this function should return the previous value without recalculating.
     calc_reverse_topological_sort();
     return this->reverse_topo_order;
+  }
+
+  std::vector<LirNodePtr> LirNode::Defs() const {
+    std::vector<LirNodePtr> res;
+    if(this->opcode == LirKind::LIR_IMM
+       || this->opcode == LirKind::LIR_LABEL_ADDR
+       || this->opcode == LirKind::LIR_LOAD_STACK
+       || this->opcode == LirKind::LIR_LVAR
+       || this->opcode == LirKind::LIR_LOAD_SPILL
+       || Optimizer::is_binary_opcode(this->opcode)
+       || this->opcode == LirKind::LIR_MOV
+       || this->opcode == LirKind::LIR_LOAD
+       || this->opcode == LirKind::LIR_CAST
+       || this->opcode == LirKind::LIR_FUNCALL)
+      {
+	res.push_back(this->d);
+      }    
+    return res;
+  }
+
+  std::vector<LirNodePtr> LirNode::Uses() const {
+    std::vector<LirNodePtr> res;
+    if(Optimizer::is_binary_opcode(this->opcode)
+       || this->opcode == LirKind::LIR_STORE){
+      if(!is_imm_int32(this->a)) res.push_back(this->a);
+      if(!is_imm_int32(this->b)) res.push_back(this->b);
+    }
+    else if(this->opcode == LirKind::LIR_MOV
+	    || this->opcode == LirKind::LIR_LOAD
+	    || this->opcode == LirKind::LIR_CAST
+	    || this->opcode == LirKind::LIR_BR
+	    || this->opcode == LirKind::LIR_STORE_STACK){
+      if(!is_imm_int32(this->b)) res.push_back(this->b);
+    }
+    else if(this->opcode == LirKind::LIR_JMP){
+      if(this->bbarg && !is_imm_int32(this->bbarg))
+	res.push_back(this->bbarg);
+    }
+    else if(this->opcode == LirKind::LIR_STORE_SPILL){
+      if(!is_imm_int32(this->a)) res.push_back(this->a);
+    }
+    else if(this->opcode == LirKind::LIR_RETURN){
+      if(this->a && !is_imm_int32(this->a))	
+	res.push_back(this->a);
+    }
+    else if(this->opcode == LirKind::LIR_FUNCALL){
+      for(int i = 0; i < this->args.size(); i++){
+	if(!is_imm_int32(this->args[i]))
+	  res.push_back(this->args[i]);
+      }
+    }
+    return res;
   }
   
 } //namespace Lunaria::LIR

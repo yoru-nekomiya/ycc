@@ -9,13 +9,13 @@ static const int COLOR = std::size(physical_regs);
 
 namespace Lunaria::LIR {
   struct LirSharedPtrHash {      
-   size_t operator()(const std::shared_ptr<LirNode>& p) const { 
+   size_t operator()(const LirNodePtr& p) const { 
      return std::hash<LirNode*>()(p.get());    
    }
   };
 
   struct BasicBlockSharedPtrHash {      
-   size_t operator()(const std::shared_ptr<BasicBlock>& p) const { 
+   size_t operator()(const BasicBlockPtr& p) const { 
      return std::hash<BasicBlock*>()(p.get());    
    }
   };
@@ -26,7 +26,6 @@ namespace Lunaria::RegAlloc {
     int id;
     bool is_physical;
     int degree;
-    //std::vector<int> adj_list;
     std::unordered_set<int> adj_list;
     int alias;
     bool is_move_related;
@@ -40,7 +39,7 @@ namespace Lunaria::RegAlloc {
   struct InterferenceGraph {
     std::vector<LiveRangeNode> nodes;
     std::vector<std::vector<bool>> adj_matrix;
-    std::vector<std::shared_ptr<LIR::LirNode>> move_list;
+    std::vector<LIR::LirNodePtr> move_list;
     std::list<int> simplify_worklist;
     std::list<int> move_worklist;
     std::list<int> freeze_worklist;
@@ -49,12 +48,29 @@ namespace Lunaria::RegAlloc {
   };
 
   static InterferenceGraph graph;
-  static std::unordered_map<int, std::shared_ptr<LIR::LirNode>> id_to_lirnode;
-  static std::unordered_map<std::shared_ptr<LIR::LirNode>, int> lirnode_to_id;
+  static std::unordered_map<int, LIR::LirNodePtr> id_to_lirnode;
+  static std::unordered_map<LIR::LirNodePtr, int> lirnode_to_id;
 
   using PredSet = std::unordered_set<int>;
-  std::unordered_map<int, PredSet> bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
+  using PredMap = std::unordered_map<int, PredSet>;
+  PredMap bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
 
+  static PredSet operator+(const PredSet& lhs, const PredSet& rhs){
+    //lhs U rhs
+    PredSet res = lhs;
+    res.insert(rhs.begin(), rhs.end());
+    return res;
+  }
+
+  static PredSet operator-(const PredSet& lhs, const PredSet& rhs){
+    //lhs - rhs
+    PredSet res;
+    for(const auto& item: lhs){
+      if(!rhs.contains(item)) res.insert(item);
+    }
+    return res;
+  }
+  
   static int get_alias(int id){
     if(graph.nodes[id].alias == id){
       return id;
@@ -62,10 +78,10 @@ namespace Lunaria::RegAlloc {
     return graph.nodes[id].alias = get_alias(graph.nodes[id].alias);
   }
   
-  static std::vector<std::shared_ptr<LIR::LirNode>>
-  collect_reg(std::shared_ptr<LIR::Function>& fn){
-    std::vector<std::shared_ptr<LIR::LirNode>> list_reg;
-    std::unordered_set<std::shared_ptr<LIR::LirNode>, LIR::LirSharedPtrHash> inserted;
+  static std::vector<LIR::LirNodePtr>
+  collect_reg(LIR::FunctionPtr& fn){
+    std::vector<LIR::LirNodePtr> list_reg;
+    std::unordered_set<LIR::LirNodePtr, LIR::LirSharedPtrHash> inserted;
     for(auto& bb: fn->bbs){
       if(bb->param /*&& !bb->param->is_fixed_reg*/
 	 && !inserted.contains(bb->param)){	
@@ -84,7 +100,7 @@ namespace Lunaria::RegAlloc {
   }
 
   static void
-  initialize_interference_graph(const std::vector<std::shared_ptr<LIR::LirNode>>& list_reg){
+  initialize_interference_graph(const std::vector<LIR::LirNodePtr>& list_reg){
     graph.nodes.clear();
     graph.adj_matrix.clear();
     graph.move_list.clear();
@@ -141,12 +157,64 @@ namespace Lunaria::RegAlloc {
     graph.adj_matrix.assign(size, std::vector<bool>(size, false));
   }
 
-  static void compute_local_predicate(std::shared_ptr<LIR::Function>& fn){
+  static void compute_local_predicate(LIR::FunctionPtr& fn){
     const auto rev_topo = fn->get_reverse_topological_sort();
     for(const auto& bb: rev_topo){
       PredSet gen, kill;
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
 	auto& inst = *iter;
+	for(const auto& def: inst->Defs()){
+	  gen.erase(lirnode_to_id.at(def));
+	  kill.insert(lirnode_to_id.at(def));
+	}
+	
+	if(inst->opcode == LIR::LirKind::LIR_MULHIGH
+	   || inst->opcode == LIR::LirKind::LIR_DIV
+	   || inst->opcode == LIR::LirKind::LIR_REM){
+	  gen.erase(0);   //rax
+	  kill.insert(0); //rax
+	  gen.erase(3);   //rdx
+	  kill.insert(3); //rdx
+	}
+	
+	if(inst->opcode == LIR::LirKind::LIR_SHL
+	   || inst->opcode == LIR::LirKind::LIR_SHR
+	   || inst->opcode == LIR::LirKind::LIR_SAR){
+	  if(!LIR::is_imm_int32(inst->b)){
+	    gen.erase(4);   //rcx
+	    kill.insert(4); //rcx
+	  }
+	}
+
+	if(inst->opcode == LIR::LirKind::LIR_PTR_DIFF){
+	  const int s = inst->type_base_size;
+	  if(s != 1 && s != 2 && s != 4 && s != 8){
+	    gen.erase(0);   //rax
+	    kill.insert(0); //rax
+	    gen.erase(3);   //rdx
+	    kill.insert(3); //rdx
+	  }
+	}
+
+	if(inst->opcode == LIR::LirKind::LIR_FUNCALL){
+	  //rax, rdi - r9
+	  for(int i = 0; i <= 6; i++){
+	    gen.erase(i);
+	    kill.insert(i);
+	  }
+	}
+	//------
+	for(const auto& use: inst->Uses()){
+	  gen.insert(lirnode_to_id.at(use));
+	}
+	
+	if(inst->opcode == LIR::LirKind::LIR_STORE_ARG){
+	  const auto arg_num = inst->imm + 1;
+	  gen.insert(arg_num);
+	  continue;
+	}
+	
+	/*
 	if(inst->opcode == LIR::LirKind::LIR_IMM
 	   || inst->opcode == LIR::LirKind::LIR_LABEL_ADDR
 	   || inst->opcode == LIR::LirKind::LIR_LOAD_STACK
@@ -255,7 +323,7 @@ namespace Lunaria::RegAlloc {
 	  }
 	  continue;
 	}
-	
+	*/
       } //for iter
       bb_to_gen.insert(std::make_pair(bb->label, gen));
       bb_to_kill.insert(std::make_pair(bb->label, kill));
@@ -264,37 +332,45 @@ namespace Lunaria::RegAlloc {
     } //for bb
   }
 
-  static void compute_dataflow_equation(std::shared_ptr<LIR::Function>& fn){
+  static void compute_dataflow_equation(LIR::FunctionPtr& fn){
     auto worklist = fn->get_reverse_topological_sort();
-    std::unordered_set<std::shared_ptr<LIR::BasicBlock>, LIR::BasicBlockSharedPtrHash> workset(worklist.begin(), worklist.end());
+    std::unordered_set<LIR::BasicBlockPtr, LIR::BasicBlockSharedPtrHash> workset(worklist.begin(), worklist.end());
     while(!worklist.empty()){
       auto bb = worklist.front();
       worklist.pop_front();
+      workset.erase(bb);
 
-      auto in_old = bb_to_in[bb->label];
-      auto gen = bb_to_gen[bb->label];
-      auto kill = bb_to_kill[bb->label];
+      const auto in_old = bb_to_in[bb->label];
+      const auto gen = bb_to_gen[bb->label];
+      const auto kill = bb_to_kill[bb->label];
 
       //Compute OUT set
+      //out[n] = Union(in[s]) (s in succ[n])
       PredSet out;
       if(!bb->is_end_node){
 	for(const auto& s: bb->succ){
+	  /*
 	  const auto in_succ = bb_to_in[s->label];	  
 	  for(const auto& item: in_succ) out.insert(item);
+	  */
+	  out = out + bb_to_in[s->label];
 	} //for s
 	bb_to_out[bb->label] = out;
       } //if
 
       //Compute IN set
+      //in[n] = gen[n] U (out[n] - kill[n])
+      /*
       auto in = out;
       for(const auto& item: kill) in.erase(item);
       for(const auto& item: gen) in.insert(item);
       bb_to_in[bb->label] = in;
-
-      //Compare IN set with the previous IN set
-      bool changed = false;      
-      if(in_old != in) changed = true;
-      if(changed){
+      */
+      const auto in = gen + (out - kill);
+      bb_to_in[bb->label] = in;
+      
+      //Compare IN set with the previous IN set      
+      if(in_old != in){
 	for(const auto& p: bb->pred){
 	  if(!workset.contains(p)){
 	    worklist.push_back(p);
@@ -324,7 +400,7 @@ namespace Lunaria::RegAlloc {
     graph.nodes[v].degree++;
   }
 
-  static void build_interference_graph(std::shared_ptr<LIR::Function>& fn){
+  static void build_interference_graph(LIR::FunctionPtr& fn){
     for(const auto& bb: fn->bbs){
       auto live = bb_to_out[bb->label];
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
@@ -507,7 +583,7 @@ namespace Lunaria::RegAlloc {
     } //for bb
   }
   
-  static void liveness_analysis(std::shared_ptr<LIR::Function>& fn){
+  static void liveness_analysis(LIR::FunctionPtr& fn){
     compute_local_predicate(fn);
     compute_dataflow_equation(fn);
   }
@@ -693,25 +769,24 @@ namespace Lunaria::RegAlloc {
       const int id = graph.select_stack.top();
       graph.select_stack.pop();
 
-      //const int alias = get_alias(id);
-      graph.nodes[/*alias*/id].on_stack = false;
-      if(graph.nodes[/*alias*/id].color != -1) continue;
+      graph.nodes[id].on_stack = false;
+      if(graph.nodes[id].color != -1) continue;
 	
       std::unordered_set<int> already_colored;
-      graph.nodes[id/*alias*/].is_removed = false;
-      for(auto r: graph.nodes[id/*alias*/].adj_list){
+      graph.nodes[id].is_removed = false;
+      for(auto r: graph.nodes[id].adj_list){
 	if(!graph.nodes[r].is_removed && graph.nodes[r].color != -1){
 	  already_colored.insert(graph.nodes[r].color);
 	}
       }
       for(int i = 0; i < COLOR; i++){
 	if(!already_colored.contains(i)){
-	  graph.nodes[id/*alias*/].color = i;
+	  graph.nodes[id].color = i;
 	  break;
 	}
       }
-      if(graph.nodes[id/*alias*/].color == -1){
-	graph.nodes[id/*alias*/].is_actual_spill = true;
+      if(graph.nodes[id].color == -1){
+	graph.nodes[id].is_actual_spill = true;
 	assert(false && "spilled register in graph coloring register allocation!");
       }
       

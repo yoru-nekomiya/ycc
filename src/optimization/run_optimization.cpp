@@ -1,5 +1,6 @@
 #include "opt_utils.hpp"
-#include "../ycc.hpp"
+//#include "../slcc.hpp"
+#include "../lunaria.hpp"
 
 namespace Lunaria::LIR::Optimizer {
   void optimize(std::unique_ptr<Program>& prog,

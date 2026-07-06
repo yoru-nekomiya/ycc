@@ -1,14 +1,15 @@
-#include "ycc.hpp"
+//#include "slcc.hpp"
+#include "lunaria.hpp"
 #include "util.hpp"
 
 namespace Lunaria::LIR {
   static int nreg = 1; //represents a virtual register number
   static std::shared_ptr<Function> func = nullptr;
-  static std::shared_ptr<BasicBlock> outBB = nullptr;
+  static BasicBlockPtr outBB = nullptr;
   static int label = 0;
-  std::unordered_set<std::shared_ptr<Lunaria::Var>,Lunaria::VarSharedPtrHash,Lunaria::VarSharedPtrEqual> localVars;
+  std::unordered_set<std::shared_ptr<Var>, VarSharedPtrHash, VarSharedPtrEqual> localVars;
 
-static std::shared_ptr<LirNode>
+static LirNodePtr
 new_lir(LirKind opcode){
   auto lirNode = std::make_shared<LirNode>();
   lirNode->opcode = opcode;
@@ -16,11 +17,11 @@ new_lir(LirKind opcode){
   return std::move(lirNode);
 }
 
-static std::shared_ptr<LirNode>
+static LirNodePtr
 emit_lir(LirKind opcode,
-	 const std::shared_ptr<LirNode>& d,
-	 const std::shared_ptr<LirNode>& a,
-	 const std::shared_ptr<LirNode>& b){
+	 const LirNodePtr& d,
+	 const LirNodePtr& a,
+	 const LirNodePtr& b){
   auto lirNode = new_lir(opcode);
   lirNode->d = d;
   lirNode->a = a;
@@ -29,7 +30,7 @@ emit_lir(LirKind opcode,
 }
 
   static std::unordered_map<std::string, int> map_varName2nreg;
-  std::shared_ptr<LirNode> new_reg(const std::string& varName, int type_size){
+  LirNodePtr new_reg(const std::string& varName, int type_size){
     auto lirNode = std::make_shared<LirNode>();
     lirNode->opcode = LirKind::LIR_REG;  
     lirNode->vn = nreg++;
@@ -37,7 +38,7 @@ emit_lir(LirKind opcode,
     return std::move(lirNode);
   }
 
-  std::shared_ptr<LirNode> new_fixed_reg(int fixed_reg_num, int type_size){
+  LirNodePtr new_fixed_reg(int fixed_reg_num, int type_size){
     auto lirNode = std::make_shared<LirNode>();
     lirNode->opcode = LirKind::LIR_REG;
     lirNode->type_size = type_size;
@@ -46,7 +47,7 @@ emit_lir(LirKind opcode,
     return std::move(lirNode);
   }
 
-static std::shared_ptr<LirNode>
+static LirNodePtr
 new_imm(long long imm){
   const int type_size = Lunaria::is_int32(imm) ? 4 : 8;
   auto d = new_reg("", type_size);
@@ -57,7 +58,7 @@ new_imm(long long imm){
   return lirNode->d;
 }
 
-static std::shared_ptr<BasicBlock>
+static BasicBlockPtr
 new_bb(){
   auto bb = std::make_shared<BasicBlock>();
   bb->label = label++;
@@ -65,19 +66,19 @@ new_bb(){
   return bb;
 }
 
-static std::shared_ptr<LirNode>
-load(const std::shared_ptr<LirNode>& dst,
-     const std::shared_ptr<LirNode>& src,
+static LirNodePtr
+load(const LirNodePtr& dst,
+     const LirNodePtr& src,
      int type_size){
   auto node = emit_lir(LirKind::LIR_LOAD, dst, nullptr, src);
   node->type_size = type_size;
   return node->d;
 }
 
-static std::shared_ptr<LirNode>
-br(const std::shared_ptr<LirNode>& b,
-   const std::shared_ptr<BasicBlock>& then,
-   const std::shared_ptr<BasicBlock>& els){
+static LirNodePtr
+br(const LirNodePtr& b,
+   const BasicBlockPtr& then,
+   const BasicBlockPtr& els){
   auto lirNode = new_lir(LirKind::LIR_BR);
   lirNode->b = b;
   lirNode->bb1 = then;
@@ -85,25 +86,25 @@ br(const std::shared_ptr<LirNode>& b,
   return lirNode;
 }
 
-static std::shared_ptr<LirNode>
-jmp(const std::shared_ptr<BasicBlock>& bb){
+static LirNodePtr
+jmp(const BasicBlockPtr& bb){
   auto lirNode = new_lir(LirKind::LIR_JMP);
   lirNode->bb1 = bb;
   return lirNode;
 }
 
-  static std::shared_ptr<LirNode>
-  jmp_arg(const std::shared_ptr<BasicBlock>& bb,
-	  const std::shared_ptr<LirNode>& reg){
+  static LirNodePtr
+  jmp_arg(const BasicBlockPtr& bb,
+	  const LirNodePtr& reg){
     auto lirNode = new_lir(LirKind::LIR_JMP);
     lirNode->bb1 = bb;
     lirNode->bbarg = reg;
     return lirNode;
   }
 
-  std::shared_ptr<LirNode> gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode);
+  LirNodePtr gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode);
 
-static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
+static LirNodePtr gen_lval_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
   if(hirNode->kind == HIR::HirKind::HIR_DEREF){
     return gen_expr_lir(hirNode->lhs);
   }
@@ -124,7 +125,7 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<HIR::HirNode>
   }
 
   assert(hirNode->kind == HIR::HirKind::HIR_VAR);
-  std::shared_ptr<LirNode> lirNode = nullptr;
+  LirNodePtr lirNode = nullptr;
   if(hirNode->var->isLocal){
     lirNode = new_lir(LirKind::LIR_LVAR);
     auto d = new_reg(hirNode->var->name, /*hirNode->type->size*/hirNode->var->type->base ? hirNode->var->type->base->size : hirNode->var->type->size);
@@ -141,7 +142,7 @@ static std::shared_ptr<LirNode> gen_lval_lir(const std::shared_ptr<HIR::HirNode>
   return lirNode->d;
 }
 
-static std::shared_ptr<LirNode>
+static LirNodePtr
 gen_binop_lir(LirKind opcode,
 	      const std::shared_ptr<HIR::HirNode>& hirNode){
   auto d = new_reg("", hirNode->type->base ? hirNode->type->base->size : hirNode->type->size);
@@ -161,7 +162,7 @@ gen_binop_lir(LirKind opcode,
     return var;
   }
 
-  static std::shared_ptr<LirNode>
+  static LirNodePtr
   gen_op_assign(HIR::HirKind k,
 		const std::shared_ptr<HIR::HirNode>& hirNode){
     //a op= b --> T* t = &a; *t = *t op b;
@@ -193,7 +194,7 @@ gen_binop_lir(LirKind opcode,
     return rlt;
   }
   
-std::shared_ptr<LirNode>
+LirNodePtr
 gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
   switch(hirNode->kind){
   case HIR::HirKind::HIR_IMM:
@@ -344,8 +345,8 @@ gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
     return gen_op_assign(HIR::HirKind::HIR_DIV, hirNode);
   }
   case HIR::HirKind::HIR_RETURN: {
-    std::shared_ptr<LirNode> a = nullptr;
-    std::shared_ptr<LirNode> mov = nullptr;
+    LirNodePtr a = nullptr;
+    LirNodePtr mov = nullptr;
     if(hirNode->lhs){
       a = gen_expr_lir(hirNode->lhs);
       mov = new_lir(LirKind::LIR_MOV);
@@ -405,7 +406,7 @@ gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
     return nullptr;
   }
   case HIR::HirKind::HIR_DO_WHILE: {
-    std::shared_ptr<BasicBlock> body = new_bb();
+    BasicBlockPtr body = new_bb();
     hirNode->_continue = new_bb();
     hirNode->_break = new_bb();
 
@@ -523,7 +524,7 @@ gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
     return nullptr;
   }
   case HIR::HirKind::HIR_FUNCALL: {
-    std::vector<std::shared_ptr<LirNode>> args;
+    std::vector<LirNodePtr> args;
     int i = 1;
     for(const auto& n: hirNode->args){
       auto d = gen_expr_lir(n);
@@ -569,18 +570,18 @@ gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
   }
   case HIR::HirKind::HIR_LOGOR: {
     const auto r1 = gen_expr_lir(hirNode->lhs);
-    std::shared_ptr<BasicBlock> bb = new_bb();
-    std::shared_ptr<BasicBlock> set1 = new_bb();
+    BasicBlockPtr bb = new_bb();
+    BasicBlockPtr set1 = new_bb();
     br(r1, set1, bb);
 
     outBB = bb;
     const auto r2 = gen_expr_lir(hirNode->rhs);
-    std::shared_ptr<BasicBlock> set0 = new_bb();
+    BasicBlockPtr set0 = new_bb();
     br(r2, set1, set0);
 
     outBB = set0;
     const auto zero = new_imm(0);
-    std::shared_ptr<BasicBlock> last = new_bb();
+    BasicBlockPtr last = new_bb();
     jmp_arg(last, zero);
 
     outBB = set1;
@@ -593,18 +594,18 @@ gen_expr_lir(const std::shared_ptr<HIR::HirNode>& hirNode){
   }
   case HIR::HirKind::HIR_LOGAND: {
     const auto r1 = gen_expr_lir(hirNode->lhs);
-    std::shared_ptr<BasicBlock> bb = new_bb();
-    std::shared_ptr<BasicBlock> set0 = new_bb();
+    BasicBlockPtr bb = new_bb();
+    BasicBlockPtr set0 = new_bb();
     br(r1, bb, set0);
 
     outBB = bb;
     const auto r2 = gen_expr_lir(hirNode->rhs);
-    std::shared_ptr<BasicBlock> set1 = new_bb();
+    BasicBlockPtr set1 = new_bb();
     br(r2, set1, set0);
 
     outBB = set0;
     const auto zero = new_imm(0);
-    std::shared_ptr<BasicBlock> last = new_bb();
+    BasicBlockPtr last = new_bb();
     jmp_arg(last, zero);
 
     outBB = set1;
@@ -700,7 +701,7 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
   return progLir;
 }
 
-  static void print_lir_formatted(std::ofstream& f, const std::shared_ptr<LirNode>& i);
+  static void print_lir_formatted(std::ofstream& f, const LirNodePtr& i);
   void dumpLIR(const std::unique_ptr<Program>& prog, const std::string& filename){
     std::ofstream f;
     f.open(filename);
@@ -723,7 +724,7 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
     f.close();
   }
 
-  std::string print_lir(const std::shared_ptr<LirNode>& i, bool is_cfg_mode){
+  std::string print_lir(const LirNodePtr& i, bool is_cfg_mode){
     const int d = i->d ? i->d->vn : 0;
     const int a = i->a ? i->a->vn : 0;
     const int b = i->b ? i->b->vn : 0;
@@ -1029,7 +1030,7 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
     return ret;
   }
 
-  static void print_lir_formatted(std::ofstream& f, const std::shared_ptr<LirNode>& i){
+  static void print_lir_formatted(std::ofstream& f, const LirNodePtr& i){
     f << "  ";
     f << print_lir(i, false);
     f << "\n";

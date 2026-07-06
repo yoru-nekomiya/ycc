@@ -1,7 +1,8 @@
 #ifndef DEAD_CODE_ELIMINATION_HPP
 #define DEAD_CODE_ELIMINATION_HPP
 
-#include "../../ycc.hpp"
+//#include "../../slcc.hpp"
+#include "../../lunaria.hpp"
 #include "../opt_utils.hpp"
 #include "../../util.hpp"
 

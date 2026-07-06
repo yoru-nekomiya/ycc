@@ -1,5 +1,6 @@
 #include "opt_utils.hpp"
-#include "../ycc.hpp"
+//#include "../slcc.hpp"
+#include "../lunaria.hpp"
 #include "../util.hpp"
 #include "global/dead_code_elimination.hpp"
 #include "global/unreachable_code_elimination.hpp"

@@ -1,7 +1,7 @@
 #include "unreachable_code_elimination.hpp"
 
 namespace Lunaria::LIR::Optimizer {
-  static void depth_first_search(const std::shared_ptr<BasicBlock>& bb,
+  static void depth_first_search(const BasicBlockPtr& bb,
 				 std::unordered_set<int>& mark){
     if(!mark.contains(bb->label)){
       mark.insert(bb->label);
@@ -11,7 +11,7 @@ namespace Lunaria::LIR::Optimizer {
     } //if
   }
   
-  bool unreachable_code_elimination(std::shared_ptr<Function>& fn){
+  bool unreachable_code_elimination(FunctionPtr& fn){
     bool changed = false;
 
     //1. Traverse basic blocks from the start node by depth first search and mark them.

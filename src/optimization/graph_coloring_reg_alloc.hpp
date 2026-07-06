@@ -1,7 +1,8 @@
 #ifndef GRAPH_COLORING_REG_ALLOC_HPP
 #define GRAPH_COLORING_REG_ALLOC_HPP
 
-#include "../ycc.hpp"
+//#include "../slcc.hpp"
+#include "../lunaria.hpp"
 #include "../util.hpp"
 #include "opt_utils.hpp"
 #include <iterator>

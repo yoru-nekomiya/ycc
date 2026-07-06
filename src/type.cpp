@@ -1,4 +1,5 @@
-#include "ycc.hpp"
+//#include "slcc.hpp"
+#include "lunaria.hpp"
 
 namespace Lunaria {
   std::shared_ptr<Type> int_type = std::make_shared<Type>(TypeKind::INT, 4, 4); //kind, size, align

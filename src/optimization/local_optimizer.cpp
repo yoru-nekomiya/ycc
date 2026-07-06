@@ -1,5 +1,6 @@
 #include "opt_utils.hpp"
-#include "../ycc.hpp"
+//#include "../slcc.hpp"
+#include "../lunaria.hpp"
 #include "../util.hpp"
 #include "local/constant_div_reduction.hpp"
 #include "local/constant_mul_reduction.hpp"
@@ -7,7 +8,7 @@
 
 namespace Lunaria::LIR {
   struct LirSharedPtrHash {
-    size_t operator()(const std::shared_ptr<LirNode>& p) const {
+    size_t operator()(const LirNodePtr& p) const {
       return std::hash<LirNode*>()(p.get());
     }
   };
@@ -23,9 +24,9 @@ namespace Lunaria::LIR::Optimizer {
       || k == LirKind::LIR_BR;
   }
   
-  static bool constant_propagation(std::shared_ptr<BasicBlock>& bb){
+  static bool constant_propagation(BasicBlockPtr& bb){
     bool changed = false;
-    std::unordered_map<std::shared_ptr<LirNode>, int64_t, LirSharedPtrHash> table;
+    std::unordered_map<LirNodePtr, int64_t, LirSharedPtrHash> table;
 
     for(auto inst: bb->insts){
       //generation-------------------
@@ -106,9 +107,9 @@ namespace Lunaria::LIR::Optimizer {
     return changed;
   }
 
-  static bool copy_propagation(std::shared_ptr<BasicBlock>& bb){
+  static bool copy_propagation(BasicBlockPtr& bb){
     bool changed = false;
-    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> table; //d --> b
+    std::unordered_map<LirNodePtr, LirNodePtr, LirSharedPtrHash> table; //d --> b
 
     for(auto inst: bb->insts){
       //generation and kill-------------------
@@ -200,7 +201,7 @@ namespace Lunaria::LIR::Optimizer {
     return changed;
   }
 
-  int64_t calc_constant(const std::shared_ptr<LirNode>& inst){
+  int64_t calc_constant(const LirNodePtr& inst){
     int64_t c = 0;
     switch(inst->opcode){
     case LirKind::LIR_ADD:
@@ -246,8 +247,8 @@ namespace Lunaria::LIR::Optimizer {
     return c;
   }
 
-  static void constant_folding(std::list<std::shared_ptr<LirNode>>::iterator& iter,
-			       std::shared_ptr<BasicBlock>& bb){
+  static void constant_folding(std::list<LirNodePtr>::iterator& iter,
+			       BasicBlockPtr& bb){
     auto& inst = *iter;
     const int64_t c = calc_constant(inst);
     auto imm_node = make_imm_node(c);
@@ -257,7 +258,7 @@ namespace Lunaria::LIR::Optimizer {
     iter = bb->insts.insert(iter, imm_node);	  
   }
 
-  static bool constant_foldings(std::shared_ptr<BasicBlock>& bb){
+  static bool constant_foldings(BasicBlockPtr& bb){
     bool changed = false;
     for(auto iter_inst = bb->insts.begin(); iter_inst != bb->insts.end(); ++iter_inst){
       auto& inst = *iter_inst;
@@ -272,7 +273,7 @@ namespace Lunaria::LIR::Optimizer {
     return changed;
   }
   
-  static bool peephole(std::shared_ptr<BasicBlock>& bb){
+  static bool peephole(BasicBlockPtr& bb){
     bool changed = false;
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
@@ -387,7 +388,7 @@ namespace Lunaria::LIR::Optimizer {
   }
   /*
   static bool
-  eliminate_redundant_load_from_stack(std::shared_ptr<BasicBlock>& bb){
+  eliminate_redundant_load_from_stack(BasicBlockPtr& bb){
     //Lunaria assumes that rbp keeps the same value during the execution of a function.
     //Load_lvar: v11 <- [rbp-8]
     //Load_lvar: v12 <- [rbp-8]
@@ -395,7 +396,7 @@ namespace Lunaria::LIR::Optimizer {
     //Load_lvar: v11 <- [rbp-8]
     //v12 <- v11
     bool changed = false;
-    std::unordered_map<int, std::shared_ptr<LirNode>> table;
+    std::unordered_map<int, LirNodePtr> table;
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto& inst = *iter;
       if(inst->opcode == LirKind::LIR_LVAR){
@@ -417,14 +418,14 @@ namespace Lunaria::LIR::Optimizer {
   }
   */
   static bool
-  propagate_stack_address(std::shared_ptr<BasicBlock>& bb){
+  propagate_stack_address(BasicBlockPtr& bb){
     //v1 <- [rbp-4]
     //v2 <- [v1]
     //-->
     //v2 <- [rbp-4]
 
     bool changed = false;
-    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<Lunaria::Var>, LirSharedPtrHash> st_offset_table; //vn --> lvar
+    std::unordered_map<LirNodePtr, std::shared_ptr<Lunaria::Var>, LirSharedPtrHash> st_offset_table; //vn --> lvar
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
       if(inst->opcode == LirKind::LIR_LVAR){
@@ -464,7 +465,7 @@ namespace Lunaria::LIR::Optimizer {
 
   /*
   static bool
-  redundant_load_elimination(std::shared_ptr<BasicBlock>& bb){
+  redundant_load_elimination(BasicBlockPtr& bb){
     //redundant load
     //v1 <- [rbp-4]
     //v2 <- [v1]
@@ -475,9 +476,9 @@ namespace Lunaria::LIR::Optimizer {
     //v6 <- [v4] ==> v6 <- v5 (or Cast: v7(64bit) <- v5(32bit); v6 <- v7; if store to v4 is 32bit)
 
     bool changed = false;
-    std::unordered_map<std::shared_ptr<LirNode>, int, LirSharedPtrHash> st_offset_table; //vn --> stack_offset
-    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> value_table; //[vn] --> vn (Load)
-    std::unordered_map<std::shared_ptr<LirNode>, std::shared_ptr<LirNode>, LirSharedPtrHash> store_table; //[vn] --> inst (Store)
+    std::unordered_map<LirNodePtr, int, LirSharedPtrHash> st_offset_table; //vn --> stack_offset
+    std::unordered_map<LirNodePtr, LirNodePtr, LirSharedPtrHash> value_table; //[vn] --> vn (Load)
+    std::unordered_map<LirNodePtr, LirNodePtr, LirSharedPtrHash> store_table; //[vn] --> inst (Store)
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
       if(inst->opcode == LirKind::LIR_LVAR){
@@ -497,7 +498,7 @@ namespace Lunaria::LIR::Optimizer {
 	else if(store_table.contains(inst->b)){
 	  
 	  auto store_inst = store_table.find(inst->b)->second;
-	  std::shared_ptr<LirNode> node = make_node(LirKind::LIR_CAST,
+	  LirNodePtr node = make_node(LirKind::LIR_CAST,
 						    new_reg("", 8),
 						    nullptr,
 						    store_inst->b);
@@ -542,7 +543,7 @@ namespace Lunaria::LIR::Optimizer {
   */
 
   static bool
-  redundant_load_elimination(std::shared_ptr<BasicBlock>& bb){
+  redundant_load_elimination(BasicBlockPtr& bb){
     //redundant load
     //Load_stack: v1 <- [rbp-4]
     //Load_stack: v2 <- [rbp-4] ==> v2 <- v1
@@ -552,8 +553,8 @@ namespace Lunaria::LIR::Optimizer {
     //v4 <- [rbp-8] ==> v4 <- v3 (or Cast: v5(64bit) <- v3(32bit); v4 <- v5; if store to rbp-8 is 32bit)
 
     bool changed = false;
-    std::unordered_map<int, std::shared_ptr<LirNode>> st_offset_table; //stack_offset --> vn (Load)
-    std::unordered_map<int, std::shared_ptr<LirNode>> store_table; //stack_offset --> inst (Store)
+    std::unordered_map<int, LirNodePtr> st_offset_table; //stack_offset --> vn (Load)
+    std::unordered_map<int, LirNodePtr> store_table; //stack_offset --> inst (Store)
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
       if(inst->opcode == LirKind::LIR_LOAD_STACK){
@@ -569,10 +570,10 @@ namespace Lunaria::LIR::Optimizer {
 	else if(store_table.contains(inst->lvar->offset)){
 	  
 	  auto store_inst = store_table.find(inst->lvar->offset)->second;
-	  std::shared_ptr<LirNode> node = make_node(LirKind::LIR_CAST,
-						    new_reg("", 8),
-						    nullptr,
-						    store_inst->b);
+	  LirNodePtr node = make_node(LirKind::LIR_CAST,
+				      new_reg("", 8),
+				      nullptr,
+				      store_inst->b);
 	  node->type_size = store_inst->type_size;
 	  auto mov_node = make_node(LirKind::LIR_MOV,
 				    inst->d,
@@ -606,7 +607,7 @@ namespace Lunaria::LIR::Optimizer {
     return changed;
   }
   
-  bool optimize_bb(std::shared_ptr<BasicBlock>& bb){
+  bool optimize_bb(BasicBlockPtr& bb){
     //changed IR --> return true
     //otherwise --> return false
     bool changed = false;

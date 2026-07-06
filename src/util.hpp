@@ -1,12 +1,13 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
-#include "ycc.hpp"
+//#include "slcc.hpp"
+#include "lunaria.hpp"
 
 namespace Lunaria::LIR {
-  bool is_imm(const std::shared_ptr<LirNode>& lirNode);
-  bool is_int32(const std::shared_ptr<LirNode>& lirNode);
-  bool is_imm_int32(const std::shared_ptr<LirNode>& n);
+  bool is_imm(const LirNodePtr& lirNode);
+  bool is_int32(const LirNodePtr& lirNode);
+  bool is_imm_int32(const LirNodePtr& n);
 } //namespace Lunaria::LIR
 
 #endif

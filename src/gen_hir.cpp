@@ -1,4 +1,5 @@
-#include "ycc.hpp"
+//#include "slcc.hpp"
+#include "lunaria.hpp"
 
 namespace Lunaria::HIR {
   static std::unordered_map<int, std::shared_ptr<HirNode>> map_astID2hirNode = {};
@@ -42,8 +43,9 @@ new_num(long long i){
 static std::shared_ptr<HirNode>
 new_var(const std::unique_ptr<Selene::Parser::AstNode>& astNode){
   auto hirNode = new_node(HirKind::HIR_VAR);
-  //hirNode->type = astNode->var->type;
-  hirNode->var = std::move(astNode->var);
+  hirNode->type = astNode->var->type;
+  //hirNode->var = std::move(astNode->var);
+  hirNode->var = astNode->var;
   add_type(hirNode);
   return hirNode;
 }

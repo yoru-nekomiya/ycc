@@ -1,4 +1,5 @@
-#include "ycc.hpp"
+//#include "slcc.hpp"
+#include "lunaria.hpp"
 #include "optimization/graph_coloring_reg_alloc.hpp"
 
 struct Config {

@@ -7,10 +7,10 @@ namespace Lunaria::LIR::Optimizer {
     bool use_add;   // Add-Shift is necessary or not
   };
   
-  static void convert_div_and_rem_to_shift(std::shared_ptr<LirNode>& x,
+  static void convert_div_and_rem_to_shift(LirNodePtr& x,
 					   int64_t c,
-					   std::list<std::shared_ptr<LirNode>>::iterator& iter,
-					   std::shared_ptr<BasicBlock>& bb){
+					   std::list<LirNodePtr>::iterator& iter,
+					   BasicBlockPtr& bb){
     //d = x / c
     //-->
     //k = log2(|c|)
@@ -102,7 +102,7 @@ namespace Lunaria::LIR::Optimizer {
     }    
   }
 
-  MagicS64 compute_magic_s64(int64_t d) {
+  MagicS64 compute_magic_s64(int64_t d){
     using uint128 = __uint128_t;
     
     // 1. Obtaining the absolute value (calculated using unsigned 128-bit)
@@ -120,7 +120,7 @@ namespace Lunaria::LIR::Optimizer {
     uint128 delta;
 
     // 3. Loop until the required accuracy is achieved
-    do {
+    do{
         p++;
         q1 = 2 * q1;
         r1 = 2 * r1;
@@ -129,7 +129,7 @@ namespace Lunaria::LIR::Optimizer {
         r2 = 2 * r2;
         if (r2 >= ad) { q2++; r2 -= ad; }
         delta = ad - r2;
-    } while (q1 < delta || (q1 == delta && r1 == 0));
+    } while(q1 < delta || (q1 == delta && r1 == 0));
 
     // 4. Confirmation of results
     uint128 M_u = q2 + 1;
@@ -141,8 +141,8 @@ namespace Lunaria::LIR::Optimizer {
     return {magic_M, p - 64, use_add};
   }
 
-  static void reduce_div_using_magic(std::list<std::shared_ptr<LirNode>>::iterator& iter,
-				     std::shared_ptr<BasicBlock>& bb){
+  static void reduce_div_using_magic(std::list<LirNodePtr>::iterator& iter,
+				     BasicBlockPtr& bb){
     //inst is a division "x = n / d" where d is constant
     auto inst = *iter;
 
@@ -160,7 +160,7 @@ namespace Lunaria::LIR::Optimizer {
     ++iter;
 
     //If necessary, q = Add(q, n)
-    //std::shared_ptr<LirNode> add_node;
+    //LirNodePtr add_node;
     if(magic.use_add){
       auto add_node = make_node(LirKind::LIR_ADD,
 				q,
@@ -218,8 +218,8 @@ namespace Lunaria::LIR::Optimizer {
     }
   }
 
-  static void reduce_rem_to_div(std::list<std::shared_ptr<LirNode>>::iterator& iter,
-				std::shared_ptr<BasicBlock>& bb){
+  static void reduce_rem_to_div(std::list<LirNodePtr>::iterator& iter,
+				BasicBlockPtr& bb){
     //inst is a remainder "n % d" where d is constant
     auto inst = *iter;
 
@@ -249,8 +249,8 @@ namespace Lunaria::LIR::Optimizer {
     iter = bb->insts.insert(iter, sub_node);
   }
   
-  bool reduce_div_and_rem(std::list<std::shared_ptr<LirNode>>::iterator& iter,
-			  std::shared_ptr<BasicBlock>& bb){
+  bool reduce_div_and_rem(std::list<LirNodePtr>::iterator& iter,
+			  BasicBlockPtr& bb){
     auto inst = *iter;
     bool changed = false;
     if(!is_imm(inst->a) && is_imm(inst->b)){

@@ -3,28 +3,53 @@
 
 namespace Lunaria::LIR {
   struct LirSharedPtrHash {      
-   size_t operator()(const std::shared_ptr<LirNode>& p) const { 
+   size_t operator()(const LirNodePtr& p) const { 
      return std::hash<LirNode*>()(p.get());    
    }
   };
 
   struct BasicBlockSharedPtrHash {      
-   size_t operator()(const std::shared_ptr<BasicBlock>& p) const { 
+   size_t operator()(const BasicBlockPtr& p) const { 
      return std::hash<BasicBlock*>()(p.get());    
    }
   };
 }
 
 namespace Lunaria::LIR::Optimizer {  
-  using PredSet = std::unordered_set<std::shared_ptr<LirNode>, LirSharedPtrHash>;
-  std::unordered_map<int, PredSet> bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
+  using PredSet = std::unordered_set<LirNodePtr, LirSharedPtrHash>;
+  using PredMap = std::unordered_map<int, PredSet>;
+  PredMap bb_to_gen, bb_to_kill, bb_to_in, bb_to_out;
+
+  static PredSet operator+(const PredSet& lhs, const PredSet& rhs){
+    //lhs U rhs
+    PredSet res = lhs;
+    res.insert(rhs.begin(), rhs.end());
+    return res;
+  }
+
+  static PredSet operator-(const PredSet& lhs, const PredSet& rhs){
+    //lhs - rhs
+    PredSet res;
+    for(const auto& item: lhs){
+      if(!rhs.contains(item)) res.insert(item);
+    }
+    return res;
+  }
   
-  static void compute_local_predicate(std::shared_ptr<Function>& fn){
+  static void compute_local_predicate(FunctionPtr& fn){
     const auto rev_topo = fn->get_reverse_topological_sort();
     for(const auto& bb: rev_topo){
       PredSet gen, kill;
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
 	auto& inst = *iter;
+	for(const auto& def: inst->Defs()){
+	  gen.erase(def);
+	  kill.insert(def);
+	}
+	for(const auto& use: inst->Uses()){
+	  gen.insert(use);
+	}
+	/*
 	if(inst->opcode == LirKind::LIR_IMM
 	   || inst->opcode == LirKind::LIR_LABEL_ADDR
 	   || inst->opcode == LirKind::LIR_LOAD_STACK
@@ -51,13 +76,7 @@ namespace Lunaria::LIR::Optimizer {
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
 	  continue;
 	}
-	/*
-	if(inst->opcode == LirKind::LIR_LOAD_STACK){
-	  gen.erase(inst->d);
-	  kill.insert(inst->d);
-	  continue;
-	}
-	*/
+	
 	if(inst->opcode == LirKind::LIR_BR
 	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
@@ -92,12 +111,13 @@ namespace Lunaria::LIR::Optimizer {
 	  gen.erase(inst->d);
 	  kill.insert(inst->d);
 	  for(int i = 0; i < inst->args.size(); i++){
-	    if(!is_imm_int32(inst->args[i])) {
+	    if(!is_imm_int32(inst->args[i])){
 	      gen.insert(inst->args[i]);
 	    }
 	  }
 	  continue;
 	}
+	*/
 	
       } //for iter
       bb_to_gen.insert(std::make_pair(bb->label, gen));
@@ -107,38 +127,45 @@ namespace Lunaria::LIR::Optimizer {
     } //for bb
   }
 
-  static void compute_dataflow_equation(std::shared_ptr<Function>& fn){
+  static void compute_dataflow_equation(FunctionPtr& fn){
     auto worklist = fn->get_reverse_topological_sort();
-    std::unordered_set<std::shared_ptr<BasicBlock>, BasicBlockSharedPtrHash> workset(worklist.begin(), worklist.end());
+    std::unordered_set<BasicBlockPtr, BasicBlockSharedPtrHash> workset(worklist.begin(), worklist.end());
     while(!worklist.empty()){
       auto bb = worklist.front();
       worklist.pop_front();
+      workset.erase(bb);
       
-      auto in_old = bb_to_in[bb->label];
-      //auto out_old = bb_to_out[bb->label];
-      auto gen = bb_to_gen[bb->label];
-      auto kill = bb_to_kill[bb->label];
+      const auto in_old = bb_to_in[bb->label];
+      const auto gen = bb_to_gen[bb->label];
+      const auto kill = bb_to_kill[bb->label];
 
       //Compute OUT set
+      //out[n] = Union(in[s]) (s in succ[n])
       PredSet out;
       if(!bb->is_end_node){
 	for(const auto& s: bb->succ){
-	  const auto in_succ = bb_to_in[s->label];	  
+	  /*
+	  const auto in_succ = bb_to_in[s->label];
 	  for(const auto& item: in_succ) out.insert(item);
+	  */
+	  out = out + bb_to_in[s->label];
 	} //for s
 	bb_to_out[bb->label] = out;
       } //if
 
       //Compute IN set
+      //in[n] = gen[n] U (out[n] - kill[n])
+      /*
       auto in = out;
       for(const auto& item: kill) in.erase(item);
       for(const auto& item: gen) in.insert(item);
       bb_to_in[bb->label] = in;
-
-      //Compare IN set with the previous IN set
-      bool changed = false;      
-      if(in_old != in) changed = true;
-      if(changed){
+      */
+      const auto in = gen + (out - kill);
+      bb_to_in[bb->label] = in;
+      
+      //Compare IN set with the previous IN set      
+      if(in_old != in){
 	for(const auto& p: bb->pred){
 	  if(!workset.contains(p)){
 	    worklist.push_back(p);
@@ -149,7 +176,7 @@ namespace Lunaria::LIR::Optimizer {
     } //while
   }
 
-  static bool eliminate_dead_code(std::shared_ptr<Function>& fn){
+  static bool eliminate_dead_code(FunctionPtr& fn){
     bool changed = false;
     for(auto& bb: fn->bbs){
       auto live = bb_to_out[bb->label];      
@@ -165,14 +192,21 @@ namespace Lunaria::LIR::Optimizer {
 	   && inst->opcode != LirKind::LIR_BR
 	   && inst->opcode != LirKind::LIR_JMP
 	   && inst->opcode != LirKind::LIR_FUNCALL
-	   //&& inst->opcode != LirKind::LIR_CAST
 	   && !live.contains(inst->d)){
 	  iter = std::make_reverse_iterator(bb->insts.erase(std::next(iter).base()));
 	  iter--;
 	  changed = true;
 	  continue;
 	}
+
+	for(const auto& def: inst->Defs()){
+	  live.erase(def);
+	}
+	for(const auto& use: inst->Uses()){
+	  live.insert(use);
+	}
 	
+	/*
 	if(inst->opcode == LirKind::LIR_IMM
 	   || inst->opcode == LirKind::LIR_LABEL_ADDR
 	   || inst->opcode == LirKind::LIR_LOAD_STACK
@@ -196,12 +230,7 @@ namespace Lunaria::LIR::Optimizer {
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
 	  continue;
 	}
-	/*
-	if(inst->opcode == LirKind::LIR_LOAD_STACK){
-	  live.erase(inst->d);
-	  continue;
-	}
-	*/
+	
 	if(inst->opcode == LirKind::LIR_BR
 	   || inst->opcode == LirKind::LIR_STORE_STACK){
 	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
@@ -241,12 +270,13 @@ namespace Lunaria::LIR::Optimizer {
 	  }
 	  continue;
 	}
+	*/
       } //for iter
     } //for bb
     return changed;
   }
   
-  bool dead_code_elimination(std::shared_ptr<Function>& fn){
+  bool dead_code_elimination(FunctionPtr& fn){
     //1. For all basic blocks, compute local gen and kill sets.
     compute_local_predicate(fn);
     
