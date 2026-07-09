@@ -23,6 +23,81 @@ namespace Lunaria::LIR::Optimizer {
       //|| k == LirKind::LIR_RETURN
       || k == LirKind::LIR_BR;
   }
+
+  struct LirRhsHash {
+    std::size_t operator()(const LirNodePtr& node) const {
+      if(!node) return 0;
+      std::size_t h1 = std::hash<LirKind>()(node->opcode);       
+      std::size_t h2 = std::hash<LirNodePtr>()(node->a);
+      std::size_t h3 = std::hash<LirNodePtr>()(node->b);
+      return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+  };
+
+  struct LirRhsEqual {
+    bool operator()(const LirNodePtr& lhs, const LirNodePtr& rhs) const {
+      if(!lhs || !rhs) return lhs == rhs;      
+      if(lhs->opcode != rhs->opcode) return false;
+      
+      return (lhs->a == rhs->a) && (lhs->b == rhs->b); 
+    }
+  };
+
+  static bool common_subexpression_elimination(BasicBlockPtr& bb){   
+    bool changed = false;
+    using CseTable = std::unordered_set<LirNodePtr, LirRhsHash, LirRhsEqual>;
+    CseTable table;
+
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end();){
+      auto inst = *iter;
+      
+      //generate-----
+      if(is_binary_opcode(inst->opcode)){
+	if(table.contains(inst)){
+	  auto it = table.find(inst);
+	  auto av_inst = *it; //av_inst: t1=a+b
+
+	  //replace
+	  //inst: d=a+b --> d=t1
+	  const auto mov_node = make_node(LirKind::LIR_MOV,
+					  inst->d,
+					  nullptr,
+					  av_inst->d);
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	} else {
+	  //register this instruction in table
+	  table.insert(inst);
+	}
+      } //if is_binary_opcode()
+      //-------------
+      
+      //kill---------
+      //inst: d=a+b --> kills expressions containg "d"
+      const auto def = (*iter)->d;
+      for(auto table_it = table.begin(); table_it != table.end();){
+	auto av_inst = *table_it;
+	bool kill_flag = false;
+	for(const auto& use: av_inst->Uses()){
+	  if(use == def){
+	    kill_flag = true;
+	    break;
+	  }
+	}
+
+	if(kill_flag){
+	  table_it = table.erase(table_it);
+	} else {
+	  table_it++;
+	}	
+      } //for table_it      
+      //-------------
+      iter++;
+    } //for inst
+    
+    return changed;
+  }
   
   static bool constant_propagation(BasicBlockPtr& bb){
     bool changed = false;
@@ -624,6 +699,7 @@ namespace Lunaria::LIR::Optimizer {
     //changed = changed || eliminate_redundant_load_from_stack(bb);
     changed = changed || redundant_load_elimination(bb);
     changed = changed || propagate_stack_address(bb);
+    changed = changed || common_subexpression_elimination(bb);
     return changed;
   }
 } //namespace Lunaria::LIR::Optimizer

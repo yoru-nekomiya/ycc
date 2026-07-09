@@ -205,7 +205,8 @@ namespace Lunaria::RegAlloc {
 	}
 	//------
 	for(const auto& use: inst->Uses()){
-	  gen.insert(lirnode_to_id.at(use));
+	  if(!LIR::is_imm_int32(use))
+	    gen.insert(lirnode_to_id.at(use));
 	}
 	
 	if(inst->opcode == LIR::LirKind::LIR_STORE_ARG){

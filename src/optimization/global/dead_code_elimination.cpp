@@ -47,7 +47,8 @@ namespace Lunaria::LIR::Optimizer {
 	  kill.insert(def);
 	}
 	for(const auto& use: inst->Uses()){
-	  gen.insert(use);
+	  if(!is_imm_int32(use))
+	    gen.insert(use);
 	}
 	/*
 	if(inst->opcode == LirKind::LIR_IMM
@@ -203,7 +204,8 @@ namespace Lunaria::LIR::Optimizer {
 	  live.erase(def);
 	}
 	for(const auto& use: inst->Uses()){
-	  live.insert(use);
+	  if(!is_imm_int32(use))
+	    live.insert(use);
 	}
 	
 	/*
