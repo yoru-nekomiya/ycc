@@ -24,6 +24,7 @@ void void_test(void){
 
 void void_test2(){
   g=2;
+  return;
 }
 
 int main(){

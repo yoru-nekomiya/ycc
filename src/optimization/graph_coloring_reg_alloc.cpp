@@ -428,6 +428,7 @@ namespace Lunaria::RegAlloc {
 	if(inst->opcode == LIR::LirKind::LIR_IMM
 	   || inst->opcode == LIR::LirKind::LIR_LABEL_ADDR
 	   || inst->opcode == LIR::LirKind::LIR_LOAD_STACK
+	   || inst->opcode == LIR::LirKind::LIR_LOAD_LABEL
 	   || inst->opcode == LIR::LirKind::LIR_LVAR
 	   || inst->opcode == LIR::LirKind::LIR_LOAD_SPILL){
 	  //Add the edge from Defs of this instruction to live registers immediately after this instruction
@@ -511,10 +512,11 @@ namespace Lunaria::RegAlloc {
 	} //LIR_LOAD, LIR_CAST
 	
 	if(inst->opcode == LIR::LirKind::LIR_BR
-	   || inst->opcode == LIR::LirKind::LIR_STORE_STACK){
+	   || inst->opcode == LIR::LirKind::LIR_STORE_STACK
+	   || inst->opcode == LIR::LirKind::LIR_STORE_LABEL){
 	  if(!LIR::is_imm_int32(inst->b)) live.insert(lirnode_to_id.at(inst->b));
 	  continue;
-	} //LIR_BR, LIR_STORE_STACK
+	} //LIR_BR, LIR_STORE_STACK, LIR_STORE_LABEL
 
 	if(inst->opcode == LIR::LirKind::LIR_JMP){
 	  if(inst->bbarg){

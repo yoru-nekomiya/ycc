@@ -82,7 +82,7 @@ static void print_cmp(const std::string& cmp,
     return std::string("qword ptr");
   }
 
-  static void load(const std::shared_ptr<LIR::LirNode>& lirNode){
+  static void load(const LIR::LirNodePtr& lirNode){
     const int d = lirNode->d ? lirNode->d->rn : 0;
     const int b = lirNode->b ? lirNode->b->rn : 0;
     const int size = lirNode->type_size;
@@ -99,7 +99,7 @@ static void print_cmp(const std::string& cmp,
     }
   }
 
-  static void load_from_stack(const std::shared_ptr<LIR::LirNode>& lirNode){
+  static void load_from_stack(const LIR::LirNodePtr& lirNode){
     const int d = lirNode->d ? lirNode->d->rn : 0;
     const int size = lirNode->type_size;
     const int os = lirNode->lvar->offset;
@@ -115,8 +115,25 @@ static void print_cmp(const std::string& cmp,
       std::cout << std::format("  mov {}, [rbp-{}]\n", regs[d], os);
     }
   }
+  
+  static void load_from_label(const LIR::LirNodePtr& lirNode){
+    const int d = lirNode->d ? lirNode->d->rn : 0;
+    const int size = lirNode->type_size;
+    const std::string label = lirNode->name;
+    //signed extension
+    if(size == 1){
+      std::cout << std::format("  movsx {}, byte ptr [{}]\n", regs[d], label);
+    } else if(size == 2){
+      std::cout << std::format("  movsx {}, word ptr [{}]\n", regs[d], label);
+    } else if(size == 4){
+      std::cout << std::format("  movsxd {}, dword ptr [{}]\n", regs[d], label);
+    } else {
+      assert(size == 8);
+      std::cout << std::format("  mov {}, [{}]\n", regs[d], label);
+    }
+  }
 
-  static void truncate(const std::shared_ptr<LIR::LirNode>& lirNode){
+  static void truncate(const LIR::LirNodePtr& lirNode){
     const int size = lirNode->type_size;
     const int d = lirNode->d ? lirNode->d->rn : 0;
     const int b = lirNode->b ? lirNode->b->rn : 0;
@@ -165,7 +182,7 @@ static void print_cmp(const std::string& cmp,
     }
   }
 
-static void gen(const std::shared_ptr<LIR::LirNode>& lirNode){
+static void gen(const LIR::LirNodePtr& lirNode){
   const int d = lirNode->d ? lirNode->d->rn : 0;
   const int a = lirNode->a ? lirNode->a->rn : 0;
   const int b = lirNode->b ? lirNode->b->rn : 0;
@@ -311,6 +328,9 @@ static void gen(const std::shared_ptr<LIR::LirNode>& lirNode){
   case LIR::LirKind::LIR_LOAD_STACK:
     load_from_stack(lirNode);
     break;
+  case LIR::LirKind::LIR_LOAD_LABEL:
+    load_from_label(lirNode);
+    break;
   case LIR::LirKind::LIR_STORE:
     if(is_imm(lirNode->b) && is_int32(lirNode->b)){
       const auto q = get_size_qualifier(lirNode->type_size);
@@ -334,6 +354,15 @@ static void gen(const std::shared_ptr<LIR::LirNode>& lirNode){
       std::cout << std::format("  mov {} [rbp-{}], {}\n", q, os, lirNode->b->imm);
     } else {
       std::cout << std::format("  mov [rbp-{}], {}\n", os, reg(b, lirNode->type_size));
+    }
+    break;
+  }
+  case LIR::LirKind::LIR_STORE_LABEL:{
+    if(is_imm(lirNode->b) && is_int32(lirNode->b)){      
+      const auto q = get_size_qualifier(lirNode->type_size);
+      std::cout << std::format("  mov {} [{}], {}\n", q, lirNode->name, lirNode->b->imm);
+    } else {
+      std::cout << std::format("  mov [{}], {}\n", lirNode->name, reg(b, lirNode->type_size));
     }
     break;
   }

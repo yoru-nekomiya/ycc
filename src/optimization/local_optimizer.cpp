@@ -19,6 +19,7 @@ namespace Lunaria::LIR::Optimizer {
     return k == LirKind::LIR_MOV
       || k == LirKind::LIR_STORE
       || k == LirKind::LIR_STORE_STACK
+      || k == LirKind::LIR_STORE_LABEL
       //|| k == LirKind::LIR_LOAD
       //|| k == LirKind::LIR_RETURN
       || k == LirKind::LIR_BR;
@@ -243,7 +244,8 @@ namespace Lunaria::LIR::Optimizer {
       }
 
       if(inst->opcode == LirKind::LIR_BR
-	 || inst->opcode == LirKind::LIR_STORE_STACK){
+	 || inst->opcode == LirKind::LIR_STORE_STACK
+	 || inst->opcode == LirKind::LIR_STORE_LABEL){
 	if(table.contains(inst->b) && !is_imm(inst->b)){
 	  inst->b = table.find(inst->b)->second;
 	  changed = true;
@@ -492,19 +494,30 @@ namespace Lunaria::LIR::Optimizer {
     return changed;
   }
   */
-  static bool
-  propagate_stack_address(BasicBlockPtr& bb){
+  static bool propagate_address(BasicBlockPtr& bb){
+    //stack address (local variable)
     //v1 <- [rbp-4]
     //v2 <- [v1]
     //-->
-    //v2 <- [rbp-4]
+    //v2 <- [rbp-4] (movsxd v2, dword ptr [rbp-4])
 
+    //label address (global variable)
+    //v1 <- g
+    //v2 <- [v1]
+    //-->
+    //v2 <- [g] (movsxd v2, dword ptr [g])
+    
     bool changed = false;
     std::unordered_map<LirNodePtr, std::shared_ptr<Lunaria::Var>, LirSharedPtrHash> st_offset_table; //vn --> lvar
+    std::unordered_map<LirNodePtr, std::string, LirSharedPtrHash> label_table; //vn --> label
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
       if(inst->opcode == LirKind::LIR_LVAR){
 	st_offset_table.insert_or_assign(inst->d, inst->lvar);
+      }
+
+      if(inst->opcode == LirKind::LIR_LABEL_ADDR){
+	label_table.insert_or_assign(inst->d, inst->name);
       }
 
       if(inst->opcode == LirKind::LIR_LOAD){
@@ -519,6 +532,17 @@ namespace Lunaria::LIR::Optimizer {
 	  iter = bb->insts.insert(iter, node);
 	  changed = true;
 	}
+	else if(label_table.contains(inst->b)){
+	  auto node = make_node(LirKind::LIR_LOAD_LABEL,
+				inst->d,
+				nullptr,
+				nullptr);
+	  node->name = label_table.find(inst->b)->second;
+	  node->type_size = inst->type_size;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  changed = true;
+	}
       }
 
       if(inst->opcode == LirKind::LIR_STORE){
@@ -528,6 +552,17 @@ namespace Lunaria::LIR::Optimizer {
 				nullptr,
 				inst->b);
 	  node->lvar = st_offset_table.find(inst->a)->second;
+	  node->type_size = inst->type_size;
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  changed = true;
+	}
+	else if(label_table.contains(inst->a)){
+	  auto node = make_node(LirKind::LIR_STORE_LABEL,
+				nullptr,
+				nullptr,
+				inst->b);
+	  node->name = label_table.find(inst->a)->second;
 	  node->type_size = inst->type_size;
 	  iter = bb->insts.erase(iter);
 	  iter = bb->insts.insert(iter, node);
@@ -617,9 +652,8 @@ namespace Lunaria::LIR::Optimizer {
   }
   */
 
-  static bool
-  redundant_load_elimination(BasicBlockPtr& bb){
-    //redundant load
+  static bool redundant_load_elimination_stack(BasicBlockPtr& bb){
+    //redundant load elimination
     //Load_stack: v1 <- [rbp-4]
     //Load_stack: v2 <- [rbp-4] ==> v2 <- v1
 
@@ -628,8 +662,9 @@ namespace Lunaria::LIR::Optimizer {
     //v4 <- [rbp-8] ==> v4 <- v3 (or Cast: v5(64bit) <- v3(32bit); v4 <- v5; if store to rbp-8 is 32bit)
 
     bool changed = false;
-    std::unordered_map<int, LirNodePtr> st_offset_table; //stack_offset --> vn (Load)
-    std::unordered_map<int, LirNodePtr> store_table; //stack_offset --> inst (Store)
+    using Table = std::unordered_map<int, LirNodePtr>;
+    Table st_offset_table; //stack_offset --> vn (Load)
+    Table store_table;     //stack_offset --> inst (Store)
     for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
       auto inst = *iter;
       if(inst->opcode == LirKind::LIR_LOAD_STACK){
@@ -659,8 +694,7 @@ namespace Lunaria::LIR::Optimizer {
 	  iter = bb->insts.insert(iter, node);
 	  ++iter;
 	  iter = bb->insts.insert(iter, mov_node);
-	  changed = true;
-	  
+	  changed = true;	  
 	}
 	else {
 	  st_offset_table.insert(std::make_pair(inst->lvar->offset, inst->d));
@@ -681,6 +715,69 @@ namespace Lunaria::LIR::Optimizer {
     
     return changed;
   }
+
+  static bool redundant_load_elimination_label(BasicBlockPtr& bb){
+    //redundant load elimination
+    //Load_label: v1 <- [g]
+    //Load_label: v2 <- [g] ==> v2 <- v1
+
+    //store-to-load forwarding
+    //[g] <- v3
+    //v4 <- [g] ==> v4 <- v3 (or Cast: v5(64bit) <- v3(32bit); v4 <- v5; if store to g is 32bit)
+
+    bool changed = false;
+    using Table = std::unordered_map<std::string, LirNodePtr>;
+    Table load_table;  //label --> vn (Load)
+    Table store_table; //label --> inst (Store)    
+    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
+      auto inst = *iter;
+      if(inst->opcode == LirKind::LIR_LOAD_LABEL){
+	if(load_table.contains(inst->name)){
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    load_table.find(inst->name)->second);
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;
+	}
+	else if(store_table.contains(inst->name)){
+	  
+	  auto store_inst = store_table.find(inst->name)->second;
+	  LirNodePtr node = make_node(LirKind::LIR_CAST,
+				      new_reg("", 8),
+				      nullptr,
+				      store_inst->b);
+	  node->type_size = store_inst->type_size;
+	  auto mov_node = make_node(LirKind::LIR_MOV,
+				    inst->d,
+				    nullptr,
+				    node->d);
+	  
+	  iter = bb->insts.erase(iter);
+	  iter = bb->insts.insert(iter, node);
+	  ++iter;
+	  iter = bb->insts.insert(iter, mov_node);
+	  changed = true;	
+	}
+	else {
+	  load_table.insert(std::make_pair(inst->name, inst->d));
+	}
+      } //if(inst->opcode == LirKind::LIR_LOAD_LABEL)
+
+      if(inst->opcode == LirKind::LIR_STORE_LABEL){	
+	  store_table.insert_or_assign(inst->name, inst);
+	  load_table.erase(inst->name);
+      }
+
+      if(inst->opcode == LirKind::LIR_FUNCALL
+	 || inst->opcode == LirKind::LIR_STORE){
+	load_table.clear();
+	store_table.clear();
+      }      
+    } //for iter
+    return changed;
+  }
   
   bool optimize_bb(BasicBlockPtr& bb){
     //changed IR --> return true
@@ -697,8 +794,9 @@ namespace Lunaria::LIR::Optimizer {
     } while(cp || cf);
     changed = changed || peephole(bb);
     //changed = changed || eliminate_redundant_load_from_stack(bb);
-    changed = changed || redundant_load_elimination(bb);
-    changed = changed || propagate_stack_address(bb);
+    changed = changed || propagate_address(bb);
+    changed = changed || redundant_load_elimination_stack(bb);
+    changed = changed || redundant_load_elimination_label(bb);
     changed = changed || common_subexpression_elimination(bb);
     return changed;
   }

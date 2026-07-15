@@ -189,6 +189,7 @@ namespace Lunaria::LIR::Optimizer {
 	   && inst->opcode != LirKind::LIR_STORE_SPILL
 	   && inst->opcode != LirKind::LIR_STORE_ARG
 	   && inst->opcode != LirKind::LIR_STORE_STACK
+	   && inst->opcode != LirKind::LIR_STORE_LABEL
 	   && inst->opcode != LirKind::LIR_RETURN
 	   && inst->opcode != LirKind::LIR_BR
 	   && inst->opcode != LirKind::LIR_JMP

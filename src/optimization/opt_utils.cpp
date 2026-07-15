@@ -244,6 +244,7 @@ namespace Lunaria::LIR {
     if(this->opcode == LirKind::LIR_IMM
        || this->opcode == LirKind::LIR_LABEL_ADDR
        || this->opcode == LirKind::LIR_LOAD_STACK
+       || this->opcode == LirKind::LIR_LOAD_LABEL
        || this->opcode == LirKind::LIR_LVAR
        || this->opcode == LirKind::LIR_LOAD_SPILL
        || Optimizer::is_binary_opcode(this->opcode)
@@ -268,7 +269,8 @@ namespace Lunaria::LIR {
 	    || this->opcode == LirKind::LIR_LOAD
 	    || this->opcode == LirKind::LIR_CAST
 	    || this->opcode == LirKind::LIR_BR
-	    || this->opcode == LirKind::LIR_STORE_STACK){
+	    || this->opcode == LirKind::LIR_STORE_STACK
+	    || this->opcode == LirKind::LIR_STORE_LABEL){
       /*if(!is_imm_int32(this->b))*/ res.push_back(this->b);
     }
     else if(this->opcode == LirKind::LIR_JMP){

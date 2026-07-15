@@ -849,6 +849,9 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
     case LirKind::LIR_LOAD_STACK:
       ret = std::format("Load_stack: v{} <- [rbp-{}]", d, i->lvar->offset);
       break;
+    case LirKind::LIR_LOAD_LABEL:
+      ret = std::format("Load_label: v{} <- [{}]", d, i->name);
+      break;
     case LirKind::LIR_STORE:
       if(is_imm(i->b)){
 	ret = std::format("Store: [v{}] <- {}", a, i->b->imm);
@@ -867,6 +870,13 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
 	ret = std::format("Store_stack: [rbp-{}] <- {}", i->lvar->offset, i->b->imm);
       } else {
 	ret = std::format("Store_stack: [rbp-{}] <- v{}", i->lvar->offset, b);
+      }
+      break;
+    case LirKind::LIR_STORE_LABEL:
+      if(is_imm(i->b)){
+	ret = std::format("Store_label: [{}] <- {}", i->name, i->b->imm);
+      } else {
+	ret = std::format("Store_label: [{}] <- v{}", i->name, b);
       }
       break;
     case LirKind::LIR_RETURN:
@@ -1024,7 +1034,7 @@ generateLirNode(const std::unique_ptr<HIR::Program>& prog){
       }
       break;
     default:
-      std::cerr << "unknown LIR\n";
+      std::cerr << "find unknown LIR when printing LIR\n";
       exit(1);
     } //switch
     return ret;
