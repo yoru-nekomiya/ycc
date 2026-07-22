@@ -214,117 +214,6 @@ namespace Lunaria::RegAlloc {
 	  gen.insert(arg_num);
 	  continue;
 	}
-	
-	/*
-	if(inst->opcode == LIR::LirKind::LIR_IMM
-	   || inst->opcode == LIR::LirKind::LIR_LABEL_ADDR
-	   || inst->opcode == LIR::LirKind::LIR_LOAD_STACK
-	   || inst->opcode == LIR::LirKind::LIR_LVAR
-	   || inst->opcode == LIR::LirKind::LIR_LOAD_SPILL){
-	  gen.erase(lirnode_to_id.at(inst->d));
-	  kill.insert(lirnode_to_id.at(inst->d));
-	  continue;
-	}
-	
-	if(LIR::Optimizer::is_binary_opcode(inst->opcode)){
-	  gen.erase(lirnode_to_id.at(inst->d));
-	  kill.insert(lirnode_to_id.at(inst->d));	  
-
-	  if(inst->opcode == LIR::LirKind::LIR_MULHIGH
-	     || inst->opcode == LIR::LirKind::LIR_DIV
-	     || inst->opcode == LIR::LirKind::LIR_REM){
-	    gen.erase(0);   //rax
-	    kill.insert(0); //rax
-	    gen.erase(3);   //rdx
-	    kill.insert(3); //rdx
-	  }
-
-	  if(inst->opcode == LIR::LirKind::LIR_SHL
-	     || inst->opcode == LIR::LirKind::LIR_SHR
-	     || inst->opcode == LIR::LirKind::LIR_SAR){
-	    if(!LIR::is_imm_int32(inst->b)){
-	      gen.erase(4);   //rcx
-	      kill.insert(4); //rcx
-	    }
-	  }
-
-	  if(inst->opcode == LIR::LirKind::LIR_PTR_DIFF){
-	    const int s = inst->type_base_size;
-	    if(s != 1 && s != 2 && s != 4 && s != 8){
-	      gen.erase(0);   //rax
-	      kill.insert(0); //rax
-	      gen.erase(3);   //rdx
-	      kill.insert(3); //rdx
-	    }
-	  }
-	  if(!LIR::is_imm_int32(inst->a)) gen.insert(lirnode_to_id.at(inst->a));
-	  if(!LIR::is_imm_int32(inst->b)) gen.insert(lirnode_to_id.at(inst->b));
-	  continue;
-	} //if is_binary_opcode
-	
-	if(inst->opcode == LIR::LirKind::LIR_MOV
-	   || inst->opcode == LIR::LirKind::LIR_LOAD
-	   || inst->opcode == LIR::LirKind::LIR_CAST){
-	  gen.erase(lirnode_to_id.at(inst->d));
-	  kill.insert(lirnode_to_id.at(inst->d));	  	  
-	  if(!LIR::is_imm_int32(inst->b)) gen.insert(lirnode_to_id.at(inst->b));	  
-	  continue;
-	}
-		
-	if(inst->opcode == LIR::LirKind::LIR_BR
-	   || inst->opcode == LIR::LirKind::LIR_STORE_STACK){
-	  if(!LIR::is_imm_int32(inst->b)) gen.insert(lirnode_to_id.at(inst->b));
-	  continue;
-	}
-
-	if(inst->opcode == LIR::LirKind::LIR_JMP){
-	  if(inst->bbarg)
-	    if(!LIR::is_imm_int32(inst->bbarg)) gen.insert(lirnode_to_id.at(inst->bbarg));	  
-	  continue;
-	}
-	
-	if(inst->opcode == LIR::LirKind::LIR_STORE){
-	  gen.insert(lirnode_to_id.at(inst->a));
-	  if(!LIR::is_imm_int32(inst->b)) gen.insert(lirnode_to_id.at(inst->b));
-	  continue;
-	}
-	
-	if(inst->opcode == LIR::LirKind::LIR_STORE_SPILL){
-	  gen.insert(lirnode_to_id.at(inst->a));
-	  continue;
-	}
-
-	if(inst->opcode == LIR::LirKind::LIR_STORE_ARG){
-	  const auto arg_num = inst->imm + 1;
-	  gen.insert(arg_num);
-	  continue;
-	}
-	
-	if(inst->opcode == LIR::LirKind::LIR_RETURN){
-	  if(inst->a != nullptr){	    
-	    if(!LIR::is_imm_int32(inst->a)) gen.insert(lirnode_to_id.at(inst->a));	    
-	  }
-	  continue;
-	}
-	
-	if(inst->opcode == LIR::LirKind::LIR_FUNCALL){	  
-	  gen.erase(lirnode_to_id.at(inst->d));
-	  kill.insert(lirnode_to_id.at(inst->d));
-
-	  //rax, rdi - r9
-	  for(int i = 0; i <= 6; i++){
-	    gen.erase(i);
-	    kill.insert(i);
-	  }
-	  
-	  for(int i = 0; i < inst->args.size(); i++){
-	    if(!LIR::is_imm_int32(inst->args[i])){
-	      gen.insert(lirnode_to_id.at(inst->args[i]));
-	    }
-	  }
-	  continue;
-	}
-	*/
       } //for iter
       bb_to_gen.insert(std::make_pair(bb->label, gen));
       bb_to_kill.insert(std::make_pair(bb->label, kill));
@@ -349,24 +238,14 @@ namespace Lunaria::RegAlloc {
       //out[n] = Union(in[s]) (s in succ[n])
       PredSet out;
       if(!bb->is_end_node){
-	for(const auto& s: bb->succ){
-	  /*
-	  const auto in_succ = bb_to_in[s->label];	  
-	  for(const auto& item: in_succ) out.insert(item);
-	  */
+	for(const auto& s: bb->succ){	  
 	  out = out + bb_to_in[s->label];
 	} //for s
 	bb_to_out[bb->label] = out;
       } //if
 
       //Compute IN set
-      //in[n] = gen[n] U (out[n] - kill[n])
-      /*
-      auto in = out;
-      for(const auto& item: kill) in.erase(item);
-      for(const auto& item: gen) in.insert(item);
-      bb_to_in[bb->label] = in;
-      */
+      //in[n] = gen[n] U (out[n] - kill[n])      
       const auto in = gen + (out - kill);
       bb_to_in[bb->label] = in;
       
@@ -392,8 +271,6 @@ namespace Lunaria::RegAlloc {
     graph.adj_matrix[v][u] = true;
 
     //Update adj_list of each node
-    //graph.nodes[u].adj_list.push_back(v);
-    //graph.nodes[v].adj_list.push_back(u);
     graph.nodes[u].adj_list.insert(v);
     graph.nodes[v].adj_list.insert(u);
 
@@ -407,7 +284,6 @@ namespace Lunaria::RegAlloc {
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
 	auto& inst = *iter;
 	if(inst->opcode == LIR::LirKind::LIR_MOV){
-
 	  if(!LIR::is_imm_int32(inst->b)){
 	    graph.move_list.push_back(inst);
 	    graph.nodes[lirnode_to_id.at(inst->d)].is_move_related = true;
@@ -425,6 +301,112 @@ namespace Lunaria::RegAlloc {
 	  continue;
 	} //LIR_MOV
 
+	if(inst->opcode == LIR::LirKind::LIR_FUNCALL){
+	  for(auto r: live){
+	    add_edge(lirnode_to_id.at(inst->d), r);
+	    for(int i = 0; i <= 6; i++)
+	      add_edge(i, r); //rax, rdi - r9
+	  }
+	  
+	  for(int i = 0; i < inst->args.size(); i++){
+	    if(!LIR::is_imm_int32(inst->args[i])){
+	      for(int p = 0; p <= 6; p++){
+		if(p == 0 || (p != 0 && i != (p-1)) )
+		  add_edge(p, lirnode_to_id.at(inst->args[i]));
+	      }
+	    }
+	  }
+	  
+	  live.erase(lirnode_to_id.at(inst->d));	  
+	  for(int i = 0; i <= 6; i++){
+	    live.erase(i); //rax, rdi - r9
+	  }
+	  
+	  for(int i = 0; i < inst->args.size(); i++){
+	    if(!LIR::is_imm_int32(inst->args[i])){
+	      live.insert(lirnode_to_id.at(inst->args[i]));
+	    }
+	  }
+	  continue;
+	} //LIR_FUNCALL
+	
+	for(const auto& def: inst->Defs()){
+	  for(auto r: live){
+	    add_edge(lirnode_to_id.at(def), r);
+	  }
+	} //for def
+
+	if(inst->opcode == LIR::LirKind::LIR_MULHIGH
+	   || inst->opcode == LIR::LirKind::LIR_DIV
+	   || inst->opcode == LIR::LirKind::LIR_REM){
+	  for(auto r: live){
+	    add_edge(0, r); //rax
+	    add_edge(3, r); //rdx
+	  }
+	  for(const auto& use: inst->Uses()){
+	    if(!LIR::is_imm_int32(use)){
+	      add_edge(0, lirnode_to_id.at(use));
+	      add_edge(3, lirnode_to_id.at(use));
+	    }
+	  } //for use
+	  live.erase(0);
+	  live.erase(3);
+	} //if MULHIGH || DIV || REM
+
+	if(inst->opcode == LIR::LirKind::LIR_SHL
+	     || inst->opcode == LIR::LirKind::LIR_SHR
+	     || inst->opcode == LIR::LirKind::LIR_SAR){
+	  for(auto r: live)
+	    add_edge(4, r); //rcx
+	  for(const auto& use: inst->Uses()){
+	    if(!LIR::is_imm_int32(use))
+	      add_edge(4, lirnode_to_id.at(use)); //rcx	    
+	  } //for use
+	  live.erase(4);
+	} //if SHL || SHR || SAR
+
+	if(inst->opcode == LIR::LirKind::LIR_PTR_DIFF){
+	  const int s = inst->type_base_size;
+	  if(s != 1 && s != 2 && s != 4 && s != 8){
+	    for(auto r: live){
+	      add_edge(0, r); //rax
+	      add_edge(3, r); //rdx
+	    }
+	    for(const auto& use: inst->Uses()){
+	      if(!LIR::is_imm_int32(use)){
+		add_edge(0, lirnode_to_id.at(use));
+		add_edge(3, lirnode_to_id.at(use));
+	      }
+	    } //for use
+	    live.erase(0);
+	    live.erase(3);
+	  } //if s
+	} //if PTR_DIFF
+
+	if(inst->opcode == LIR::LirKind::LIR_JMP){
+	  if(inst->bbarg){
+	    for(auto r: live)
+	      add_edge(lirnode_to_id.at(inst->bb1->param), r);
+	    live.erase(lirnode_to_id.at(inst->bb1->param));
+	  }
+	} //if JMP
+
+	if(inst->opcode == LIR::LirKind::LIR_STORE_ARG){
+	  const auto arg_num = inst->imm + 1;
+	  live.insert(arg_num);
+	} //if STORE_ARG
+	
+	for(const auto& def: inst->Defs()){
+	  live.erase(lirnode_to_id.at(def));
+	} //for def
+	
+	for(const auto& use: inst->Uses()){
+	  if(!LIR::is_imm_int32(use))
+	    live.insert(lirnode_to_id.at(use));
+	} //for use
+	
+	//------before
+	/*
 	if(inst->opcode == LIR::LirKind::LIR_IMM
 	   || inst->opcode == LIR::LirKind::LIR_LABEL_ADDR
 	   || inst->opcode == LIR::LirKind::LIR_LOAD_STACK
@@ -438,12 +420,13 @@ namespace Lunaria::RegAlloc {
 	  live.erase(lirnode_to_id.at(inst->d));
 	  continue;
 	} //LIR_IMM, LIR_LABEL_ADDR
-
+	
 	if(LIR::Optimizer::is_binary_opcode(inst->opcode)){
 	  for(auto r: live)
 	    add_edge(lirnode_to_id.at(inst->d), r);
-	  if (!LIR::is_imm_int32(inst->a) && !LIR::is_imm_int32(inst->b))
-	    add_edge(lirnode_to_id.at(inst->a), lirnode_to_id.at(inst->b));
+	  
+	  //if(!LIR::is_imm_int32(inst->a) && !LIR::is_imm_int32(inst->b))
+	  //add_edge(lirnode_to_id.at(inst->a), lirnode_to_id.at(inst->b));
 	  
 	  if(inst->opcode == LIR::LirKind::LIR_MULHIGH
 	     || inst->opcode == LIR::LirKind::LIR_DIV
@@ -462,7 +445,7 @@ namespace Lunaria::RegAlloc {
 	    }
 	    live.erase(0);
 	    live.erase(3);
-	  }
+	  } //if MULHIGH || DIV || REM
 	  if(inst->opcode == LIR::LirKind::LIR_SHL
 	     || inst->opcode == LIR::LirKind::LIR_SHR
 	     || inst->opcode == LIR::LirKind::LIR_SAR){
@@ -493,7 +476,7 @@ namespace Lunaria::RegAlloc {
 	      live.erase(0);
 	      live.erase(3);
 	    }
-	  }
+	  } //if PTR_DIFF
 	  
 	  live.erase(lirnode_to_id.at(inst->d));
 	  if(!LIR::is_imm_int32(inst->a)) live.insert(lirnode_to_id.at(inst->a));
@@ -581,7 +564,7 @@ namespace Lunaria::RegAlloc {
 	  }
 	  continue;
 	} //LIR_FUNCALL
-	
+	*/
       } //for iter
     } //for bb
   }

@@ -312,6 +312,7 @@ enum class LirKind {
   };
   
   struct LirNode {
+  public:
     LirKind opcode; //d = a <opcode> b
     LirNodePtr d; //destination operand
     LirNodePtr a; //left source operand
@@ -351,6 +352,19 @@ enum class LirKind {
     {}
     std::vector<LirNodePtr> Defs() const;
     std::vector<LirNodePtr> Uses() const;
+    /*
+    const std::vector<LirNodePtr>& Defs() {calc_defs(); return _defs;};
+    const std::vector<LirNodePtr>& Uses() {calc_uses(); return _uses;};
+    std::vector<LirNodePtr>& get_mutable_defs() {calc_defs(); return _defs;};
+    std::vector<LirNodePtr>& get_mutable_uses() {calc_uses(); return _uses;};
+    */
+    /*
+  private:
+    std::vector<LirNodePtr> _defs;
+    std::vector<LirNodePtr> _uses;
+    void calc_defs();
+    void calc_uses();
+    */
   };
   
   struct Function {

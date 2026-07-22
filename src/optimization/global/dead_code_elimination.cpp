@@ -50,76 +50,6 @@ namespace Lunaria::LIR::Optimizer {
 	  if(!is_imm_int32(use))
 	    gen.insert(use);
 	}
-	/*
-	if(inst->opcode == LirKind::LIR_IMM
-	   || inst->opcode == LirKind::LIR_LABEL_ADDR
-	   || inst->opcode == LirKind::LIR_LOAD_STACK
-	   || inst->opcode == LirKind::LIR_LVAR
-	   || inst->opcode == LirKind::LIR_LOAD_SPILL){
-	  gen.erase(inst->d);
-	  kill.insert(inst->d);
-	  continue;
-	}
-	
-	if(is_binary_opcode(inst->opcode)){
-	  gen.erase(inst->d);
-	  kill.insert(inst->d);
-	  if(!is_imm_int32(inst->a)) gen.insert(inst->a);
-	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
-	  continue;
-	} //if is_binary_opcode
-	
-	if(inst->opcode == LirKind::LIR_MOV
-	   || inst->opcode == LirKind::LIR_LOAD
-	   || inst->opcode == LirKind::LIR_CAST){
-	  gen.erase(inst->d);
-	  kill.insert(inst->d);
-	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_BR
-	   || inst->opcode == LirKind::LIR_STORE_STACK){
-	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
-	  continue;
-	}
-
-	if(inst->opcode == LirKind::LIR_JMP){
-	  if(inst->bbarg)
-	    if(!is_imm_int32(inst->bbarg)) gen.insert(inst->bbarg);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_STORE){
-	  gen.insert(inst->a);
-	  if(!is_imm_int32(inst->b)) gen.insert(inst->b);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_STORE_SPILL){
-	  gen.insert(inst->a);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_RETURN){
-	  if(inst->a != nullptr){
-	    if(!is_imm_int32(inst->a)) gen.insert(inst->a);
-	    continue;
-	  }
-	}
-	
-	if(inst->opcode == LirKind::LIR_FUNCALL){
-	  gen.erase(inst->d);
-	  kill.insert(inst->d);
-	  for(int i = 0; i < inst->args.size(); i++){
-	    if(!is_imm_int32(inst->args[i])){
-	      gen.insert(inst->args[i]);
-	    }
-	  }
-	  continue;
-	}
-	*/
-	
       } //for iter
       bb_to_gen.insert(std::make_pair(bb->label, gen));
       bb_to_kill.insert(std::make_pair(bb->label, kill));
@@ -144,24 +74,14 @@ namespace Lunaria::LIR::Optimizer {
       //out[n] = Union(in[s]) (s in succ[n])
       PredSet out;
       if(!bb->is_end_node){
-	for(const auto& s: bb->succ){
-	  /*
-	  const auto in_succ = bb_to_in[s->label];
-	  for(const auto& item: in_succ) out.insert(item);
-	  */
+	for(const auto& s: bb->succ){	  
 	  out = out + bb_to_in[s->label];
 	} //for s
 	bb_to_out[bb->label] = out;
       } //if
 
       //Compute IN set
-      //in[n] = gen[n] U (out[n] - kill[n])
-      /*
-      auto in = out;
-      for(const auto& item: kill) in.erase(item);
-      for(const auto& item: gen) in.insert(item);
-      bb_to_in[bb->label] = in;
-      */
+      //in[n] = gen[n] U (out[n] - kill[n])      
       const auto in = gen + (out - kill);
       bb_to_in[bb->label] = in;
       
@@ -183,9 +103,10 @@ namespace Lunaria::LIR::Optimizer {
       auto live = bb_to_out[bb->label];      
       for(auto iter = bb->insts.rbegin(); iter != bb->insts.rend(); iter++){
 	auto& inst = *iter;
+	const auto defs = inst->Defs();
 
 	//delete inst if it is dead
-	if(inst->opcode != LirKind::LIR_STORE
+	if(/*inst->opcode != LirKind::LIR_STORE
 	   && inst->opcode != LirKind::LIR_STORE_SPILL
 	   && inst->opcode != LirKind::LIR_STORE_ARG
 	   && inst->opcode != LirKind::LIR_STORE_STACK
@@ -193,6 +114,8 @@ namespace Lunaria::LIR::Optimizer {
 	   && inst->opcode != LirKind::LIR_RETURN
 	   && inst->opcode != LirKind::LIR_BR
 	   && inst->opcode != LirKind::LIR_JMP
+	   */
+	   !defs.empty()
 	   && inst->opcode != LirKind::LIR_FUNCALL
 	   && !live.contains(inst->d)){
 	  iter = std::make_reverse_iterator(bb->insts.erase(std::next(iter).base()));
@@ -207,83 +130,17 @@ namespace Lunaria::LIR::Optimizer {
 	for(const auto& use: inst->Uses()){
 	  if(!is_imm_int32(use))
 	    live.insert(use);
-	}
-	
-	/*
-	if(inst->opcode == LirKind::LIR_IMM
-	   || inst->opcode == LirKind::LIR_LABEL_ADDR
-	   || inst->opcode == LirKind::LIR_LOAD_STACK
-	   || inst->opcode == LirKind::LIR_LVAR
-	   || inst->opcode == LirKind::LIR_LOAD_SPILL){
-	  live.erase(inst->d);
-	  continue;
-	}
-	
-	if(is_binary_opcode(inst->opcode)){
-	  live.erase(inst->d);
-	  if(!is_imm_int32(inst->a)) live.insert(inst->a);
-	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
-	  continue;
-	} //if is_binary_opcode
-	
-	if(inst->opcode == LirKind::LIR_MOV
-	   || inst->opcode == LirKind::LIR_LOAD
-	   || inst->opcode == LirKind::LIR_CAST){
-	  live.erase(inst->d);
-	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_BR
-	   || inst->opcode == LirKind::LIR_STORE_STACK){
-	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
-	  continue;
-	}
-
-	if(inst->opcode == LirKind::LIR_JMP){
-	  if(inst->bbarg)
-	    if(!is_imm_int32(inst->bbarg)) live.insert(inst->bbarg);	  
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_STORE){
-	  live.insert(inst->a);
-	  if(!is_imm_int32(inst->b)) live.insert(inst->b);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_STORE_SPILL){
-	  live.insert(inst->a);
-	  continue;
-	}
-	
-	if(inst->opcode == LirKind::LIR_RETURN){
-	  if(inst->a != nullptr){
-	    if(!is_imm_int32(inst->a)) live.insert(inst->a);
-	    continue;
-	  }
-	}
-	
-	if(inst->opcode == LirKind::LIR_FUNCALL){
-	  live.erase(inst->d);
-	  for(int i = 0; i < inst->args.size(); i++){
-	    if(!is_imm_int32(inst->args[i])) {
-	      live.insert(inst->args[i]);
-	    }
-	  }
-	  continue;
-	}
-	*/
+	}		
       } //for iter
     } //for bb
     return changed;
   }
   
   bool dead_code_elimination(FunctionPtr& fn){
-    //1. For all basic blocks, compute local gen and kill sets.
+    //1. For all basic blocks, compute local gen and kill sets
     compute_local_predicate(fn);
     
-    //2. Compute dataflow equations backwardly.
+    //2. Compute dataflow equations backwardly
     compute_dataflow_equation(fn);
     
     //3. For all basic blocks, eliminate dead code

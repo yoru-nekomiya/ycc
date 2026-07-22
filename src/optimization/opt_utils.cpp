@@ -262,8 +262,8 @@ namespace Lunaria::LIR {
     std::vector<LirNodePtr> res;
     if(Optimizer::is_binary_opcode(this->opcode)
        || this->opcode == LirKind::LIR_STORE){
-      /*if(!is_imm_int32(this->a))*/ res.push_back(this->a);
-      /*if(!is_imm_int32(this->b))*/ res.push_back(this->b);
+      res.push_back(this->a);
+      res.push_back(this->b);
     }
     else if(this->opcode == LirKind::LIR_MOV
 	    || this->opcode == LirKind::LIR_LOAD
@@ -271,22 +271,21 @@ namespace Lunaria::LIR {
 	    || this->opcode == LirKind::LIR_BR
 	    || this->opcode == LirKind::LIR_STORE_STACK
 	    || this->opcode == LirKind::LIR_STORE_LABEL){
-      /*if(!is_imm_int32(this->b))*/ res.push_back(this->b);
+      res.push_back(this->b);
     }
     else if(this->opcode == LirKind::LIR_JMP){
-      if(this->bbarg /*&& !is_imm_int32(this->bbarg)*/)
+      if(this->bbarg)
 	res.push_back(this->bbarg);
     }
     else if(this->opcode == LirKind::LIR_STORE_SPILL){
-      /*if(!is_imm_int32(this->a))*/ res.push_back(this->a);
+      res.push_back(this->a);
     }
     else if(this->opcode == LirKind::LIR_RETURN){
-      if(this->a /*&& !is_imm_int32(this->a)*/)	
+      if(this->a)	
 	res.push_back(this->a);
     }
     else if(this->opcode == LirKind::LIR_FUNCALL){
       for(int i = 0; i < this->args.size(); i++){
-	//if(!is_imm_int32(this->args[i]))
 	  res.push_back(this->args[i]);
       }
     }

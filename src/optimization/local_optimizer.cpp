@@ -15,6 +15,7 @@ namespace Lunaria::LIR {
 }
 
 namespace Lunaria::LIR::Optimizer {
+  /*
   static bool is_unary_opcode(LirKind k){
     return k == LirKind::LIR_MOV
       || k == LirKind::LIR_STORE
@@ -24,7 +25,7 @@ namespace Lunaria::LIR::Optimizer {
       //|| k == LirKind::LIR_RETURN
       || k == LirKind::LIR_BR;
   }
-
+  */
   struct LirRhsHash {
     std::size_t operator()(const LirNodePtr& node) const {
       if(!node) return 0;
@@ -75,7 +76,7 @@ namespace Lunaria::LIR::Optimizer {
       //-------------
       
       //kill---------
-      //inst: d=a+b --> kills expressions containg "d"
+      //inst: d=a+b --> kills expressions containing "d"
       const auto def = (*iter)->d;
       for(auto table_it = table.begin(); table_it != table.end();){
 	auto av_inst = *table_it;
@@ -108,17 +109,26 @@ namespace Lunaria::LIR::Optimizer {
       //generation-------------------
       if(is_imm(inst)){
 	table.insert_or_assign(inst->d, inst->imm);
+	continue;
       }
       if(inst->opcode == LirKind::LIR_MOV
 	 && is_imm(inst->b)){
 	table.insert_or_assign(inst->d, inst->b->imm);
+	continue;
       }
       //-----------------------------
 
       //replace----------------------
+      for(auto& use: inst->Uses()){
+	if(table.contains(use) && !is_imm(use)){
+	  use->opcode = LirKind::LIR_IMM;
+	  use->imm = table.find(use)->second;
+	  changed = true;
+	}
+      }
+      /*
       //cast
       if(inst->opcode == LirKind::LIR_CAST){
-	//table.erase(inst->d);
 	if(table.contains(inst->b) && !is_imm(inst->b)){
 	  inst->b->opcode = LirKind::LIR_IMM;
 	  inst->b->imm = table.find(inst->b)->second;
@@ -179,6 +189,7 @@ namespace Lunaria::LIR::Optimizer {
 	  }
 	}
       }
+      */
     } //for inst
     return changed;
   }
@@ -193,13 +204,24 @@ namespace Lunaria::LIR::Optimizer {
 	 && !is_imm(inst->b)
 	 && !inst->b->is_fixed_reg){
 	table.insert_or_assign(inst->d, inst->b);
+	continue;
       }
-      //-----------------------------
-
+      //-----------------------------           
+      /*
+      for(auto& use: inst->get_mutable_uses()){
+	if(table.contains(use) && !is_imm(use)){
+	  use = table.find(use)->second;
+	  changed = true;
+	}
+      }
+      for(auto& def: inst->get_mutable_defs()){
+	table.erase(def);
+      }
+      */
       //d=a+b
       //replace a and b if they are registered in table,
       //and kill d in table
-      //binary opcode----------
+      //binary opcode----------      
       if(is_binary_opcode(inst->opcode)){
 	if(table.contains(inst->a) && !is_imm(inst->a)){
 	  inst->a = table.find(inst->a)->second;
@@ -214,6 +236,16 @@ namespace Lunaria::LIR::Optimizer {
       //----------
 
       //unary opcode----------
+      if(inst->opcode == LirKind::LIR_IMM
+	 || inst->opcode == LirKind::LIR_LABEL_ADDR
+	 || inst->opcode == LirKind::LIR_LOAD_STACK
+	 || inst->opcode == LirKind::LIR_LOAD_LABEL
+	 || inst->opcode == LirKind::LIR_LVAR
+	 || inst->opcode == LirKind::LIR_LOAD_SPILL
+	 ){
+	table.erase(inst->d);
+      }
+      
       if(inst->opcode == LirKind::LIR_STORE){
 	if(table.contains(inst->a)){
 	  inst->a = table.find(inst->a)->second;
@@ -271,6 +303,7 @@ namespace Lunaria::LIR::Optimizer {
 	    changed = true;
 	  }
 	}
+	table.erase(inst->d);
       }
       
     } //for inst
@@ -463,37 +496,7 @@ namespace Lunaria::LIR::Optimizer {
     } //for inst
     return changed;
   }
-  /*
-  static bool
-  eliminate_redundant_load_from_stack(BasicBlockPtr& bb){
-    //Lunaria assumes that rbp keeps the same value during the execution of a function.
-    //Load_lvar: v11 <- [rbp-8]
-    //Load_lvar: v12 <- [rbp-8]
-    //-->
-    //Load_lvar: v11 <- [rbp-8]
-    //v12 <- v11
-    bool changed = false;
-    std::unordered_map<int, LirNodePtr> table;
-    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
-      auto& inst = *iter;
-      if(inst->opcode == LirKind::LIR_LVAR){
-	if(table.contains(inst->lvar->offset)){
-	  auto mov_node = make_node(LirKind::LIR_MOV,
-				    inst->d,
-				    nullptr,
-				    table.find(inst->lvar->offset)->second);	  
-	  iter = bb->insts.erase(iter);
-	  iter = bb->insts.insert(iter, mov_node);
-	  changed = true;
-	} else {
-	  //register offset
-	  table.insert(std::make_pair(inst->lvar->offset, inst->d));
-	}
-      } //if LIR_LVAR
-    } //for
-    return changed;
-  }
-  */
+  
   static bool propagate_address(BasicBlockPtr& bb){
     //stack address (local variable)
     //v1 <- [rbp-4]
@@ -572,85 +575,6 @@ namespace Lunaria::LIR::Optimizer {
     }
     return changed;
   }
-
-  /*
-  static bool
-  redundant_load_elimination(BasicBlockPtr& bb){
-    //redundant load
-    //v1 <- [rbp-4]
-    //v2 <- [v1]
-    //v3 <- [v1] ==> v3 <- v2
-
-    //store-to-load forwarding
-    //[v4] <- v5
-    //v6 <- [v4] ==> v6 <- v5 (or Cast: v7(64bit) <- v5(32bit); v6 <- v7; if store to v4 is 32bit)
-
-    bool changed = false;
-    std::unordered_map<LirNodePtr, int, LirSharedPtrHash> st_offset_table; //vn --> stack_offset
-    std::unordered_map<LirNodePtr, LirNodePtr, LirSharedPtrHash> value_table; //[vn] --> vn (Load)
-    std::unordered_map<LirNodePtr, LirNodePtr, LirSharedPtrHash> store_table; //[vn] --> inst (Store)
-    for(auto iter = bb->insts.begin(); iter != bb->insts.end(); ++iter){
-      auto inst = *iter;
-      if(inst->opcode == LirKind::LIR_LVAR){
-	st_offset_table.insert_or_assign(inst->d, inst->lvar->offset);
-      }
-
-      if(inst->opcode == LirKind::LIR_LOAD){
-	if(value_table.contains(inst->b)){
-	  auto mov_node = make_node(LirKind::LIR_MOV,
-				    inst->d,
-				    nullptr,
-				    value_table.find(inst->b)->second);
-	  iter = bb->insts.erase(iter);
-	  iter = bb->insts.insert(iter, mov_node);
-	  changed = true;
-	}
-	else if(store_table.contains(inst->b)){
-	  
-	  auto store_inst = store_table.find(inst->b)->second;
-	  LirNodePtr node = make_node(LirKind::LIR_CAST,
-						    new_reg("", 8),
-						    nullptr,
-						    store_inst->b);
-	  node->type_size = store_inst->type_size;
-	  auto mov_node = make_node(LirKind::LIR_MOV,
-				    inst->d,
-				    nullptr,
-				    node->d);
-	  
-	  iter = bb->insts.erase(iter);
-	  iter = bb->insts.insert(iter, node);
-	  ++iter;
-	  iter = bb->insts.insert(iter, mov_node);
-	  changed = true;
-	  
-	}
-	else {
-	  value_table.insert(std::make_pair(inst->b, inst->d));
-	}
-      }
-
-      if(inst->opcode == LirKind::LIR_STORE){
-	
-	if(st_offset_table.contains(inst->a)){
-	  store_table.insert_or_assign(inst->a, inst);
-	  value_table.erase(inst->a);
-	} else {
-	  value_table.clear();
-	  store_table.clear();
-	  store_table.insert(std::make_pair(inst->a, inst));
-	}	
-      }
-      
-      if(inst->opcode == LirKind::LIR_FUNCALL){
-	value_table.clear();
-	store_table.clear();
-      }
-    } //for iter
-    
-    return changed;
-  }
-  */
 
   static bool redundant_load_elimination_stack(BasicBlockPtr& bb){
     //redundant load elimination
@@ -793,7 +717,6 @@ namespace Lunaria::LIR::Optimizer {
       changed = changed || cp || cf || copy_prop;
     } while(cp || cf);
     changed = changed || peephole(bb);
-    //changed = changed || eliminate_redundant_load_from_stack(bb);
     changed = changed || propagate_address(bb);
     changed = changed || redundant_load_elimination_stack(bb);
     changed = changed || redundant_load_elimination_label(bb);
