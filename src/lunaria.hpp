@@ -302,6 +302,7 @@ enum class LirKind {
   
   struct BasicBlock {
     int label;
+    static inline int next_label = 0;
     std::list<LirNodePtr> insts;
     std::list<BasicBlockPtr> pred;
     std::list<BasicBlockPtr> succ;
@@ -309,6 +310,11 @@ enum class LirKind {
     
     bool is_start_node;
     bool is_end_node;
+
+    BasicBlock(): label(next_label++), insts({}),
+		  pred({}), succ({}), param(nullptr),
+		  is_start_node(false), is_end_node(false)
+    {}
   };
   
   struct LirNode {
@@ -351,20 +357,7 @@ enum class LirKind {
 	       type_size(0), type_base_size(0)
     {}
     std::vector<LirNodePtr> Defs() const;
-    std::vector<LirNodePtr> Uses() const;
-    /*
-    const std::vector<LirNodePtr>& Defs() {calc_defs(); return _defs;};
-    const std::vector<LirNodePtr>& Uses() {calc_uses(); return _uses;};
-    std::vector<LirNodePtr>& get_mutable_defs() {calc_defs(); return _defs;};
-    std::vector<LirNodePtr>& get_mutable_uses() {calc_uses(); return _uses;};
-    */
-    /*
-  private:
-    std::vector<LirNodePtr> _defs;
-    std::vector<LirNodePtr> _uses;
-    void calc_defs();
-    void calc_uses();
-    */
+    std::vector<LirNodePtr> Uses() const;    
   };
   
   struct Function {
@@ -399,6 +392,7 @@ enum class LirKind {
     std::unordered_set<std::shared_ptr<Var>, VarSharedPtrHash, VarSharedPtrEqual> globalVars;
     std::unordered_map<std::string, int> funcname_to_reg_pressure;
   };
+  using ProgramPtr = std::unique_ptr<Program>;
 
   LirNodePtr new_reg(const std::string& varName = "", int type_size = 0);
   std::unique_ptr<Program>

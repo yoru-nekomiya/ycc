@@ -1,7 +1,10 @@
 #include "opt_utils.hpp"
 
 namespace Lunaria::LIR::Optimizer {
+  static std::unordered_set<int> visited_bb;
+  
   static void cleanCFGs(std::unique_ptr<Program>& prog){
+    visited_bb.clear();
     for(auto& fn: prog->fns){
       fn->start_node = nullptr;
       fn->end_node = nullptr;
@@ -11,10 +14,13 @@ namespace Lunaria::LIR::Optimizer {
       }
     } //for fn
   }
-  
+
   static void add_edges(BasicBlockPtr& bb){
     if(bb->insts.empty()) return;
     if(!bb->succ.empty()) return;
+    if(visited_bb.contains(bb->label)) return;
+
+    visited_bb.insert(bb->label);
 
     auto& last = bb->insts.back();
     if(last->bb1){

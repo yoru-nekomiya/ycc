@@ -4,16 +4,18 @@
 #include "../util.hpp"
 #include "global/dead_code_elimination.hpp"
 #include "global/unreachable_code_elimination.hpp"
+#include "global/lazy_code_motion.hpp"
 
 namespace Lunaria::LIR::Optimizer {
-  bool optimize_fn(std::shared_ptr<Function>& fn){
+  bool optimize_fn(FunctionPtr& fn){
     bool changed = false;
     changed = changed || unreachable_code_elimination(fn);
     changed = changed || dead_code_elimination(fn);
+    changed = changed || lazy_code_motion(fn);
     return changed;
   }
 
-  bool merge_basic_block(std::shared_ptr<Function>& fn){
+  bool merge_basic_block(FunctionPtr& fn){
     //This function merges bb1 and bb2, where bb1 is the unique predecessor of bb2, and bb2 is the unique successor of bb1.
     //Thus, this function eliminates the unconditional jump instruction of bb1, and the edge between bb1 and bb2.
     bool changed = false;

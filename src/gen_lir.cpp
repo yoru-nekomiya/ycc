@@ -61,7 +61,7 @@ new_imm(long long imm){
 static BasicBlockPtr
 new_bb(){
   auto bb = std::make_shared<BasicBlock>();
-  bb->label = label++;
+  //bb->label = label++;
   func->bbs.push_back(bb);
   return bb;
 }
